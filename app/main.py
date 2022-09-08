@@ -1,7 +1,11 @@
 import os
 import sys
 from pathlib import Path
-from ALMAFE.common.GitVersion import gitBranch, gitVersion
+
+# FastAPI and ASGI:
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # add the top-level project path to PYTHONPATH:
 thisPath = Path.cwd()
@@ -11,52 +15,53 @@ sys.path.append(projectRoot)
 # and change to that directory:
 os.chdir(projectRoot)
 
-# FastAPI and ASGI:
-import uvicorn
-from fastapi import FastAPI, Response
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Dict
-from fastapi.encoders import jsonable_encoder
-import json
+# Imports for this app:
+from app.Response import MessageResponse, VersionResponse, prepareResponse
+from ALMAFE.common.GitVersion import gitVersion
+from app.routers.CCA import router as ccaRouter
+from app.routers.LO import router as loRouter
+from app.routers.RFSource import router as srcRouter
 
 # globals:
-app = FastAPI()
+
+tags_metadata = [
+    {
+        "name": "API",
+        "description": "info about this API"
+    },
+    {
+        "name": "CCA",
+        "description": "the cold cartridge under test"
+    },
+    {
+        "name": "LO",
+        "description": "the local oscillator"
+    },
+    {
+        "name": "RF source",
+        "description": "aka BEASTs"
+    }
+]
+
+app = FastAPI(openapi_tags=tags_metadata)
+app.include_router(ccaRouter)
+app.include_router(loRouter)
+app.include_router(srcRouter)
+
 API_VERSION = "0.0.1"
 
 # set up CORSMiddleware to allow local development:
 #TODO: this will need to be updated in the deployment environment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["http://127.0.0.1:1841"], # port used by "sencha app watch"
+    allow_origins = [],
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
 
-class MessageResponse(BaseModel):
-    message:str
-    success:bool
-
-def prepareResponse(result:Dict, callback:str = None):
-    '''
-    Helper function to properly format a result for return
-    :param result: dict to convert to JSON.
-    :param callback: optional name of Javascript function to wrap JSONP results in.
-    :return FastAPI.Response or dict{result, success}
-    '''
-    # check for JSONP callback:
-    if callback:
-        # format and return the result as a Javascript callback:
-        content = "{}({});".format(callback, json.dumps(jsonable_encoder(result)))
-        return Response(content=content, media_type="text/javascript")
-    else:
-        # return the result in the normal FastAPI way:
-        return result
-
-@app.get("/", response_model = MessageResponse)
-async def getRoot(callback:str = None):
+@app.get("/", tags=["API"], response_model = MessageResponse)
+async def get_Root(callback:str = None):
     '''
     Hello world
     :return MessageResponse 
@@ -65,17 +70,18 @@ async def getRoot(callback:str = None):
     result = MessageResponse(message = 'ALMAFE-CTS-Control API version ' + API_VERSION + '. See /docs', success = True)
     return prepareResponse(result, callback)
 
-@app.get("/app/version/")
-async def getAppVersion(callback:str = None):
+@app.get("/version/", tags=["API"], response_model = VersionResponse)
+async def get_API_Version(callback:str = None):
     '''
-    Get the version string for the API server source code
+    Get the version information for this API and source code
     :param callback: optional name of Javascript function to wrap JSONP results in.
-    :return MessageResponse
+    :return VersionResponse
     '''
     global API_VERSION
-    appVersion = 'API:' + API_VERSION + ' ' + gitVersion(branch = 'master')
-        
-    result = MessageResponse(message = appVersion, success = True)
+    result = VersionResponse(name = "ALMAFE-CTS-Control API",
+                             apiVersion = API_VERSION,
+                             gitCommit = gitVersion(branch = 'master'),
+                             success = True)
     return prepareResponse(result, callback)
 
 if __name__ == "__main__":
