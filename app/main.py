@@ -8,19 +8,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # add the top-level project path to PYTHONPATH:
-thisPath = Path.cwd()
-projectRoot = str(thisPath.parent)
+projectRoot = Path.cwd()
 sys.path.append(projectRoot)
+sys.path.append("L:\\Python\\ALMAFE-Lib")
+sys.path.append("L:\\Python\\ALMAFE-AMBDeviceLibrary")
 
 # and change to that directory:
 os.chdir(projectRoot)
 
 # Imports for this app:
-from app.Response import MessageResponse, VersionResponse, prepareResponse
+from Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion
-from app.routers.CCA import router as ccaRouter
-from app.routers.LO import router as loRouter
-from app.routers.RFSource import router as srcRouter
+from routers.CCA import router as ccaRouter
+from routers.LO import router as loRouter
+from routers.RFSource import router as srcRouter
 
 # globals:
 
@@ -54,7 +55,7 @@ API_VERSION = "0.0.1"
 #TODO: this will need to be updated in the deployment environment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = [],
+    allow_origins = ["http://localhost:3000"],
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"],
@@ -70,7 +71,7 @@ async def get_Root(callback:str = None):
     result = MessageResponse(message = 'ALMAFE-CTS-Control API version ' + API_VERSION + '. See /docs', success = True)
     return prepareResponse(result, callback)
 
-@app.get("/version/", tags=["API"], response_model = VersionResponse)
+@app.get("/version", tags=["API"], response_model = VersionResponse)
 async def get_API_Version(callback:str = None):
     '''
     Get the version information for this API and source code

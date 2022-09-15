@@ -1,145 +1,131 @@
 from fastapi import APIRouter
-from typing import Optional
-from app.schemas.LO import *
-import app.hardware.FEMC as FEMC
-from app.Response import MessageResponse
+from schemas.LO import *
+from schemas.common import *
+import hardware.FEMC as FEMC
+from Response import MessageResponse
 
 router = APIRouter(prefix="/lo")
 
-@router.put("/yto/limits/", tags=["LO"], response_model = MessageResponse)
-async def set_YTO_Limits(lowGhz:float, highGhz:float):
-    FEMC.loDevice.setYTOLimits(lowGhz, highGhz)
-    return MessageResponse(message = f"YTO {lowGhz} to {highGhz} GHz", success = True)
+@router.put("/yto/limits", tags=["LO"], response_model = MessageResponse)
+async def set_YTO_Limits(request: ConfigYTO):
+    FEMC.loDevice.setYTOLimits(request.lowGHz, request.highGHz)
+    return MessageResponse(message = "YTO: " + request.getText(), success = True)
 
-@router.put("/yto/coursetune/", tags=["LO"], response_model = MessageResponse)
-async def set_YTO_CourseTune(courseTune:int):
-    result = FEMC.loDevice.setYTOCourseTune(courseTune)
+@router.put("/yto/coursetune", tags=["LO"], response_model = MessageResponse)
+async def set_YTO_CourseTune(request: SetYTO):
+    result = FEMC.loDevice.setYTOCourseTune(request.courseTune)
     if result:
-        return MessageResponse(message = f"YTO courseTune to {courseTune}", success = True)
+        return MessageResponse(message = "YTO courseTune " + request.getText(), success = True)
     else:
-        return MessageResponse(message = f"YTO courseTune FAILED: {courseTune}", success = False)
+        return MessageResponse(message = "YTO courseTune FAILED: " + request.getText(), success = False)
 
-@router.put("/frequency/", tags=["LO"], response_model = MessageResponse)
-async def set_LO_Frequency(freqGHz:float, coldMultipler:Optional[int] = 1):
-    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.setLOFrequency(freqGHz, coldMultipler)
+@router.put("/frequency", tags=["LO"], response_model = MessageResponse)
+async def set_LO_Frequency(request: SetLOFrequency):
+    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.setLOFrequency(request.freqGHz, request.coldMultipler)
     if wcaFreq:
-        return MessageResponse(message = f"LO frequency set to {freqGHz} GHz [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]", 
-                               success = True)
+        wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
+        return MessageResponse(message = "LO frequency " + request.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = f"LO frequency set FAILED: {freqGHz} GHz coldMultipler={coldMultipler}", 
-                               success = False)
+        return MessageResponse(message = "LO frequency FAILED: " + request.getText(), success = False)
 
-@router.put("/pll/lock/", tags=["LO"], response_model = MessageResponse)
-async def lock_PLL(freqLOGHz:float, coldMultipler:int = 1, freqFloogGhz:float = 0.0315):
-    result = FEMC.loDevice.lockPLL(freqLOGHz, coldMultipler, freqFloogGhz)
-    wcaFreq = freqLOGHz / coldMultipler
-    if result:
-        return MessageResponse(message = f"PLL locked at {freqLOGHz} GHz [wcaFreq:{wcaFreq}]", success = True)
+@router.put("/pll/lock", tags=["LO"], response_model = MessageResponse)
+async def lock_PLL(request:LockPLL):
+    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.lockPLL(request.freqLOGHz, request.coldMultipler, request.freqFloogGHz)
+    if wcaFreq:
+        wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
+        return MessageResponse(message = "PLL LOCKED " + request.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = f"PLL lock FAILED: {freqLOGHz} GHz [wcaFreq:{wcaFreq}]", success = False)
+        return MessageResponse(message = "PLL lock FAILED " + request.getText(), success = False)
 
-@router.put("/pll/adjust/", tags=["LO"], response_model = MessageResponse)
-async def adjust_PLL(targetCV:Optional[float] = 0):
-    result = FEMC.loDevice.adjustPLL(targetCV)
-    if result:
-        return MessageResponse(message = f"PLL adjusted for target CV {targetCV} V", success = True)
+@router.put("/pll/adjust", tags=["LO"], response_model = MessageResponse)
+async def adjust_PLL(request: AdjustPLL):
+    CV = FEMC.loDevice.adjustPLL(request.targetCV)
+    if CV is not None:
+        return MessageResponse(message = f"PLL adjusted CV:{CV} [target:" + request.getText + "]", success = True)
     else:
-        return MessageResponse(message = f"PLL adjust FAILED: target CV {targetCV} V", success = False)
+        return MessageResponse(message = f"PLL adjust FAILED: target: " + request.getText(), success = False)
 
-@router.put("/pll/clearunlock/", tags=["LO"], response_model = MessageResponse)
+@router.put("/pll/clearunlock", tags=["LO"], response_model = MessageResponse)
 async def clear_Unlock_Detect():
     FEMC.loDevice.clearUnlockDetect()
     return MessageResponse(message = "PLL cleared unlock detect.", success = True)
 
-@router.put("/pll/selectloopbw/", tags=["LO"], response_model = MessageResponse)
-async def select_Loop_BW(select:int = LoopBW.DEFAULT):
+@router.put("/pll/config", tags=["LO"], response_model = MessageResponse)
+async def set_PLL_Config(request: PLLConfig):
     '''
-    select is one of:
+    request.loopBW is one of:
     -1: Use the band's default loop bandwidth.
      0: Override to use the "normal" loop BW:   7.5MHz/V (Band 2,4,8,9).
-     1: Override to use the "alternate" loop BW: 15MHz/V (Band 3,5,6,7,10, and NRAO band 2 prototype). 
-    '''
-    FEMC.loDevice.selectLoopBW(select)
-    return MessageResponse(message = f"PLL selected loop bandwidth: {select}.", success = True)
-    
-@router.put("/pll/selectlocksb/", tags=["LO"], response_model = MessageResponse)
-async def select_Lock_Sideband(select:int = LockSB.BELOW_REF):
-    '''
-    select is one of:
+     1: Override to use the "alternate" loop BW: 15MHz/V (Band 3,5,6,7,10, and NRAO band 2 prototype).
+     None/null: no change 
+    request.lockSB is one of:
      0: Lock BELOW the reference input.
      1: Lock ABOVE the reference input. 
+     None/null: no change 
     '''
-    FEMC.loDevice.selectLockSideband(select)
-    return MessageResponse(message = f"PLL selected lock sideband : {select}.", success = True)
+    if request.loopBW is not None:
+        FEMC.loDevice.selectLoopBW(request.loopBW)
+    if request.lockSB is not None:
+        FEMC.loDevice.selectLockSideband(request.lockSB)
+    return MessageResponse(message = f"PLL config " + request.getText(), success = True)
     
-@router.put("/pll/nullintegrator/", tags=["LO"], response_model = MessageResponse)
-async def setNullLoopIntegrator(enable:bool):
-    FEMC.loDevice.setNullLoopIntegrator(enable)
-    return MessageResponse(message = "PLL null integrator" + ("enabled." if enable else "disabled."), success = True)
+@router.put("/pll/nullintegrator", tags=["LO"], response_model = MessageResponse)
+async def setNullLoopIntegrator(request:SingleBool):
+    FEMC.loDevice.setNullLoopIntegrator(request.enable)
+    return MessageResponse(message = "PLL null integrator " + request.getText(), success = True)
 
-@router.put("/photomixer/enable/", tags=["LO"], response_model = MessageResponse)
-async def set_Photmixer_Enable(enable:bool):
-    FEMC.loDevice.setPhotmixerEnable(enable)
-    return MessageResponse(message = "Photomixer " + ("enabled." if enable else "disabled."), success = True)
+@router.put("/photomixer/enable", tags=["LO"], response_model = MessageResponse)
+async def set_Photmixer_Enable(request:SingleBool):
+    FEMC.loDevice.setPhotmixerEnable(request.enable)
+    return MessageResponse(message = "Photomixer " + request.getText(), success = True)
 
-@router.put("/pa/bias/", tags=["LO"], response_model = MessageResponse)
-async def set_PA_Bias(pol:int, drainControl:float = None, gateVoltage:float = None):
-    result = FEMC.loDevice.setPABias(pol, drainControl, gateVoltage)
-    drainText = f"{drainControl}" if drainControl else "no change"
-    gateText = f"{gateVoltage}" if gateVoltage else "no change"
+@router.put("/pa/bias", tags=["LO"], response_model = MessageResponse)
+async def set_PA_Bias(request: SetPA):
+    result = FEMC.loDevice.setPABias(request.pol, request.VDControl, request.VG)
     if result:
-        return MessageResponse(message = f"PA bias pol {pol}: drainControl={drainText} gateVoltage={gateText}", success = True)
+        return MessageResponse(message = "PA bias " + request.getText(), success = True)
     else:
-        return MessageResponse(message = f"PA bias pol {pol} FAILED: drainControl={drainText} gateVoltage={gateText}", success = False)
+        return MessageResponse(message = "PA bias FAILED " + request.getText(), success = False)
     
-@router.put("/pa/teledyne/", tags=["LO"], response_model = MessageResponse)
-def set_Teledyne_PA_Config(hasTeledyne:bool, collectorP0:int = 0, collectorP1:int = 0):
-    result = FEMC.loDevice.setTeledynePAConfig(hasTeledyne, collectorP0, collectorP1)
+@router.put("/pa/teledyne", tags=["LO"], response_model = MessageResponse)
+def set_Teledyne_PA_Config(request: TeledynePA):
+    result = FEMC.loDevice.setTeledynePAConfig(request.hasTeledyne, request.collectorP0, request.collectorP1)
     if result:
-        return MessageResponse(message = f"Teledyne PA config: hasTeledyne={hasTeledyne} collectorP0={collectorP0} collectorP1={collectorP1}",
-                               success = True)
+        return MessageResponse(message = "Teledyne PA config " + request.getText(), success = True)
     else:
-        return MessageResponse(message = f"Teledyne PA config FAILED: hasTeledyne={hasTeledyne} collectorP0={collectorP0} collectorP1={collectorP1}",
-                               success = False)
+        return MessageResponse(message = "Teledyne PA config FAILED " + request.getText(), success = False)
 
-@router.get("/yto/", tags=["LO"], response_model = YTO)
+@router.get("/yto", tags=["LO"], response_model = YTO)
 async def get_YTO():
     data = FEMC.loDevice.getYTO()
-    result = YTO.parse_obj(data)
-    return result
+    return YTO.parse_obj(data)
     
-@router.get("/pll/", tags=["LO"], response_model = PLL)
+@router.get("/pll", tags=["LO"], response_model = PLL)
 async def get_PLL():
     data = FEMC.loDevice.getPLL()
-    result = PLL.parse_obj(data)
-    return result
+    return PLL.parse_obj(data)
 
-@router.get("/pllconfig/", tags=["LO"], response_model = PLLConfig)
+@router.get("/pll/config", tags=["LO"], response_model = PLLConfig)
 async def get_PLL_Config():
     data = FEMC.loDevice.getPLLConfig()
-    result = PLLConfig.parse_obj(data)
-    return result
+    return PLLConfig.parse_obj(data)
 
-@router.get("/photomixer/", tags=["LO"], response_model = Photomixer)
+@router.get("/photomixer", tags=["LO"], response_model = Photomixer)
 async def get_Photomixer():
     data = FEMC.loDevice.getPhotomixer()
-    result = Photomixer.parse_obj(data)
-    return result
+    return Photomixer.parse_obj(data)
 
-@router.get("/amc/", tags=["LO"], response_model = AMC)
+@router.get("/amc", tags=["LO"], response_model = AMC)
 async def get_AMC():
     data = FEMC.loDevice.getAMC()
-    result = AMC.parse_obj(data)
-    return result
+    return AMC.parse_obj(data)
 
-@router.get("/pa/", tags=["LO"], response_model = PA)
+@router.get("/pa", tags=["LO"], response_model = PA)
 async def get_PA():
     data = FEMC.loDevice.getPA()
-    result = PA.parse_obj(data)
-    return result
+    return PA.parse_obj(data)
 
-@router.get("/teledynepa/", tags=["LO"], response_model = TeledynePA)
+@router.get("/teledynepa", tags=["LO"], response_model = TeledynePA)
 async def get_Teledyne_PA():
     data = FEMC.loDevice.getTeledynePA()
-    result = TeledynePA.parse_obj(data)
-    return result
+    return TeledynePA.parse_obj(data)
