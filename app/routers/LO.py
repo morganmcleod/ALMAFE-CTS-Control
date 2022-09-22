@@ -21,7 +21,7 @@ async def set_YTO_CourseTune(request: SetYTO):
 
 @router.put("/frequency", tags=["LO"], response_model = MessageResponse)
 async def set_LO_Frequency(request: SetLOFrequency):
-    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.setLOFrequency(request.freqGHz, request.coldMultipler)
+    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.setLOFrequency(request.freqGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
         return MessageResponse(message = "LO frequency " + request.getText() + wcaText, success = True)
@@ -30,7 +30,7 @@ async def set_LO_Frequency(request: SetLOFrequency):
 
 @router.put("/pll/lock", tags=["LO"], response_model = MessageResponse)
 async def lock_PLL(request:LockPLL):
-    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.lockPLL(request.freqLOGHz, request.coldMultipler, request.freqFloogGHz)
+    (wcaFreq, ytoFreq, ytoCourse) = FEMC.loDevice.lockPLL(request.freqLOGHz, request.freqFloogGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
         return MessageResponse(message = "PLL LOCKED " + request.getText() + wcaText, success = True)

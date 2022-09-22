@@ -54,26 +54,22 @@ class SetLOFrequency(BaseModel):
     Set the LO frequency
     
     freqGHz: final LO frequency
-    coldMultipler: freqGHz gets divided by this before the YTO setting is calculated
     '''
     freqGHz:float
-    coldMultipler:Optional[int] = 1
     def getText(self):
-        return f"{self.freqGHz} GHz  coldMultipler:{self.coldMultipler}"
+        return f"{self.freqGHz} GHz"
     
 class LockPLL(BaseModel):
     '''
     Set the LO frequency and lock the PLL
     
     freqGHz: final LO frequency
-    coldMultipler: freqGHz gets divided by this before the YTO setting is calculated
     freqFloogGHz: the FLOOG frequency used to calculate the required reference setting
     '''
     freqLOGHz:float
-    coldMultipler:Optional[int] = 1
     freqFloogGHz:Optional[float] = 0.0315
     def getText(self):
-        return f"{self.freqLOGHz} GHz  coldMultipler:{self.coldMultipler}  FLOOG:{self.freqFloogGHz}"
+        return f"{self.freqLOGHz} GHz FLOOG:{self.freqFloogGHz}"
 
 class AdjustPLL(BaseModel):
     '''
@@ -129,13 +125,21 @@ class PLLConfig(BaseModel):
     
     loopBW: 0 or 1.  See description for class LoopBW(Enum) above.  If None, no change.
     lockSB: 0 or 1.  See description for class LockSB(Enum) above.  If None, no change.
+    warmMult: Read only constant depends on band
+    coldMult: Read only constant depends on band
     '''
     loopBW:Optional[int] = None 
     lockSB:Optional[int] = None
+    warmMult:Optional[int] = None
+    coldMult:Optional[int] = None
     def getText(self):
         ret = f"loopBW:{self.loopBW} " if (self.loopBW is not None) else ""
         if self.lockSB is not None:
-            ret += f"lock:{'above ref' if self.lockSB else 'below ref'}"
+            ret += f"lock:{'above ref' if self.lockSB else 'below ref'} "
+        if self.warmMult is not None:
+            ret += f"warmMult:{self.warmMult} "
+        if self.coldMult is not None:
+            ret += f"coldMult:{self.coldMult} "
         return ret
     
 class Photomixer(BaseModel):

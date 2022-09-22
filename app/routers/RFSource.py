@@ -20,23 +20,22 @@ async def set_YTO_CourseTune(courseTune:int):
         return MessageResponse(message = f"YTO courseTune FAILED: {courseTune}", success = False)
 
 @router.put("/frequency", tags=["RF source"], response_model = MessageResponse)
-async def set_LO_Frequency(freqGHz:float, coldMultipler:Optional[int] = 1):
-    (wcaFreq, ytoFreq, ytoCourse) = FEMC.srcDevice.setLOFrequency(freqGHz, coldMultipler)
+async def set_LO_Frequency(freqGHz:float):
+    (wcaFreq, ytoFreq, ytoCourse) = FEMC.srcDevice.setLOFrequency(freqGHz)
     if wcaFreq:
         return MessageResponse(message = f"LO frequency set to {freqGHz} GHz [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]", 
                                success = True)
     else:
-        return MessageResponse(message = f"LO frequency set FAILED: {freqGHz} GHz coldMultipler={coldMultipler}", 
+        return MessageResponse(message = f"LO frequency set FAILED: {freqGHz} GHz", 
                                success = False)
 
 @router.put("/pll/lock", tags=["RF source"], response_model = MessageResponse)
-async def lock_PLL(freqLOGHz:float, coldMultipler:int = 1, freqFloogGHz:float = 0.0315):
-    result = FEMC.srcDevice.lockPLL(freqLOGHz, coldMultipler, freqFloogGHz)
-    wcaFreq = freqLOGHz / coldMultipler
+async def lock_PLL(freqLOGHz:float, freqFloogGHz:float = 0.0315):
+    result = FEMC.srcDevice.lockPLL(freqLOGHz, freqFloogGHz)
     if result:
-        return MessageResponse(message = f"PLL locked at {freqLOGHz} GHz [wcaFreq:{wcaFreq}]", success = True)
+        return MessageResponse(message = f"PLL locked at {freqLOGHz} GHz", success = True)
     else:
-        return MessageResponse(message = f"PLL lock FAILED: {freqLOGHz} GHz [wcaFreq:{wcaFreq}]", success = False)
+        return MessageResponse(message = f"PLL lock FAILED: {freqLOGHz} GHz", success = False)
 
 @router.put("/pll/adjust", tags=["RF source"], response_model = MessageResponse)
 async def adjust_PLL(targetCV:Optional[float] = 0):
