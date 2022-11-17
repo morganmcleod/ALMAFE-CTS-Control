@@ -71,12 +71,12 @@ async def set_PLL_Config(request: PLLConfig):
     
 @router.put("/pll/nullintegrator", tags=["LO"], response_model = MessageResponse)
 async def setNullLoopIntegrator(request:SingleBool):
-    FEMC.loDevice.setNullLoopIntegrator(request.enable)
+    FEMC.loDevice.setNullLoopIntegrator(request.value)
     return MessageResponse(message = "PLL null integrator " + request.getText(), success = True)
 
 @router.put("/photomixer/enable", tags=["LO"], response_model = MessageResponse)
 async def set_Photmixer_Enable(request:SingleBool):
-    FEMC.loDevice.setPhotmixerEnable(request.enable)
+    FEMC.loDevice.setPhotmixerEnable(request.value)
     return MessageResponse(message = "Photomixer " + request.getText(), success = True)
 
 @router.put("/pa/bias", tags=["LO"], response_model = MessageResponse)

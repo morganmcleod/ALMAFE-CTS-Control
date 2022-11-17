@@ -2,15 +2,15 @@ from pydantic import BaseModel
 
 class SingleBool(BaseModel):
     '''
-    For setting a single bool value in a PUT or POST operation.
+    For get/set a single bool value.
     '''
-    enable: bool
+    value: bool
     def getText(self):
-        return "enabled" if self.enable else "disabled"
+        return "true" if self.value else "false"
     
 class SingleFloat(BaseModel):
     '''
-    For setting or reading single float value in a PUT or POST operation.
+    For get/set a single float value.
     '''
     value: float
     def getText(self, units = None):

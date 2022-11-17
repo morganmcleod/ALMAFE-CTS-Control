@@ -16,13 +16,13 @@ async def set_SIS(request: SetSIS):
     
 @router.put("/sis/openloop", tags=["CCA"], response_model = MessageResponse)
 async def set_SIS_Open_Loop(request: SingleBool):
-    FEMC.ccaDevice.setSISOpenLoop(request.enable)
+    FEMC.ccaDevice.setSISOpenLoop(request.value)
     return MessageResponse(message = "SIS open loop " + request.getText(), success = True)
     
 @router.put("/sis/heater", tags=["CCA"], response_model = MessageResponse)
 async def set_SIS_Heater(request: SingleBool):
-    FEMC.ccaDevice.setSISHeater(request.enable)
-    return MessageResponse(message = "SIS heater " +  ("enabled." if request.enable else "disabled."), success = True)
+    FEMC.ccaDevice.setSISHeater(request.value)
+    return MessageResponse(message = "SIS heater " +  ("enabled." if request.value else "disabled."), success = True)
 
 @router.put("/lna", tags=["CCA"], response_model = MessageResponse)
 async def set_LNA(request: SetLNA):
@@ -69,7 +69,7 @@ async def get_SIS(pol:int, sis:int, averaging:int = 1):
 @router.get("/sis/openloop", tags=["CCA"], response_model = SingleBool)
 async def get_SIS_Open_Loop():
     data = FEMC.ccaDevice.getSISOpenLoop()
-    return SingleBool(enable = data)
+    return SingleBool(value = data)
     
 @router.get("/lna", tags=["CCA"], response_model = LNA)
 async def get_LNA(pol:int, lna:int):
@@ -82,7 +82,7 @@ async def get_LNA(pol:int, lna:int):
 @router.get("/lna/led", tags=["CCA"], response_model = SingleBool)
 async def get_LNA_LED(pol:int):
     data = FEMC.ccaDevice.getLNALEDEnable(pol)
-    return SingleBool(enable = data)
+    return SingleBool(value = data)
 
 @router.get("/sis/heater", tags=["CCA"], response_model = SingleFloat)
 async def get_Heater():

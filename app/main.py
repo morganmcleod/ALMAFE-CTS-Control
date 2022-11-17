@@ -22,6 +22,7 @@ from ALMAFE.common.GitVersion import gitVersion
 from routers.CCA import router as ccaRouter
 from routers.LO import router as loRouter
 from routers.RFSource import router as srcRouter
+from routers.BeamScanner import router as beamScanRouter
 
 # globals:
 
@@ -42,12 +43,17 @@ tags_metadata = [
         "name": "RF source",
         "description": "aka BEASTs"
     }
+    {
+        "name": "BeamScan",
+        "description": "beam scanner and motor controller"
+    }
 ]
 
 app = FastAPI(openapi_tags=tags_metadata)
 app.include_router(ccaRouter)
 app.include_router(loRouter)
 app.include_router(srcRouter)
+app.include_router(beamScanRouter)
 
 API_VERSION = "0.0.1"
 
