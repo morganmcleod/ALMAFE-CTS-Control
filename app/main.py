@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # add the top-level project path to PYTHONPATH:
 projectRoot = Path.cwd()
-sys.path.append(projectRoot)
 sys.path.append("L:\\Python\\ALMAFE-Lib")
 sys.path.append("L:\\Python\\ALMAFE-AMBDeviceLibrary")
 
@@ -21,7 +20,7 @@ from Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion
 from routers.CCA import router as ccaRouter
 from routers.LO import router as loRouter
-from routers.RFSource import router as srcRouter
+from routers.LO import router as rfRouter
 from routers.BeamScanner import router as beamScanRouter
 
 # globals:
@@ -30,6 +29,10 @@ tags_metadata = [
     {
         "name": "API",
         "description": "info about this API"
+    },
+    {
+        "name": "BeamScan",
+        "description": "beam scanner and motor controller"
     },
     {
         "name": "CCA",
@@ -43,16 +46,12 @@ tags_metadata = [
         "name": "RF source",
         "description": "aka BEASTs"
     }
-    {
-        "name": "BeamScan",
-        "description": "beam scanner and motor controller"
-    }
 ]
 
 app = FastAPI(openapi_tags=tags_metadata)
 app.include_router(ccaRouter)
-app.include_router(loRouter)
-app.include_router(srcRouter)
+app.include_router(loRouter, prefix = "/lo", tags=["LO"])
+app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
 app.include_router(beamScanRouter)
 
 API_VERSION = "0.0.1"

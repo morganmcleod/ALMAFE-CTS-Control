@@ -41,8 +41,10 @@ class YTO(ConfigYTO):
     courseTune in 0..4095 
     '''
     courseTune: int
+    ytoFreqGHz: float
+    loFreqGHz: float
     def getText(self):
-        return f"{self.courseTune} in ({super(PLL, self).getText()})"
+        return f"{self.courseTune} in ({super(PLL, self).getText()}) yto:{self.ytoFreqGHz}, final:{self.loFreqGHz}"
 
 class SetYTO(BaseModel):
     courseTune: int
@@ -198,7 +200,7 @@ class SetPA(BaseModel):
     VDControl: Optional[float] = None
     VG: Optional[float] = None
     def getText(self):
-        return f"pol:{self.pol} VDControl{self.VDControl} VG:{self.VG}"
+        return f"pol:{self.pol} VDControl:{self.VDControl} VG:{self.VG}"
     
 class PA(BaseModel):
     '''

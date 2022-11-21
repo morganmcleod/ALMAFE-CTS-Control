@@ -102,19 +102,6 @@ class BaseE441X():
         err = self.removeDelims(err)
         return (int(err[0]), err[1])
 
-    def getSensorType(self, channel = Channel.A):
-        """Query the power sensor type
-
-        :param Channel channel to query, defaults to Channel.A
-        :return sensor type string or False if no sensor connected
-        """
-        if channel == Channel.B and not self.twoChannel:
-            return False
-        ret = self.inst.query(f"SERV:SENS{channel.value + 1}:TYPE?")
-        print("SENSOR: ", channel, ret)
-        return ret        
-
-
     def zero(self, channel = Channel.A):
         """Zero the power meter
 

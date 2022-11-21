@@ -46,7 +46,7 @@ class SetSIS(BaseModel):
     Vj: Optional[float] = None
     Imag: Optional[float] = None
     def getText(self):
-        return f"pol:{self.pol} sis:{self.sis} Vj{self.Vj} Imag:{self.Imag}"
+        return f"pol:{self.pol} sis:{self.sis} Vj:{self.Vj} Imag:{self.Imag}"
 
 class SetLNAEnable(BaseModel):
     '''
