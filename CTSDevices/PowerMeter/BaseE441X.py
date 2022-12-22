@@ -1,23 +1,8 @@
+from ..Common.RemoveDelims import removeDelims
+from .schemas import Channel, Trigger, Unit
 from enum import Enum
 import re
 import pyvisa
-
-class Channel(Enum):
-    A = 0
-    B = 1
-
-class Unit(Enum):
-    DBM = "DBM"
-    W = "W"
-
-class Trigger(Enum):
-    IMMEDIATE = "IMM"
-    BUS = "BUS"
-    HOLD = "HOLD"
-    EXTERNAL = "EXT"
-    INTERNAL_A = "INT1"
-    INTERNAL_B = "INT2"
-
 
 class BaseE441X():
     """Base class for Agilent/Keysight Power Meters E441xA, E441xB, N191xA
@@ -25,7 +10,6 @@ class BaseE441X():
     """
 
     DEFAULT_TIMEOUT = 15000
-    DELIMS = r'[,"\s\r\n]'
 
     def __init__(self, resource="GPIB0::13::INSTR", idQuery=True, reset=True):
         """Constructor
@@ -89,18 +73,14 @@ class BaseE441X():
         else:
             return False
 
-    def removeDelims(self, data: str, delimsRe: str = DELIMS):
-        d = re.split(delimsRe, data)
-        return [x for x in d if x]
-
     def errorQuery(self):
         """Send an error query and return the results
 
         :return (int, str): Error code and string
         """
         err = self.inst.query(":SYST:ERR?")
-        err = self.removeDelims(err)
-        return (int(err[0]), err[1])
+        err = removeDelims(err)
+        return (int(err[0]), " ".join(err[1:]))
 
     def zero(self, channel = Channel.A):
         """Zero the power meter

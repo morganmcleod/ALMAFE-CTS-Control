@@ -1,19 +1,56 @@
-from fastapi import APIRouter
-from typing import Optional
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import List, Tuple
 from schemas.BeamScanner import *
 from schemas.common import SingleBool, SingleFloat
 import hardware.BeamScanner as BeamScanner
-from Response import MessageResponse
+from Response import KeyResponse, MessageResponse
+import asyncio
+import json
+from .ConnectionManager import ConnectionManager
+from .Database import CTSDB
+from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.TestTypes import TestTypeIds
 
 router = APIRouter(prefix="/beamscan")
+manager = ConnectionManager()
 
-@router.get("/mc/query", tags=["BeamScan"], response_model = MessageResponse)
-async def get_Query(query: ControllerQuery):
+@router.websocket("/position_ws")
+async def websocket_scandata_request(websocket: WebSocket):
+    await manager.connect(websocket)
+    lastPosition = None            
+    try:
+        while True:        
+            position = BeamScanner.motorController.getPosition()
+            if position != lastPosition:
+                lastPosition = position
+                await manager.send(position.dict(), websocket)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print("WebSocketDisconnect: /position_ws")
+
+@router.websocket("/rasters_ws")
+async def websocket_scandata_push(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            rasters = BeamScanner.beamScanner.getRasters()
+            if rasters:
+                await manager.send(rasters.dict(), websocket)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print("WebSocketDisconnect: /rasters_ws")
+    except Exception as e:
+        print(e)
+
+@router.get("/mc/query", response_model = MessageResponse)
+async def get_Query(query: str):
     """
     Low-level query to the motor controller.
     """
     try:
-        response = BeamScanner.motorController.query(bytes(query.request), query.replySize)
+        response = BeamScanner.motorController.query(bytes(query, 'ascii'), 3)
         if response:
             return MessageResponse(message = str(response), success = True)
         else:
@@ -21,53 +58,53 @@ async def get_Query(query: ControllerQuery):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.get("/mc/isconnected", tags=["BeamScan"], response_model = SingleBool)
+@router.get("/mc/isconnected", response_model = SingleBool)
 async def get_IsConnected():
     return SingleBool(value = BeamScanner.motorController.isConnected())
 
-@router.get("/mc/xy_speed", tags=["BeamScan"], response_model = SingleFloat)
+@router.get("/mc/xy_speed", response_model = SingleFloat)
 async def get_XYSpeed():
     return SingleFloat(value = BeamScanner.motorController.getXYSpeed())
 
-@router.put("/mc/xy_speed", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/xy_speed", response_model = MessageResponse)
 async def put_XYSpeed(request: SingleFloat):
     BeamScanner.motorController.setXYSpeed(request.value)
     return MessageResponse(message = "XY speed = " + request.getText() + " mm/sec", success = True)
     
-@router.get("/mc/pol_speed", tags=["BeamScan"], response_model = SingleFloat)
+@router.get("/mc/pol_speed", response_model = SingleFloat)
 async def get_PolSpeed():
     return SingleFloat(value = BeamScanner.motorController.getPolSpeed())
 
-@router.put("/mc/pol_speed", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/pol_speed", response_model = MessageResponse)
 async def put_PolSpeed(request: SingleFloat):
     BeamScanner.motorController.setPolSpeed(request.value)
     return MessageResponse(message = "Pol speed = " + request.getText() + " deg/sec", success = True)
 
-@router.put("/mc/xy_accel", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/xy_accel", response_model = MessageResponse)
 async def put_XYAccel(request: SingleFloat):
     BeamScanner.motorController.setXYAccel(request.value)
     return MessageResponse(message = "XY accel = " + request.getText() + " mm/sec^2", success = True)
 
-@router.put("/mc/pol_accel", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/pol_accel", response_model = MessageResponse)
 async def put_PolAccel(request: SingleFloat):
     BeamScanner.motorController.setPolAccel(request.value)
     return MessageResponse(message = "Pol accel = " + request.getText() + " deg/sec^2", success = True)
 
-@router.put("/mc/xy_decel", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/xy_decel", response_model = MessageResponse)
 async def put_XYDecel(request: SingleFloat):
     BeamScanner.motorController.setXYDecel(request.value)
     return MessageResponse(message = "XY decel = " + request.getText() + " mm/sec^2", success = True)
 
-@router.put("/mc/pol_decel", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/pol_decel", response_model = MessageResponse)
 async def put_PolDecel(request: SingleFloat):
     BeamScanner.motorController.setPolDecel(request.value)
     return MessageResponse(message = "Pol decel = " + request.getText() + " deg/sec^2", success = True)
 
-@router.get("/mc/pol_torque", tags=["BeamScan"], response_model = SingleFloat)
+@router.get("/mc/pol_torque", response_model = SingleFloat)
 async def get_PolTorque():
     return SingleFloat(value = BeamScanner.motorController.getPolTorque())
 
-@router.put("/mc/home/{axis}", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/home/{axis}", response_model = MessageResponse)
 async def put_HomeAxis(axis:str):
     try:
         BeamScanner.motorController.homeAxis(axis)
@@ -75,7 +112,7 @@ async def put_HomeAxis(axis:str):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.put("/mc/set_zero/{axis}", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/set_zero/{axis}", response_model = MessageResponse)
 async def put_SetZeroAxis(axis:str):
     try:
         BeamScanner.motorController.setZeroAxis(axis)
@@ -83,20 +120,15 @@ async def put_SetZeroAxis(axis:str):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.put("/mc/trigger_interval", tags=["BeamScan"], response_model = MessageResponse)
-async def put_TriggerInterval(request: SingleFloat):
-    BeamScanner.motorController.setTriggerInterval(request.value)
-    return MessageResponse(message = f"Trigger interval = {request.value} mm", success = True)
-
-@router.get("/mc/status", tags=["BeamScan"], response_model = MotorStatus)
+@router.get("/mc/status", response_model = MotorStatus)
 async def get_MotorStatus():
     return BeamScanner.motorController.getMotorStatus()
 
-@router.get("/mc/position", tags=["BeamScan"], response_model = Position)
+@router.get("/mc/position", response_model = Position)
 async def get_Position():
     return BeamScanner.motorController.getPosition()
 
-@router.put("/mc/next_pos", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/next_pos", response_model = MessageResponse)
 async def put_NextPos(pos:Position):
     try:
         BeamScanner.motorController.setNextPos(pos)
@@ -104,59 +136,65 @@ async def put_NextPos(pos:Position):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.get("/mc/estimate_move_time", tags=["BeamScan"], response_model = SingleFloat)
+@router.get("/mc/estimate_move_time", response_model = SingleFloat)
 async def get_estimateMoveTime():
     fromPos = BeamScanner.motorController.getPosition()
     toPos = BeamScanner.motorController.nextPos
     return SingleFloat(value = BeamScanner.motorController.estimateMoveTime(fromPos, toPos))
 
-@router.put("/mc/start_move", tags=["BeamScan"], response_model = MessageResponse)
-async def put_startMove(trigger: bool = False):
+@router.put("/mc/start_move", response_model = MessageResponse)
+async def put_startMove(withTrigger:bool = False, timeout:float = None):
     try:
-        BeamScanner.motorController.startMove(trigger)
-        return MessageResponse(message = "Start move", success = True)
+        BeamScanner.motorController.startMove(withTrigger, timeout)
+        return MessageResponse(message = "Motor controller start move", success = True)
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.put("/mc/stop_move", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/mc/stop_move", response_model = MessageResponse)
 async def put_StopMove():
     BeamScanner.motorController.stopMove()
-    return MessageResponse(message = "Stop move", success = True)
+    return MessageResponse(message = "Motor controller stop move", success = True)
 
-@router.get("/mc/move_status", tags=["BeamScan"], response_model = MoveStatus)
+@router.get("/mc/move_status", response_model = MoveStatus)
 async def get_MoveStatus():
     return BeamScanner.motorController.getMoveStatus()
 
-@router.put("/start", tags=["BeamScan"], response_model = MessageResponse)
-async def put_Start():
-    BeamScanner.beamScanner.start()
-    return MessageResponse(message = "Scanner started", success = True)
+@router.put("/start", response_model = KeyResponse)
+async def put_Start(cartTest:CartTest):
+    cartTestsDb = CartTests(driver = CTSDB())
+    cartTest.fkTestType = TestTypeIds.BEAM_PATTERN
+    keyCartTest = cartTestsDb.create(cartTest)
+    if (keyCartTest):
+        BeamScanner.beamScanner.start()
+        return KeyResponse(key = keyCartTest, message = "Beam scans started", success = True)
+    else:
+        return KeyResponse(key = 0, message = "Failed creating CartTest record", success = False)
 
-@router.put("/stop", tags=["BeamScan"], response_model = MessageResponse)
+@router.put("/stop", response_model = MessageResponse)
 async def put_Stop():
     BeamScanner.beamScanner.stop()
-    return MessageResponse(message = "Scanner stopped", success = True)
+    return MessageResponse(message = "Beam scans stopped", success = True)
 
-@router.get("/meas_spec", tags=["BeamScan"], response_model = MeasurementSpec)
+@router.get("/meas_spec", response_model = MeasurementSpec)
 async def get_MeasurementSpec():
     return BeamScanner.beamScanner.measurementSpec
 
-@router.post("/meas_spec", tags=["BeamScan"], response_model = MessageResponse)
+@router.post("/meas_spec", response_model = MessageResponse)
 async def put_MeasurementSpec(measurementSpec:MeasurementSpec):
     BeamScanner.beamScanner.measurementSpec = measurementSpec
     return MessageResponse(message = "Updated MeasurementSpec", success = True)
 
-@router.get("/scan_list", tags=["BeamScan"], response_model = ScanList)
+@router.get("/scan_list", response_model = ScanList)
 async def get_ScanList():
     return BeamScanner.beamScanner.scanList
 
-@router.post("/scan_list/enable/all", tags=["BeamScan"], response_model = MessageResponse)
+@router.post("/scan_list/enable/all", response_model = MessageResponse)
 async def put_ScanListItemEnableAll(enable: bool):
     for item in BeamScanner.beamScanner.scanList.items:
         item.enable = enable
     return MessageResponse(message = f"Updated ScanList all={enable}", success = True)
 
-@router.post("/scan_list/enable/{index}", tags=["BeamScan"], response_model = MessageResponse)
+@router.post("/scan_list/enable/{index}", response_model = MessageResponse)
 async def put_ScanListItemEnable(index: int, enable: bool):
     try:
         BeamScanner.beamScanner.scanList.items[index].enable = enable
@@ -164,7 +202,7 @@ async def put_ScanListItemEnable(index: int, enable: bool):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.post("/scan_list/subscans/all", tags=["BeamScan"], response_model = MessageResponse)
+@router.post("/scan_list/subscans/all", response_model = MessageResponse)
 async def put_ScanListItemEnableAll(what: dict):
     try:
         subScan = list(what.keys())[0]
@@ -179,7 +217,7 @@ async def put_ScanListItemEnableAll(what: dict):
         return MessageResponse(message = str(e), success = False)
 
 
-@router.post("/scan_list/subscans/{index}", tags=["BeamScan"], response_model = MessageResponse)
+@router.post("/scan_list/subscans/{index}", response_model = MessageResponse)
 async def put_ScanListSubScansOption(index: int, subScansOption: SubScansOption):
     try:
         BeamScanner.beamScanner.scanList.items[index].subScansOption = subScansOption
@@ -187,6 +225,42 @@ async def put_ScanListSubScansOption(index: int, subScansOption: SubScansOption)
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.get("/scan_status", tags=["BeamScan"], response_model = ScanStatus)
+@router.get("/scan_status", response_model = ScanStatus)
 async def get_ScanStatus():
     return BeamScanner.beamScanner.scanStatus
+
+@router.get("/pna/idquery", response_model = MessageResponse)
+async def get_PNAIdQuery():
+    ret = BeamScanner.pna.idQuery()
+    return MessageResponse(message = ret if ret else "None", success = True if ret else False)
+
+@router.post("/pna/reset", response_model = MessageResponse)
+async def post_PNAReset():
+    BeamScanner.pna.reset()
+    return MessageResponse(message = "PNA reset", success = True)
+
+@router.get("/pna/measconfig", response_model = MeasConfig)
+async def get_PNAMeasConfig():
+    return BeamScanner.pna.measConfig
+
+@router.post("/pna/measconfig", response_model = MessageResponse)
+async def post_PNAMeasConfig(config:MeasConfig):
+    BeamScanner.pna.setMeasConfig(config)
+    return MessageResponse(message = "PNA set MeasConfig: " + config.getText(), success = True)
+
+@router.get("/pna/powerconfig", response_model = PowerConfig)
+async def get_PNAPowerConfig():
+    return BeamScanner.pna.powerConfig
+
+@router.post("/pna/powerconfig", response_model = MessageResponse)
+async def post_PNAMeasConfig(config:PowerConfig):
+    BeamScanner.pna.setPowerConfig(config)
+    return MessageResponse(message = "PNA set PowerConfig" + config.getText(), success = True)
+
+@router.get("/pna/trace", response_model = List[float])
+async def get_PNATrace():
+    return BeamScanner.pna.getTrace()
+
+@router.get("/pna/ampphase", response_model = Tuple[float])
+async def get_PNAAmpPhase():
+    return BeamScanner.pna.getAmpPhase()

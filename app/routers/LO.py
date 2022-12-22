@@ -12,6 +12,10 @@ def getTarget(request: Request):
     else:
         return FEMC.loDevice
 
+@router.get("/connected", response_model = SingleBool)
+async def get_isConnected(request: Request):
+    return SingleBool(value = getTarget(request).isConnected())
+
 @router.put("/yto/limits", response_model = MessageResponse)
 async def set_YTO_Limits(request: Request, payload: ConfigYTO):
     getTarget(request).setYTOLimits(payload.lowGHz, payload.highGHz)

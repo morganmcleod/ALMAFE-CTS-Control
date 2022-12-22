@@ -8,12 +8,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # add the top-level project path to PYTHONPATH:
-projectRoot = Path.cwd()
-sys.path.append("L:\\Python\\ALMAFE-Lib")
-sys.path.append("L:\\Python\\ALMAFE-AMBDeviceLibrary")
+# projectRoot = Path.cwd()
+# sys.path.append("L:\\Python\\ALMAFE-Lib")
+# sys.path.append("L:\\Python\\ALMAFE-AMBDeviceLibrary")
 
 # and change to that directory:
-os.chdir(projectRoot)
+# os.chdir(projectRoot)
 
 # Imports for this app:
 from Response import MessageResponse, VersionResponse, prepareResponse
@@ -22,6 +22,7 @@ from routers.CCA import router as ccaRouter
 from routers.LO import router as loRouter
 from routers.LO import router as rfRouter
 from routers.BeamScanner import router as beamScanRouter
+from routers.Database import router as databaseRouter
 
 # globals:
 
@@ -45,14 +46,19 @@ tags_metadata = [
     {
         "name": "RF source",
         "description": "aka BEASTs"
+    },
+    {
+        "name": "Database",
+        "description": "the band 6 cartridge database"
     }
 ]
 
 app = FastAPI(openapi_tags=tags_metadata)
-app.include_router(ccaRouter)
+app.include_router(ccaRouter, tags=["CCA"])
 app.include_router(loRouter, prefix = "/lo", tags=["LO"])
 app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
-app.include_router(beamScanRouter)
+app.include_router(beamScanRouter, tags=["BeamScan"])
+app.include_router(databaseRouter, tags=["Database"])
 
 API_VERSION = "0.0.1"
 

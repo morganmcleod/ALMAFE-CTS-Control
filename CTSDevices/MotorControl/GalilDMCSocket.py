@@ -4,13 +4,16 @@ This code was ported from the existing LabVIEW code.
 It uses a TCP/IP socket to communicate directly with the hardware.
 '''
 
-from .MCInterface import MCInterface, MotorStatus, MoveStatus, Position
+from .schemas import MotorStatus, MoveStatus, Position
+from .MCInterface import MCInterface, MCError
+from ..Common.RemoveDelims import removeDelims
 import socket
 import re
 from time import time
 from math import sqrt
 
 class MotorController(MCInterface):
+    SOCKET_TIMEOUT = 5
     STEPS_PER_DEGREE = 225
     STEPS_PER_MM = 5000
     X_MIN = 0
@@ -30,32 +33,29 @@ class MotorController(MCInterface):
     POL_DECEL = 10
 
     def __init__(self, host = DEFAULT_HOST, port = DEFAULT_PORT):
-        self.reset()
         self.host = host
         self.port = port
+        self.reset()
 
     def reset(self):
         self.start = False
         self.stop = False
         self.nextPos = Position(x=0, y=0, z=0)
-        self.xySpeed = self.getSpeedXY()
-        self.polSpeed = self.getSpeedZ()
+        self.xySpeed = self.getXYSpeed()
+        self.polSpeed = self.getPolSpeed()
         
     def query(self, request: bytes, replySize: int) -> bytes:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(self.SOCKET_TIMEOUT)
             s.connect((self.host, self.port))
             sent = s.send(request)
             if not sent:
-                raise RuntimeError("socket connection broken")
+                raise MCError("socket connection broken")
             else:
                 data = s.recv(replySize)
                 if data == b'':
-                    raise RuntimeError("socket connection broken")
+                    raise MCError("socket connection broken")
                 return data
-
-    def removeDelims(self, bData: bytes, bDelimsRe: bytes = DELIMS):
-        d = re.split(bDelimsRe, bData)
-        return [x for x in d if x]
 
     def setup(self):
         # send command to execute the Clear Faults, Motor Power ON, and
@@ -68,8 +68,11 @@ class MotorController(MCInterface):
         # assert(hs == b':')
 
     def isConnected(self) -> bool:
-        hs=self.query(b';', 1)
-        return hs == b':'
+        try:
+            hs=self.query(b';', 1)
+            return hs == b':'
+        except:
+            return False
 
     def setXYSpeed(self, speed:float = XY_SPEED):
         '''
@@ -84,7 +87,7 @@ class MotorController(MCInterface):
         # Send the variable format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read speed command.
         data = self.query(b'\nLZ 0; VF 10,0; VS?;', 13)
-        data = self.removeDelims(data)
+        data = removeDelims(data, self.DELIMS)
         speed = float(int(data[0]) / self.STEPS_PER_MM)
         assert(2 < speed < 3000000)
         return speed
@@ -120,7 +123,7 @@ class MotorController(MCInterface):
         # Send the variable format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read speed command.
         data = self.query(b'\nLZ 0; VF 10,0; SP ?,?,?;', 31)
-        data = self.removeDelims(data)
+        data = removeDelims(data, self.DELIMS)
         speed = float(int(data[2]) / self.STEPS_PER_DEGREE)
         assert(1 < speed < 12000000)
         return speed
@@ -148,12 +151,12 @@ class MotorController(MCInterface):
         Voltage in range -9.9982 to +9.9982
         '''
         data = self.query(b'TTZ;', 9)
-        data = self.removeDelims(data)
+        data = removeDelims(data, self.DELIMS)
         return float(data(0))
 
     def homeAxis(self, axis:str = 'xy', timeout:float = None):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot home axis while scanner is in motion.")
+            raise MCError("Cannot home axis while scanner is in motion.")
         
         axis = axis.lower()
         if axis == 'x':
@@ -165,7 +168,7 @@ class MotorController(MCInterface):
             hs = self.query(b'HMB; BGB;', 2)
             assert(hs == b'::')
         elif axis == 'pol':
-            self.nextPos.z = 0
+            self.nextPos.pol = 0
             hs = self.query(b'JGC=300; FIC; BGC;', 3)
             assert(hs == b':::')
         elif axis == 'xy':
@@ -183,7 +186,7 @@ class MotorController(MCInterface):
 
     def setZeroAxis(self, axis:str = 'xypol'):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot zero axis while scanner is in motion.")
+            raise MCError("Cannot zero axis while scanner is in motion.")
 
         axis = axis.lower()
         if axis == 'x':
@@ -201,25 +204,16 @@ class MotorController(MCInterface):
         hs = self.query(cmd, 1)
         assert(hs == b':')
 
-    def setTriggerInterval(self, interval:float):
-        '''
-        interval: mm
-        '''
-        # Set the DISTANCE variable used in the #TRIGMV routine
-        interval = int(interval * self.STEPS_PER_MM)
-        hs = self.query(str.encode(f"DISTANCE={interval};"), 1)
-        assert(hs == b':')
-
     def getMotorStatus(self) -> MotorStatus:
-        data = self.query(b'TS;', 18)
-        data = self.removeDelims(data)
+        data = self.query(b'TS;', 19)
+        data = removeDelims(data, self.DELIMS)
         return MotorStatus(
-            xPower = bool(1 - (int(data[0]) >> 4) & 1), # ~ bit 5
-            yPower = bool(1 - (int(data[1]) >> 4) & 1),
-            polPower = bool(1 - (int(data[2]) >> 4) & 1),
-            xMotion = bool((int(data[0]) >> 6) & 1),      # bit 7
-            yMotion = bool((int(data[1]) >> 6) & 1),
-            polMotion = bool((int(data[2]) >> 6) & 1)
+            xPower = bool(1 - (int(data[0]) >> 5) & 1),   # !bit 5
+            yPower = bool(1 - (int(data[1]) >> 5) & 1),
+            polPower = bool(1 - (int(data[2]) >> 5) & 1),
+            xMotion = bool((int(data[0]) >> 7) & 1),      # bit 7
+            yMotion = bool((int(data[1]) >> 7) & 1),
+            polMotion = bool((int(data[2]) >> 7) & 1)
         )
     
     def getPosition(self) -> Position:
@@ -227,12 +221,12 @@ class MotorController(MCInterface):
         # decimal point and zero after.  Send the read position command.
         # RP is necessary because TP doesn't work for stepper motors.
         data = self.query(b'\nLZ 0; PF 10,0; RPX; RPY; TPZ;', 51)
-        data = self.removeDelims(data)
+        data = removeDelims(data, self.DELIMS)
         # negate because motors are opposite what we want to call (0,0)
         return Position(
-            x = -(int(data[0]) / self.STEPS_PER_MM),
-            y = -(int(data[1]) / self.STEPS_PER_MM),
-            pol = int(data[2]) / self.STEPS_PER_DEGREE
+            x = round(-(int(data[0]) / self.STEPS_PER_MM), 1),
+            y = round(-(int(data[1]) / self.STEPS_PER_MM), 1),
+            pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 1)
         )
 
     def positionInBounds(self, pos: Position) -> bool:
@@ -251,14 +245,23 @@ class MotorController(MCInterface):
         return max(xyTime, polTime) * 1.25
 
     def setNextPos(self, nextPos: Position):
-        if self.positionInBounds(nextPos):
-            self.nextPos = nextPos
-        else:
+        if not self.positionInBounds(nextPos):
             raise ValueError(f"SetNextPos out of bounds: {nextPos.getText()}")
+        if self.getMotorStatus().inMotion():
+            raise MCError("Cannot SetNextPos while scanner is already in motion.")
+        else:
+            self.nextPos = nextPos
+
+    def setTriggerInterval(self, interval_mm:float):
+        '''
+        interval_mm: mm
+        '''
+        hs = self.query(f"DISTANCE={int(interval_mm * self.STEPS_PER_MM)};")
+        assert(hs == b':')
 
     def startMove(self, withTrigger:bool, timeout:float = None):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot start move while scanner is already in motion.")
+            raise MCError("Cannot start move while scanner is already in motion.")
         
         self.start = True
         self.stop = False

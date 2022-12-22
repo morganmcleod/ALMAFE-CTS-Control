@@ -1,6 +1,6 @@
 import unittest
 from CTSDevices.PowerMeter.BaseE441X import Channel, Trigger, Unit
-from CTSDevices.PowerMeter.Keysight import PowerMeter, StdErrConfig
+from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, StdErrConfig
 
 class test_PowerMeter(unittest.TestCase):
     
@@ -15,11 +15,12 @@ class test_PowerMeter(unittest.TestCase):
 
     def __implErrorQuery(self):
         code, msg = self.pm.errorQuery()
+        if not code:
+            return False
         while code:
             print(code, msg)
             code, msg = self.pm.errorQuery()
-        else:
-            return True
+        return True
 
     def test_setDefaults(self):
         self.assertTrue(self.pm.setDefaults())
@@ -31,7 +32,7 @@ class test_PowerMeter(unittest.TestCase):
         self.assertTrue(self.pm.idQuery(True))
         
     def test_errorQuery(self):
-        self.assertTrue(self.__implErrorQuery())
+        self.assertFalse(self.__implErrorQuery())
 
     def test_setUnits(self):
         self.assertTrue(self.pm.setUnits(Unit.W, Channel.A))

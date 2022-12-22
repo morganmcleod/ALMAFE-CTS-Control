@@ -1,6 +1,7 @@
 '''
 '''
-from .MCInterface import MCInterface, MotorStatus, MoveStatus, Position
+from .schemas import MotorStatus, MoveStatus, Position
+from .MCInterface import MCInterface, MCError
 from random import random
 from time import time
 from math import sqrt
@@ -84,7 +85,7 @@ class MCSimulator(MCInterface):
     
     def homeAxis(self, axis:str, timeout:float = None):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot home axis while scanner is in motion.")
+            raise MCError("Cannot home axis while scanner is in motion.")
         
         axis = axis.lower()
         if axis == 'x':
@@ -105,7 +106,7 @@ class MCSimulator(MCInterface):
     
     def setZeroAxis(self, axis:str):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot zero axis while scanner is in motion.")
+            raise MCError("Cannot zero axis while scanner is in motion.")
 
         pos = self.getPosition()
         axis = axis.lower()
@@ -122,12 +123,6 @@ class MCSimulator(MCInterface):
             raise ValueError(f"Unsupported option for axis: '{axis}'")
 
         self.pos = pos
-
-    def setTriggerInterval(self, interval:float):
-        '''
-        interval: mm
-        '''
-        pass
     
     def getMotorStatus(self) -> MotorStatus:
         pos = self.getPosition()
@@ -171,17 +166,25 @@ class MCSimulator(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.25
+        return max(xyTime, polTime, 0.2) * 1.25
     
     def setNextPos(self, nextPos: Position):
-        if self.positionInBounds(nextPos):
-            self.nextPos = nextPos
-        else:
+        if not self.positionInBounds(nextPos):
             raise ValueError(f"SetNextPos out of bounds: {nextPos.getText()}")
+        if self.getMotorStatus().inMotion():
+            raise MCError("Cannot SetNextPos while scanner is already in motion.")
+        else:
+            self.nextPos = nextPos
     
+    def setTriggerInterval(self, interval_mm:float):
+        '''
+        interval: mm
+        '''
+        self.triggerInterval = interval_mm
+
     def startMove(self, withTrigger:bool, timeout:float = None):
         if self.getMotorStatus().inMotion():
-            raise RuntimeError("Cannot start move while scanner is already in motion.")
+            raise MCError("Cannot start move while scanner is already in motion.")
         
         self.timeout = timeout
         self.startTime = time()
@@ -192,8 +195,11 @@ class MCSimulator(MCInterface):
         self.stop = False
     
     def stopMove(self):
+        # if mid-move save where we were stopped:
+        stoppedAt = self.getPosition() if self.start else self.pos
         self.start = False
         self.stop = True
+        self.pos = stoppedAt
     
     def getMoveStatus(self) -> MoveStatus:
         timedOut = ((time() - self.startTime) > self.timeout) if self.timeout else False

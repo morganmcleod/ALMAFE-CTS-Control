@@ -4,3 +4,4 @@ fastapi>=0.82.0
 uvicorn>=0.18.3
 ALMAFE-Lib>=0.0.12
 pyvisa>=1.12.0
+websockets>=10.4

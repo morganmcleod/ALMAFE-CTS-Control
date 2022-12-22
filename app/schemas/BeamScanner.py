@@ -1,6 +1,8 @@
 from pydantic import BaseModel
-from CTSDevices.MotorControl.MCInterface import MotorStatus, MoveStatus, Position
-from Procedures.BeamScanner.BeamScanner import ScanStatus, SubScansOption, ScanList, ScanListItem, MeasurementSpec
+from abc import ABC, abstractmethod
+from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
+from Measure.BeamScanner.schemas import ScanStatus, SubScansOption, ScanList, ScanListItem, MeasurementSpec
+from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
 
 class ControllerQuery(BaseModel):
     """
