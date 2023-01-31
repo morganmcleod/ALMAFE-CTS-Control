@@ -8,57 +8,73 @@ router = APIRouter()
 
 def getTarget(request: Request):
     if "/rfsource" in request.url.path:
-        return FEMC.rfSrcDevice
+        return (FEMC.rfSrcDevice, "RF Source")
+    elif "/lo" in request.url.path:
+        return (FEMC.loDevice, "LO")
     else:
-        return FEMC.loDevice
+        return (None, "")
 
 @router.get("/connected", response_model = SingleBool)
 async def get_isConnected(request: Request):
-    return SingleBool(value = getTarget(request).isConnected())
+    target, _ = getTarget(request)
+    assert(target)
+    return SingleBool(value = target.isConnected())
 
 @router.put("/yto/limits", response_model = MessageResponse)
 async def set_YTO_Limits(request: Request, payload: ConfigYTO):
-    getTarget(request).setYTOLimits(payload.lowGHz, payload.highGHz)
-    return MessageResponse(message = "YTO: " + payload.getText(), success = True)
+    target, name = getTarget(request)
+    assert(target)
+    target.setYTOLimits(payload.lowGHz, payload.highGHz)
+    return MessageResponse(message = f"{name} YTO: " + payload.getText(), success = True)
 
 @router.put("/yto/coursetune", response_model = MessageResponse)
 async def set_YTO_CourseTune(request: Request, payload: SetYTO):
-    result = getTarget(request).setYTOCourseTune(payload.courseTune)
+    target, name = getTarget(request)
+    assert(target)
+    result = target.setYTOCourseTune(payload.courseTune)
     if result:
-        return MessageResponse(message = "YTO courseTune " + payload.getText(), success = True)
+        return MessageResponse(message = f"{name} YTO courseTune " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = "YTO courseTune FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} YTO courseTune FAILED: " + payload.getText(), success = False)
 
 @router.put("/frequency", response_model = MessageResponse)
-async def set_LO_Frequency(request: Request, payload: SetLOFrequency):
-    (wcaFreq, ytoFreq, ytoCourse) = getTarget(request).setLOFrequency(payload.freqGHz)
+async def set_Frequency(request: Request, payload: SetLOFrequency):
+    target, name = getTarget(request)
+    assert(target)
+    (wcaFreq, ytoFreq, ytoCourse) = target.setLOFrequency(payload.freqGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
-        return MessageResponse(message = "LO frequency " + payload.getText() + wcaText, success = True)
+        return MessageResponse(message = f"{name} frequency " + payload.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = "LO frequency FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} frequency FAILED: " + payload.getText(), success = False)
 
 @router.put("/pll/lock", response_model = MessageResponse)
 async def lock_PLL(request: Request, payload: LockPLL):
-    (wcaFreq, ytoFreq, ytoCourse) = getTarget(request).lockPLL(payload.freqLOGHz, payload.freqFloogGHz)
+    target, name = getTarget(request)
+    assert(target)
+    (wcaFreq, ytoFreq, ytoCourse) = target.lockPLL(payload.freqLOGHz, payload.freqFloogGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
-        return MessageResponse(message = "PLL LOCKED " + payload.getText() + wcaText, success = True)
+        return MessageResponse(message = f"{name} PLL LOCKED " + payload.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = "PLL lock FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} PLL lock FAILED " + payload.getText(), success = False)
 
 @router.put("/pll/adjust", response_model = MessageResponse)
 async def adjust_PLL(request: Request, payload: AdjustPLL):
-    CV = getTarget(request).adjustPLL(payload.targetCV)
+    target, name = getTarget(request)
+    assert(target)
+    CV = target.adjustPLL(payload.targetCV)
     if CV is not None:
-        return MessageResponse(message = f"PLL adjusted CV:{CV} [target:" + payload.getText + "]", success = True)
+        return MessageResponse(message = f"{name} PLL adjusted CV:{CV} target: {payload.getText()}", success = True)
     else:
-        return MessageResponse(message = f"PLL adjust FAILED: target: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} PLL adjust FAILED: target: {payload.getText()}", success = False)
 
 @router.put("/pll/clearunlock", response_model = MessageResponse)
 async def clear_Unlock_Detect(request: Request):
-    getTarget(request).clearUnlockDetect()
-    return MessageResponse(message = "PLL cleared unlock detect.", success = True)
+    target, name = getTarget(request)
+    assert(target)
+    target.clearUnlockDetect()
+    return MessageResponse(message = f"{name} PLL cleared unlock detect.", success = True)
 
 @router.put("/pll/config", response_model = MessageResponse)
 async def set_PLL_Config(request: Request, payload: PLLConfig):
@@ -73,69 +89,93 @@ async def set_PLL_Config(request: Request, payload: PLLConfig):
      1: Lock ABOVE the reference input. 
      None/null: no change 
     '''
+    target, name = getTarget(request)
+    assert(target)
     if payload.loopBW is not None:
-        getTarget(request).selectLoopBW(payload.loopBW)
+        target.selectLoopBW(payload.loopBW)
     if payload.lockSB is not None:
-        getTarget(request).selectLockSideband(payload.lockSB)
-    return MessageResponse(message = f"PLL config " + payload.getText(), success = True)
+        target.selectLockSideband(payload.lockSB)
+    return MessageResponse(message = f"{name} PLL config " + payload.getText(), success = True)
     
 @router.put("/pll/nullintegrator", response_model = MessageResponse)
 async def setNullLoopIntegrator(request: Request, payload:SingleBool):
-    getTarget(request).setNullLoopIntegrator(payload.value)
-    return MessageResponse(message = "PLL null integrator " + payload.getText(), success = True)
+    target, name = getTarget(request)
+    assert(target)
+    target.setNullLoopIntegrator(payload.value)
+    return MessageResponse(message = f"{name} PLL null integrator " + payload.getText(), success = True)
 
 @router.put("/photomixer/enable", response_model = MessageResponse)
 async def set_Photmixer_Enable(request: Request, payload:SingleBool):
-    getTarget(request).setPhotmixerEnable(payload.value)
-    return MessageResponse(message = "Photomixer " + payload.getText(), success = True)
+    target, name = getTarget(request)
+    assert(target)
+    target.setPhotmixerEnable(payload.value)
+    return MessageResponse(message = f"{name} Photomixer " + payload.getText(), success = True)
 
 @router.put("/pa/bias", response_model = MessageResponse)
 async def set_PA_Bias(request: Request, payload: SetPA):
-    result = getTarget(request).setPABias(payload.pol, payload.VDControl, payload.VG)
+    target, name = getTarget(request)
+    assert(target)
+    result = target.setPABias(payload.pol, payload.VDControl, payload.VG)
     if result:
-        return MessageResponse(message = "PA bias " + payload.getText(), success = True)
+        return MessageResponse(message = f"{name} PA bias " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = "PA bias FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} PA bias FAILED " + payload.getText(), success = False)
     
 @router.put("/pa/teledyne", response_model = MessageResponse)
 def set_Teledyne_PA_Config(request: Request, payload: TeledynePA):
-    result = getTarget(request).setTeledynePAConfig(payload.hasTeledyne, payload.collectorP0, payload.collectorP1)
+    target, name = getTarget(request)
+    assert(target)
+    result = target.setTeledynePAConfig(payload.hasTeledyne, payload.collectorP0, payload.collectorP1)
     if result:
-        return MessageResponse(message = "Teledyne PA config " + payload.getText(), success = True)
+        return MessageResponse(message = f"{name} Teledyne PA config " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = "Teledyne PA config FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} Teledyne PA config FAILED " + payload.getText(), success = False)
 
 @router.get("/yto", response_model = YTO)
 async def get_YTO(request: Request):
-    data = getTarget(request).getYTO()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getYTO()
     return YTO.parse_obj(data)
     
 @router.get("/pll", response_model = PLL)
 async def get_PLL(request: Request):
-    data = getTarget(request).getPLL()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getPLL()
     return PLL.parse_obj(data)
 
 @router.get("/pll/config", response_model = PLLConfig)
 async def get_PLL_Config(request: Request):
-    data = getTarget(request).getPLLConfig()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getPLLConfig()
     return PLLConfig.parse_obj(data)
 
 @router.get("/photomixer", response_model = Photomixer)
 async def get_Photomixer(request: Request):
-    data = getTarget(request).getPhotomixer()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getPhotomixer()
     return Photomixer.parse_obj(data)
 
 @router.get("/amc", response_model = AMC)
 async def get_AMC(request: Request):
-    data = getTarget(request).getAMC()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getAMC()
     return AMC.parse_obj(data)
 
 @router.get("/pa", response_model = PA)
 async def get_PA(request: Request):
-    data = getTarget(request).getPA()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getPA()
     return PA.parse_obj(data)
 
 @router.get("/teledynepa", response_model = TeledynePA)
 async def get_Teledyne_PA(request: Request):
-    data = getTarget(request).getTeledynePA()
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getTeledynePA()
     return TeledynePA.parse_obj(data)

@@ -40,9 +40,9 @@ class PNAInterface(ABC):
         pass
 
     @abstractmethod
-    def getTrace(self, *args, **kwargs) -> List[float]:
-        """Get trace data as a list of float
-        :return List[float]
+    def getTrace(self, *args, **kwargs) -> Tuple[List[float], List[float]]:
+        """Get trace data as a two lists of float:  amp, phase
+        :return Tuple[List[float], List[float]]
         """
         pass
 

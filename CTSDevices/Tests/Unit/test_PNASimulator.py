@@ -54,8 +54,9 @@ class test_PNASimulator(unittest.TestCase):
             measName = "CH1_S21_CW"
         ))
         self.pna.setPowerConfig(PowerConfig())
-        trace = self.pna.getTrace()
-        self.assertEqual(len(trace), 2 * self.pna.measConfig.sweepPoints)
+        amp, phase = self.pna.getTrace()
+        self.assertEqual(len(amp), 401)
+        self.assertEqual(len(phase), 401)
         
     def test_getAmpPhase(self):
         self.pna.setMeasConfig(MeasConfig(

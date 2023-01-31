@@ -129,3 +129,14 @@ class SetLED(BaseModel):
     enable: bool
     def getText(self):
         return f"pol{self.pol} " + ("enabled" if self.enable else "disabled")
+
+class Preset(BaseModel):
+    description: str
+    LNA01: SetLNA
+    LNA02: SetLNA
+    LNA11: SetLNA
+    LNA12: SetLNA
+    SIS01: SetSIS
+    SIS02: SetSIS
+    SIS11: SetSIS
+    SIS12: SetSIS

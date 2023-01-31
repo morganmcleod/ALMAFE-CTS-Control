@@ -25,7 +25,7 @@ class MCSimulator(MCInterface):
         self.pos = Position(
             x = round(random() * self.X_MAX, 1),
             y = round(random() * self.Y_MAX, 1),
-            pol = round(random() * self.POL_MAX, 1)
+            pol = 0
         )
         self.nextPos = deepcopy(self.pos)
     

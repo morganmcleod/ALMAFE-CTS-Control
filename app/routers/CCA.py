@@ -3,6 +3,7 @@ from schemas.CCA import *
 from schemas.common import *
 import hardware.FEMC as FEMC
 from Response import MessageResponse
+import yaml
 
 router = APIRouter(prefix="/cca")
 
@@ -92,4 +93,21 @@ async def get_LNA_LED(pol:int):
 async def get_Heater(pol: int):
     current = FEMC.ccaDevice.getSISHeaterCurrent(pol)
     return SingleFloat(value = current)
-    
+
+@router.put("/preset/{index}", response_model = MessageResponse)
+async def put_Preset(index: int, preset:Preset):
+    if index < 1 or index > 3:
+        return MessageResponse(message = "Preset index out of range 1-3", success = False)
+    else:
+        with open(f"CCAPreset{index}.yaml", "w") as f:
+            yaml.dump(preset.dict(), f)
+        return MessageResponse(message = f"Saved preset '{preset.description}'", success = True)
+
+@router.get("/preset/{index}", response_model = Preset)
+async def get_Preset(index: int):
+    if index <= 1 or index > 3:
+        index = 1
+
+    with open(f"CCAPreset{index}.yaml", "r") as f:
+        d = yaml.safe_load(f)
+    return Preset.parse_obj(d)

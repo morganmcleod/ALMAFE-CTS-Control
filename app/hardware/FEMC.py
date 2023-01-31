@@ -2,11 +2,15 @@ from AMB.AMBConnectionDLL import AMBConnectionDLL
 from AMB.FEMCDevice import FEMCDevice
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
+import configparser
 
 CARTRIDGE_BAND = 6
 RF_SOURCE_PORT = 7
 
-conn = AMBConnectionDLL()
+config = configparser.ConfigParser()
+config.read('FrontEndAMBDLL.ini')
+dllName = config['load']['dll']
+conn = AMBConnectionDLL(channel = 0, dllName = dllName)
 
 ccaDevice = CCADevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
 ccaDevice.initSession(FEMCDevice.MODE_SIMULATE)

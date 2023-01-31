@@ -2,7 +2,7 @@ from .schemas import *
 from .PNAInterface import *
 from typing import Tuple, List, Optional
 from random import gauss, random
-from math import log10, pi, sqrt, atan2, exp
+from math import log10, pi, sqrt, atan2, exp, sin
 
 class PNASimulator(PNAInterface):
 
@@ -39,16 +39,24 @@ class PNASimulator(PNAInterface):
         """
         self.powerConfig = config
     
-    def getTrace(self, *args, **kwargs) -> List[float]:
-        """Get trace data as a list of float        
-        :return List[float]
+    def getTrace(self, *args, **kwargs) -> Tuple[List[float], List[float]]:
+        """Get trace data as a list of float: amp, phase    
+        :return Tuple[List[float], List[float]]
         """
         # rescale x and y to -2..2.
-        # exp(-(r^2)) = exp(-(sqrt(x^2 + y^2))^2) = exp(-(x^2 + y^2))
-        y = kwargs.get('y', None)
-        y = 2 * ((y - 150) / 75) if y else 0
+        # amp = exp(-(r^2)) = exp(-(sqrt(x^2 + y^2))^2) = exp(-(x^2 + y^2))
+        # phase = sin(4* pi * r^2)
         xSize = self.measConfig.sweepPoints
-        return [exp(-((2 * (x - xSize) / xSize) ** 2 + y **2)) for x in range(xSize * 2)]
+        amp = []
+        phase = []
+        y = kwargs.get('y', None)
+        y = 2 * ((y - 145) / 73) if y else 0
+        for i in range(xSize):
+            x = 2 * (2 * i - xSize) / xSize
+            r2 = x ** 2 + y ** 2
+            amp.append(70 * ((exp(-r2)) - 1))
+            phase.append(180 * sin(4 * pi * r2))
+        return amp, phase
         
     def getAmpPhase(self) -> Tuple[float]:
         """Get instantaneous amplitude and phase

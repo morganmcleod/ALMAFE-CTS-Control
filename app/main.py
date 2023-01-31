@@ -21,6 +21,8 @@ from ALMAFE.common.GitVersion import gitVersion
 from routers.CCA import router as ccaRouter
 from routers.LO import router as loRouter
 from routers.LO import router as rfRouter
+from routers.ReferenceSource import router as loRefRouter
+from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.Database import router as databaseRouter
 
@@ -48,6 +50,10 @@ tags_metadata = [
         "description": "aka BEASTs"
     },
     {
+        "name": "Signal generators",
+        "description": "LO and RF reference sources"
+    },
+    {
         "name": "Database",
         "description": "the band 6 cartridge database"
     }
@@ -57,6 +63,8 @@ app = FastAPI(openapi_tags=tags_metadata)
 app.include_router(ccaRouter, tags=["CCA"])
 app.include_router(loRouter, prefix = "/lo", tags=["LO"])
 app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
+app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
+app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(beamScanRouter, tags=["BeamScan"])
 app.include_router(databaseRouter, tags=["Database"])
 

@@ -5,6 +5,8 @@ from CTSDevices.PNA.AgilentPNA import AgilentPNA
 from CTSDevices.PNA.PNASimulator import PNASimulator
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
+from hardware.ReferenceSources import loReference
+from hardware.FEMC import ccaDevice, loDevice, rfSrcDevice
 
 motorController = MCSimulator()
 motorController.setup()
@@ -13,7 +15,7 @@ pna = PNASimulator(resource="GPIB0::16::INSTR", idQuery=True, reset=True)
 pna.setMeasConfig(MeasConfig())
 pna.setPowerConfig(PowerConfig())
 
-beamScanner = BeamScanner(motorController, pna)
+beamScanner = BeamScanner(motorController, pna, loReference, ccaDevice, loDevice, rfSrcDevice)
 
 beamScanner.measurementSpec = MeasurementSpec(
     resolution = 14,
@@ -22,17 +24,17 @@ beamScanner.measurementSpec = MeasurementSpec(
 
 beamScanner.scanList = ScanList(
     items = [
-        ScanListItem(RF = 211, LO=221, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = False, xpol1=False, copol180=False))
-        # ScanListItem(RF = 215, LO=225),
-        # ScanListItem(RF = 219, LO=229),
-        # ScanListItem(RF = 231, LO=241),
-        # ScanListItem(RF = 235, LO=245),
-        # ScanListItem(RF = 239, LO=249),
-        # ScanListItem(RF = 243, LO=253),
-        # ScanListItem(RF = 247, LO=257),
-        # ScanListItem(RF = 262, LO=252),
-        # ScanListItem(RF = 271, LO=261),
-        # ScanListItem(RF = 275, LO=265)
+        ScanListItem(RF = 211, LO=221, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 215, LO=225, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 219, LO=229, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 235, LO=245, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 239, LO=249, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 243, LO=253, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 247, LO=257, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 262, LO=252, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 271, LO=261, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
+        ScanListItem(RF = 275, LO=265, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True))
     ]
 )
 beamScanner.scanList.updateIndex()

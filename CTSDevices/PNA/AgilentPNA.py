@@ -69,9 +69,9 @@ class AgilentPNA(BaseAgilentPNA):
         self.configurePowerLevel(config.channel, config.powerLevel_dBm)
         self.configurePowerState(True)
 
-    def getTrace(self, *args, **kwargs) -> List[float]:
+    def getTrace(self, *args, **kwargs) -> Tuple[List[float], List[float]]:
         """Get trace data as a list of float
-        :return List[float]
+        :return Tuple[List[float], List[float]]
         """
         if self.measConfig.triggerSource == TriggerSource.MANUAL:
             self.generateTriggerSignal(self.measConfig.channel, True)
@@ -84,7 +84,8 @@ class AgilentPNA(BaseAgilentPNA):
             elapsed = time.time() - startTime
         
         if sweepComplete:
-            return self.readData(self.measConfig.channel, self.measConfig.format, self.measConfig.sweepPoints, self.measConfig.measName)
+            data = self.readData(self.measConfig.channel, self.measConfig.format, self.measConfig.sweepPoints, self.measConfig.measName)
+            return data[0::2], data[1::2]
         else:
             print("getTrace timeout")
             return None

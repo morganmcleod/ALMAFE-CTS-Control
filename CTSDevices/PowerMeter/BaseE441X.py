@@ -1,6 +1,5 @@
 from ..Common.RemoveDelims import removeDelims
 from .schemas import Channel, Trigger, Unit
-from enum import Enum
 import re
 import pyvisa
 

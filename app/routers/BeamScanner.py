@@ -5,7 +5,6 @@ from schemas.common import SingleBool, SingleFloat
 import hardware.BeamScanner as BeamScanner
 from Response import KeyResponse, MessageResponse
 import asyncio
-import json
 from .ConnectionManager import ConnectionManager
 from .Database import CTSDB
 from DBBand6Cart.CartTests import CartTest, CartTests
@@ -162,11 +161,11 @@ async def get_MoveStatus():
 @router.put("/start", response_model = KeyResponse)
 async def put_Start(cartTest:CartTest):
     cartTestsDb = CartTests(driver = CTSDB())
-    cartTest.fkTestType = TestTypeIds.BEAM_PATTERN
-    keyCartTest = cartTestsDb.create(cartTest)
-    if (keyCartTest):
+    cartTest.fkTestType = TestTypeIds.BEAM_PATTERN.value
+    BeamScanner.beamScanner.keyCartTest = cartTestsDb.create(cartTest)
+    if (BeamScanner.beamScanner.keyCartTest):
         BeamScanner.beamScanner.start()
-        return KeyResponse(key = keyCartTest, message = "Beam scans started", success = True)
+        return KeyResponse(key = BeamScanner.beamScanner.keyCartTest, message = "Beam scans started", success = True)
     else:
         return KeyResponse(key = 0, message = "Failed creating CartTest record", success = False)
 
@@ -257,7 +256,7 @@ async def post_PNAMeasConfig(config:PowerConfig):
     BeamScanner.pna.setPowerConfig(config)
     return MessageResponse(message = "PNA set PowerConfig" + config.getText(), success = True)
 
-@router.get("/pna/trace", response_model = List[float])
+@router.get("/pna/trace", response_model = Tuple[List[float], List[float]])
 async def get_PNATrace():
     return BeamScanner.pna.getTrace()
 

@@ -90,10 +90,11 @@ class test_AgilentPNA(unittest.TestCase):
         self.assertFalse(self.__implErrorQuery())
         self.pna.setPowerConfig(PowerConfig())
         self.assertFalse(self.__implErrorQuery())
-        trace = self.pna.getTrace()
+        amp, phase = self.pna.getTrace()
         self.assertFalse(self.__implErrorQuery())
-        self.assertEqual(len(trace), 802)
-            
+        self.assertEqual(len(amp), 401)
+        self.assertEqual(len(phase), 401)
+
     def test_getAmpPhase(self):
         measConfig = MeasConfig(
             channel = 1,
