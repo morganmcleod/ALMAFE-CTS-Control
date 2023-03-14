@@ -183,14 +183,17 @@ class BaseAgilentPNA(PNAInterface):
         else:
             self.inst.write(":ABOR;")
 
-    def checkSweepComplete(self, waitForComplete:bool = True) -> bool:
+    def checkSweepComplete(self, waitForComplete:bool = True, timeoutSec:float = 20.0) -> bool:
         complete = False
+        startTime = time.time()
         while not complete:
             time.sleep(.020)
             result = removeDelims(self.inst.query(":STAT:OPER:DEV?"))
             if int(result[0]):
                 complete = True
             elif not waitForComplete:
+                break
+            elif time.time() - startTime > timeoutSec:
                 break
         return complete
 
@@ -214,7 +217,7 @@ class BaseAgilentPNA(PNAInterface):
                        measName:str = "MY_MEAS"):
         self.configureMeasurementParameter(channel, Mode.SELECT, measName = measName)
         self.setDataFormat(DataFormat.REAL32)
-        trace = self.inst.query_binary_values(f"CALC{channel}:DATA? {format.value};", is_big_endian = True)
+        trace = self.inst.query_binary_values(f"CALC{channel}:DATA? {format.value};", datatype='f', is_big_endian = True)
         if trace:
             return trace
         else:

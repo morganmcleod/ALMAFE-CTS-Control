@@ -66,12 +66,10 @@ class LockPLL(BaseModel):
     Set the LO frequency and lock the PLL
     
     freqGHz: final LO frequency
-    freqFloogGHz: the FLOOG frequency used to calculate the required reference setting
     '''
     freqLOGHz:float
-    freqFloogGHz:Optional[float] = 0.0315
     def getText(self):
-        return f"{self.freqLOGHz} GHz FLOOG:{self.freqFloogGHz}"
+        return f"{self.freqLOGHz} GHzssss"
 
 class AdjustPLL(BaseModel):
     '''

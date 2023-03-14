@@ -11,6 +11,7 @@ import socket
 import re
 from time import time
 from math import sqrt
+from typing import Union
 
 class MotorController(MCInterface):
     SOCKET_TIMEOUT = 5
@@ -44,7 +45,9 @@ class MotorController(MCInterface):
         self.xySpeed = self.getXYSpeed()
         self.polSpeed = self.getPolSpeed()
         
-    def query(self, request: bytes, replySize: int) -> bytes:
+    def query(self, request: Union[bytes, str], replySize: int = 1) -> bytes:
+        if isinstance(request, str):
+            request = request.encode()
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(self.SOCKET_TIMEOUT)
             s.connect((self.host, self.port))
@@ -60,16 +63,16 @@ class MotorController(MCInterface):
     def setup(self):
         # send command to execute the Clear Faults, Motor Power ON, and
         # Setup routines that should be saved on the motion controller card.
-        hs = self.query(b'ST;', 1)
+        hs = self.query(b'ST;')
         assert(hs == b':')
-        hs = self.query(b'XQ#CF;', 1)
+        hs = self.query(b'XQ#CF;')
         assert(hs == b':')
-        hs = self.query(b'XQ#SETUP;', 1)
+        hs = self.query(b'XQ#SETUP;')
         # assert(hs == b':')
 
     def isConnected(self) -> bool:
         try:
-            hs=self.query(b';', 1)
+            hs=self.query(b';')
             return hs == b':'
         except:
             return False
@@ -80,13 +83,13 @@ class MotorController(MCInterface):
         '''
         self.xySpeed = speed
         speed *= self.STEPS_PER_MM
-        hs = self.query(str.encode(f"SP {speed}, {speed};"), 1)
+        hs = self.query(f"SP {speed}, {speed};")
         assert(hs == b':')
 
     def getXYSpeed(self) -> float:
         # Send the variable format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read speed command.
-        data = self.query(b'\nLZ 0; VF 10,0; VS?;', 13)
+        data = self.query(b'\nLZ 0; VF 10,0; VS?;', replySize = 13)
         data = removeDelims(data, self.DELIMS)
         speed = float(int(data[0]) / self.STEPS_PER_MM)
         assert(2 < speed < 3000000)
@@ -98,7 +101,7 @@ class MotorController(MCInterface):
         '''
         accel *= self.STEPS_PER_MM
         assert(1024 <= accel <= 68431360)
-        hs = self.query(str.encode(f"AC {accel}, {accel};"), 1)
+        hs = self.query(f"AC {accel}, {accel};")
         assert(hs == b':')
 
     def setXYDecel(self, decel:float = XY_DECEL):
@@ -107,7 +110,7 @@ class MotorController(MCInterface):
         '''
         decel *= self.STEPS_PER_MM
         assert(1024 <= decel <= 68431360)
-        hs = self.query(str.encode(f"DC {decel}, {decel};"), 1)
+        hs = self.query(f"DC {decel}, {decel};")
         assert(hs == b':')
 
     def setPolSpeed(self, speed:float = POL_SPEED):
@@ -116,13 +119,13 @@ class MotorController(MCInterface):
         '''
         self.polSpeed = speed
         speed *= self.STEPS_PER_DEGREE
-        hs = self.query(str.encode(f"SPC={speed};"), 1)
+        hs = self.query(str.encode(f"SPC={speed};"))
         assert(hs == b':')
 
     def getPolSpeed(self) -> float:
         # Send the variable format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read speed command.
-        data = self.query(b'\nLZ 0; VF 10,0; SP ?,?,?;', 31)
+        data = self.query(b'\nLZ 0; VF 10,0; SP ?,?,?;', replySize = 31)
         data = removeDelims(data, self.DELIMS)
         speed = float(int(data[2]) / self.STEPS_PER_DEGREE)
         assert(1 < speed < 12000000)
@@ -134,7 +137,7 @@ class MotorController(MCInterface):
         '''
         accel *= self.STEPS_PER_DEGREE
         assert(1024 <= accel <= 67107840)
-        hs = self.query(str.encode(f"ACC={accel};"), 1)
+        hs = self.query(f"ACC={accel};")
         assert(hs == b':')
 
     def setPolDecel(self, decel:float = POL_DECEL):
@@ -143,14 +146,14 @@ class MotorController(MCInterface):
         '''
         decel *= self.STEPS_PER_DEGREE
         assert(1024 <= decel <= 67107840)
-        hs = self.query(str.encode(f"DCC={decel};"), 1)
+        hs = self.query(f"DCC={decel};")
         assert(hs == b':')
 
     def getPolTorque(self) -> float:
         '''
         Voltage in range -9.9982 to +9.9982
         '''
-        data = self.query(b'TTZ;', 9)
+        data = self.query(b'TTZ;', replySize = 9)
         data = removeDelims(data, self.DELIMS)
         return float(data(0))
 
@@ -161,20 +164,20 @@ class MotorController(MCInterface):
         axis = axis.lower()
         if axis == 'x':
             self.nextPos.x = 0
-            hs = self.query(b'HMA; BGA;', 2)
+            hs = self.query(b'HMA; BGA;', replySize = 2)
             assert(hs == b'::')
         elif axis == 'y':
             self.nextPos.y = 0
-            hs = self.query(b'HMB; BGB;', 2)
+            hs = self.query(b'HMB; BGB;', replySize = 2)
             assert(hs == b'::')
         elif axis == 'pol':
             self.nextPos.pol = 0
-            hs = self.query(b'JGC=300; FIC; BGC;', 3)
+            hs = self.query(b'JGC=300; FIC; BGC;', replySize = 3)
             assert(hs == b':::')
         elif axis == 'xy':
             self.nextPos.x = 0
             self.nextPos.y = 0
-            hs = self.query(b'HMAB; BGAB;', 2)
+            hs = self.query(b'HMAB; BGAB;', replySize = 2)
             assert(hs == b'::')
         else:
             raise ValueError(f"Unsupported option for axis: '{axis}'")
@@ -201,11 +204,11 @@ class MotorController(MCInterface):
             cmd = b'DP 0,0,0'
         else:
             raise ValueError(f"Unsupported option for axis: '{axis}'")
-        hs = self.query(cmd, 1)
+        hs = self.query(cmd)
         assert(hs == b':')
 
     def getMotorStatus(self) -> MotorStatus:
-        data = self.query(b'TS;', 19)
+        data = self.query(b'TS;', replySize = 19)
         data = removeDelims(data, self.DELIMS)
         return MotorStatus(
             xPower = bool(1 - (int(data[0]) >> 5) & 1),   # !bit 5
@@ -220,7 +223,7 @@ class MotorController(MCInterface):
         # Send the position format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read position command.
         # RP is necessary because TP doesn't work for stepper motors.
-        data = self.query(b'\nLZ 0; PF 10,0; RPX; RPY; TPZ;', 51)
+        data = self.query(b'\nLZ 0; PF 10,0; RPX; RPY; TPZ;', replySize = 51)
         data = removeDelims(data, self.DELIMS)
         # negate because motors are opposite what we want to call (0,0)
         return Position(
@@ -270,21 +273,21 @@ class MotorController(MCInterface):
 
         vector = self.getPosition().calcMove(self.nextPos)
         # position absolute the pol axis:
-        hs = self.query(str.encode(f"PAC={self.nextPos.pol * self.STEPS_PER_DEGREE};"), 1)
+        hs = self.query(f"PAC={self.nextPos.pol * self.STEPS_PER_DEGREE};")
         assert(hs == b':')
         # position relative the X and Y axes:
-        hs = self.query(str.encode(f"PR {vector.x * self.STEPS_PER_MM}, {vector.y * self.STEPS_PER_MM};"), 1)
+        hs = self.query(f"PR {vector.x * self.STEPS_PER_MM}, {vector.y * self.STEPS_PER_MM};")
         assert(hs == b':')
         if withTrigger:
-            hs = self.query(b'XQ #TRIGMV;', 1)
+            hs = self.query(b'XQ #TRIGMV;')
         else:
-            hs = self.query(b'BGABC;', 1)
+            hs = self.query(b'BGABC;')
         assert(hs == b':')
 
     def stopMove(self):
         self.start = False
         self.stop = True
-        hs = self.query(b'ST;', 1)
+        hs = self.query(b'ST;')
         assert(hs == b':')
 
     def getMoveStatus(self) -> MoveStatus:
