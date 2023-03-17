@@ -20,6 +20,42 @@ class BeamScanner():
     XY_SPEED_SCANNING = 20    # mm/sec
     POL_SPEED = 20            # deg/sec
 
+    PNA_CONFIG_SCANNING = MeasConfig(
+        channel = 1,
+        measType = MeasType.S21,
+        format = Format.SDATA,
+        sweepType = SweepType.CW_TIME,
+        sweepGenType = SweepGenType.STEPPED,
+        sweepPoints = 6000,
+        triggerSource = TriggerSource.IMMEDIATE,
+        bandWidthHz = 200,
+        centerFreq_Hz = 10.180e9,
+        spanFreq_Hz = 0,
+        timeout_sec = 6.03,
+        sweepTimeAuto = True,
+        measName = "CH1_S21_CW"
+    )
+    PNA_CONFIG_BEAMCENTER = MeasConfig(
+        channel = 1,
+        measType = MeasType.S21,
+        format = Format.SDATA,
+        sweepType = SweepType.CW_TIME,
+        sweepGenType = SweepGenType.STEPPED,
+        sweepPoints = 20,
+        triggerSource = TriggerSource.MANUAL,
+        bandWidthHz = 200,
+        centerFreq_Hz = 10.180e9,
+        spanFreq_Hz = 0,
+        timeout_sec = 6.03,
+        sweepTimeAuto = True,
+        measName = "CH1_S21_CW"
+    )
+    PNA_POWER_CONFIG = PowerConfig(
+        channel = 1, 
+        powerLevel_dBm = -10, 
+        attenuation_dB = 0
+    )
+
     def __init__(self, 
                 motorController:MCInterface, 
                 pna:PNAInterface, 
@@ -302,6 +338,7 @@ class BeamScanner():
                 msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
                 return (False, msg)
             iter -= 1
+        self.pna.setMeasConfig(self.PNA_CONFIG_SCANNING)
         msg = f"__rfSourceAutoLevel: target={self.measurementSpec.targetLevel} amp={amp} setValue={setValue} iter={iter}"
         print(msg)
         return (iter > 0, msg)
