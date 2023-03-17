@@ -52,7 +52,7 @@ async def set_Frequency(request: Request, payload: SetLOFrequency):
 async def lock_PLL(request: Request, payload: LockPLL):
     target, name = getTarget(request)
     assert(target)
-    (wcaFreq, ytoFreq, ytoCourse) = target.lockPLL(payload.freqLOGHz, payload.freqFloogGHz)
+    (wcaFreq, ytoFreq, ytoCourse) = target.lockPLL(payload.freqLOGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
         return MessageResponse(message = f"{name} PLL LOCKED " + payload.getText() + wcaText, success = True)

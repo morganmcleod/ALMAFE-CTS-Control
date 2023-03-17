@@ -107,4 +107,4 @@ class AgilentPNA(BaseAgilentPNA):
             return (amp, phase)
         else:
             print("getAmpPhase error")
-            return None
+            return (None, None)

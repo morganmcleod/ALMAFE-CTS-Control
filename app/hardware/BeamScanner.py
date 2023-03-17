@@ -5,7 +5,7 @@ from CTSDevices.PNA.AgilentPNA import AgilentPNA
 from CTSDevices.PNA.PNASimulator import PNASimulator
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
-from hardware.ReferenceSources import loReference
+from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import ccaDevice, loDevice, rfSrcDevice
 
 motorController = MCSimulator()
@@ -16,6 +16,10 @@ pna.setMeasConfig(MeasConfig())
 pna.setPowerConfig(PowerConfig())
 
 beamScanner = BeamScanner(motorController, pna, loReference, ccaDevice, loDevice, rfSrcDevice)
+
+FOR_DEBUG_ONLY = True
+if FOR_DEBUG_ONLY:
+    beamScanner.rfReference = rfReference   # normally we don't use the RF reference synth.
 
 beamScanner.measurementSpec = MeasurementSpec(
     resolution = 14,
