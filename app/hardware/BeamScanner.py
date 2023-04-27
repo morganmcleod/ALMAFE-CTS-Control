@@ -7,19 +7,27 @@ from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem,
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import ccaDevice, loDevice, rfSrcDevice
+from .debugging import *
 
-motorController = MotorController()
+if SIMULATE:
+    motorController = MCSimulator()
+else:
+    motorController = MotorController()
 motorController.setup()
 
-pna = AgilentPNA(resource="GPIB0::16::INSTR", idQuery=True, reset=True)
+if SIMULATE:
+    pna = PNASimulator()
+else:
+    pna = AgilentPNA(resource="GPIB0::16::INSTR", idQuery=True, reset=True)
 pna.setMeasConfig(MeasConfig())
 pna.setPowerConfig(PowerConfig())
 
 beamScanner = BeamScanner(motorController, pna, loReference, ccaDevice, loDevice, rfSrcDevice)
 
-FOR_DEBUG_ONLY = True
-if FOR_DEBUG_ONLY:
-    beamScanner.rfReference = rfReference   # normally we don't use the RF reference synth.
+if TESTING:
+    # we can use the RF reference synth to test locking the RF source.  
+    # Normally not used for beam pattern measurement.
+    beamScanner.rfReference = rfReference
 
 beamScanner.measurementSpec = MeasurementSpec(
     resolution = 14,
