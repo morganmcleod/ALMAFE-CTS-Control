@@ -1,6 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple
-from schemas.BeamScanner import *
 from schemas.common import SingleBool, SingleFloat
 import hardware.BeamScanner as BeamScanner
 from Response import KeyResponse, MessageResponse

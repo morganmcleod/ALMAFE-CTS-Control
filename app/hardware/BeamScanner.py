@@ -7,7 +7,7 @@ from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem,
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import ccaDevice, loDevice, rfSrcDevice
-from .debugging import *
+from .DebugOptions import *
 
 if SIMULATE:
     motorController = MCSimulator()

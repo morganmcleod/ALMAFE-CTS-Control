@@ -52,3 +52,12 @@ class Position(BaseModel):
 
     def getText(self) -> str:
         return f"({self.x}, {self.y}, {self.pol})"
+    
+class ControllerQuery(BaseModel):
+    """
+    A low-level query to send to the beam scanner motor controller.    
+    """
+    request: str
+    replySize: int
+    def getText(self):
+        return f"'{self.request}' with replySize {self.replySize}"

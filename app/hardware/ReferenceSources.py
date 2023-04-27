@@ -1,6 +1,6 @@
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from CTSDevices.SignalGenerator.Simulator import SignalGenSimulator
-from .debugging import *
+from .DebugOptions import *
 
 if SIMULATE:
     loReference = SignalGenSimulator()
