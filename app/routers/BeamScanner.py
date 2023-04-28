@@ -8,6 +8,9 @@ from .ConnectionManager import ConnectionManager
 from .Database import CTSDB
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
+from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
+from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
+from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption
 
 router = APIRouter(prefix="/beamscan")
 manager = ConnectionManager()

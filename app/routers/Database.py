@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 from Response import ListResponse, prepareListResponse
 router = APIRouter(prefix="/database")
-from ..database.CTSDB import CTSDB
+
+from app.database.CTSDB import CTSDB
+
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParams
