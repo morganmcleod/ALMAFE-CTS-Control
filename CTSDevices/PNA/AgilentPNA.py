@@ -5,6 +5,44 @@ from typing import Tuple
 from statistics import mean
 from math import log10, pi, sqrt, atan2
 
+DEFAULT_CONFIG = MeasConfig(
+    channel = 1,
+    measType = MeasType.S21,
+    format = Format.SDATA,
+    sweepType = SweepType.CW_TIME,
+    sweepGenType = SweepGenType.STEPPED,
+    sweepPoints = 6000,
+    triggerSource = TriggerSource.IMMEDIATE,
+    bandWidthHz = 200,
+    centerFreq_Hz = 10.180e9,
+    spanFreq_Hz = 0,
+    timeout_sec = 6.03,
+    sweepTimeAuto = True,
+    measName = "CH1_S21_CW"
+)
+
+FAST_CONFIG = MeasConfig(
+    channel = 1,
+    measType = MeasType.S21,
+    format = Format.SDATA,
+    sweepType = SweepType.CW_TIME,
+    sweepGenType = SweepGenType.STEPPED,
+    sweepPoints = 5,
+    triggerSource = TriggerSource.MANUAL,
+    bandWidthHz = 200,
+    centerFreq_Hz = 10.180e9,
+    spanFreq_Hz = 0,
+    timeout_sec = 10,
+    sweepTimeAuto = True,
+    measName = "CH1_S21_CW"
+)
+
+DEFAULT_POWER_CONFIG = PowerConfig(
+    channel = 1, 
+    powerLevel_dBm = -10, 
+    attenuation_dB = 0
+)
+
 class AgilentPNA(BaseAgilentPNA):
 
     def __init__(self, resource="GPIB0::16::INSTR", idQuery=True, reset=True):
@@ -74,7 +112,9 @@ class AgilentPNA(BaseAgilentPNA):
         :return Tuple[List[float], List[float]]
         """
         if self.measConfig.triggerSource == TriggerSource.MANUAL:
-            self.generateTriggerSignal(self.measConfig.channel, True)
+            for _ in range(self.measConfig.sweepPoints):
+                self.generateTriggerSignal(self.measConfig.channel, True)
+                time.sleep(0.1)
         
         sweepComplete = False
         startTime = time.time()
@@ -85,24 +125,35 @@ class AgilentPNA(BaseAgilentPNA):
         
         if sweepComplete:
             data = self.readData(self.measConfig.channel, self.measConfig.format, self.measConfig.sweepPoints, self.measConfig.measName)
-            return data[0::2], data[1::2]
+            if data:
+                real_a = data[::2]
+                imag_a = data[1::2]
+                # not taking sqrt because the value we want is power, not voltage:
+                amp = [10 * log10(real ** 2 + imag ** 2) for real, imag in zip(real_a, imag_a)]
+                phase = [atan2(imag, real) * 180 / pi for real, imag in zip(real_a, imag_a)]
+                return amp, phase
+            else:
+                print("getTrace no data")
         else:
             print("getTrace timeout")
-            return None
+        return None, None
             
     def getAmpPhase(self) -> Tuple[float]:
         """Get instantaneous amplitude and phase
         :return (amplitude_dB, phase_deg)
         """
         if self.measConfig.triggerSource == TriggerSource.MANUAL:
-            self.generateTriggerSignal(self.measConfig.channel, True)        
+            for _ in range(self.measConfig.sweepPoints):
+                self.generateTriggerSignal(self.measConfig.channel, True)
+                time.sleep(0.1)
         if self.checkSweepComplete(waitForComplete = True):
             trace = self.readData(self.measConfig.channel, self.measConfig.format, self.measConfig.sweepPoints, self.measConfig.measName)
             # Real and imaginary values are interleaved in the trace data
             # Average these then convert to phase & amplitude
             real = mean(trace[::2])
             imag = mean(trace[1::2])
-            amp = 10 * log10(sqrt(real ** 2 + imag ** 2))
+            # not taking sqrt because the value we want is power, not voltage:
+            amp = 10 * log10(real ** 2 + imag ** 2)
             phase = atan2(imag, real) * 180 / pi
             return (amp, phase)
         else:

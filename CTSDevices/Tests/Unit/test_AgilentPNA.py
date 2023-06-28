@@ -12,6 +12,8 @@ class test_AgilentPNA(unittest.TestCase):
         self.pna = AgilentPNA()
         # clear any previous errors:
         self.__implErrorQuery()
+        self.__implWorkaroundPhaseLockLost()
+        self.pna.setMeasConfig(DEFAULT_CONFIG)
                 
     def tearDown(self):
         # clear any errors not detected by test case:
@@ -41,22 +43,7 @@ class test_AgilentPNA(unittest.TestCase):
         self.assertFalse(self.__implErrorQuery())
 
     def test_setMeasConfig(self):
-        measConfig = MeasConfig(
-            channel = 1,
-            measType = MeasType.S21,
-            format = Format.SDATA,
-            sweepType = SweepType.CW_TIME,
-            sweepGenType = SweepGenType.STEPPED,
-            sweepPoints = 401,
-            triggerSource = TriggerSource.IMMEDIATE,
-            bandWidthHz = 200,
-            centerFreq_Hz = 10.180e9,
-            spanFreq_Hz = 0,
-            timeout_sec = 6.03,
-            sweepTimeAuto = True,
-            measName = "CH1_S21_CW"
-        )
-        self.pna.setMeasConfig(measConfig)
+        self.pna.setMeasConfig(DEFAULT_CONFIG)
         self.assertFalse(self.__implErrorQuery())
         self.assertTrue(self.pna.checkDisplayTrace())
         self.assertFalse(self.__implErrorQuery())
@@ -64,31 +51,20 @@ class test_AgilentPNA(unittest.TestCase):
         self.assertFalse(self.__implErrorQuery())
         measList = self.pna.listMeasurementParameters()
         self.assertTrue(len(measList) > 0)
-        self.assertTrue(measList[0] == measConfig.measName)
+        self.assertTrue(measList[0] == DEFAULT_CONFIG.measName)
         self.assertFalse(self.__implErrorQuery())
 
     def test_setPowerConfig(self):
-        self.pna.setPowerConfig(PowerConfig())
+        self.pna.setPowerConfig(DEFAULT_POWER_CONFIG)
         self.assertFalse(self.__implErrorQuery())
 
     def test_getTrace(self):
-        measConfig = MeasConfig(
-            channel = 1,
-            measType = MeasType.S21,
-            format = Format.SDATA,
-            sweepType = SweepType.LIN_FREQ,
-            sweepGenType = SweepGenType.STEPPED,
-            sweepPoints = 401,
-            triggerSource = TriggerSource.IMMEDIATE,
-            bandWidthHz = 200,
-            centerFreq_Hz = 10.180e9,
-            spanFreq_Hz = 0.5e6,
-            sweepTimeAuto = True,
-            measName = "CH1_S21_LIN"
-        )
-        self.pna.setMeasConfig(measConfig)
+        config = DEFAULT_CONFIG
+        config.sweepPoints = 401
+        # config.timeout_sec = 60
+        self.pna.setMeasConfig(config)
         self.assertFalse(self.__implErrorQuery())
-        self.pna.setPowerConfig(PowerConfig())
+        self.pna.setPowerConfig(DEFAULT_POWER_CONFIG)
         self.assertFalse(self.__implErrorQuery())
         amp, phase = self.pna.getTrace()
         self.assertFalse(self.__implErrorQuery())
@@ -96,24 +72,9 @@ class test_AgilentPNA(unittest.TestCase):
         self.assertEqual(len(phase), 401)
 
     def test_getAmpPhase(self):
-        measConfig = MeasConfig(
-            channel = 1,
-            measType = MeasType.S21,
-            format = Format.SDATA,
-            sweepType = SweepType.CW_TIME,
-            sweepGenType = SweepGenType.STEPPED,
-            sweepPoints = 20,
-            triggerSource = TriggerSource.IMMEDIATE,
-            bandWidthHz = 200,
-            centerFreq_Hz = 10.180e9,
-            spanFreq_Hz = 0,
-            timeout_sec = 6.03,
-            sweepTimeAuto = True,
-            measName = "CH1_S21_CW"
-        )
-        self.pna.setMeasConfig(measConfig)
+        self.pna.setMeasConfig(FAST_CONFIG)
         self.assertFalse(self.__implErrorQuery())
-        self.pna.setPowerConfig(PowerConfig())
+        self.pna.setPowerConfig(DEFAULT_POWER_CONFIG)
         self.assertFalse(self.__implErrorQuery())
         for _ in range(10):
             amp, phase = self.pna.getAmpPhase()

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple
-from schemas.BeamScanner import *
 from schemas.common import SingleBool, SingleFloat
 import hardware.BeamScanner as BeamScanner
 from Response import KeyResponse, MessageResponse
@@ -9,6 +8,9 @@ from .ConnectionManager import ConnectionManager
 from .Database import CTSDB
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
+from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
+from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
+from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption
 
 router = APIRouter(prefix="/beamscan")
 manager = ConnectionManager()

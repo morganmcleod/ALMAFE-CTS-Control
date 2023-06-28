@@ -2,6 +2,7 @@ from CTSDevices.MotorControl.schemas import MoveStatus, Position
 from CTSDevices.MotorControl.MCInterface import MCInterface
 from CTSDevices.PNA.schemas import MeasConfig, PowerConfig, MeasType, SweepType, Format, SweepGenType, TriggerSource
 from CTSDevices.PNA.PNAInterface import PNAInterface
+from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
@@ -11,48 +12,13 @@ from time import time, sleep
 from datetime import datetime
 import concurrent.futures
 from typing import Tuple
+import copy
 
 class BeamScanner():
 
     XY_SPEED_POSITIONING = 40 # mm/sec
     XY_SPEED_SCANNING = 20    # mm/sec
     POL_SPEED = 20            # deg/sec
-
-    PNA_CONFIG_SCANNING = MeasConfig(
-        channel = 1,
-        measType = MeasType.S21,
-        format = Format.SDATA,
-        sweepType = SweepType.CW_TIME,
-        sweepGenType = SweepGenType.STEPPED,
-        sweepPoints = 6000,
-        triggerSource = TriggerSource.IMMEDIATE,
-        bandWidthHz = 200,
-        centerFreq_Hz = 10.180e9,
-        spanFreq_Hz = 0,
-        timeout_sec = 6.03,
-        sweepTimeAuto = True,
-        measName = "CH1_S21_CW"
-    )
-    PNA_CONFIG_BEAMCENTER = MeasConfig(
-        channel = 1,
-        measType = MeasType.S21,
-        format = Format.SDATA,
-        sweepType = SweepType.CW_TIME,
-        sweepGenType = SweepGenType.STEPPED,
-        sweepPoints = 20,
-        triggerSource = TriggerSource.MANUAL,
-        bandWidthHz = 200,
-        centerFreq_Hz = 10.180e9,
-        spanFreq_Hz = 0,
-        timeout_sec = 6.03,
-        sweepTimeAuto = True,
-        measName = "CH1_S21_CW"
-    )
-    PNA_POWER_CONFIG = PowerConfig(
-        channel = 1, 
-        powerLevel_dBm = -10, 
-        attenuation_dB = 0
-    )
 
     def __init__(self, 
                 motorController:MCInterface, 
@@ -244,10 +210,7 @@ class BeamScanner():
         success, msg = self.__moveToBeamCenter(scan, subScan)
         if not success:
             return (success, msg)
-        self.pnaMeasConfig.triggerSource = TriggerSource.MANUAL
-        self.pnaMeasConfig.timeout_sec = 10
-        self.pnaMeasConfig.sweepPoints = 5
-        self.pna.setMeasConfig(self.pnaMeasConfig)
+        self.pna.setMeasConfig(FAST_CONFIG)
         self.scanStatus.amplitude, self.scanStatus.phase = self.pna.getAmpPhase()
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
@@ -263,9 +226,11 @@ class BeamScanner():
         return (False, msg)
 
     def __resetPNA(self) -> Tuple[bool, str]:
-        self.pna.reset()        
-        self.pna.setMeasConfig(self.PNA_CONFIG_SCANNING)
-        self.pna.setPowerConfig(self.PNA_POWER_CONFIG)
+        self.pna.reset()
+        self.pnaConfig = copy(DEFAULT_CONFIG)        
+        self.pnaConfig.triggerSource = TriggerSource.EXTERNAL
+        self.pna.setMeasConfig(self.pnaConfig)
+        self.pna.setPowerConfig(DEFAULT_POWER_CONFIG)
         code, msg = self.pna.errorQuery()
         return (code == 0, "__resetPNA: " + msg)
 
@@ -319,7 +284,7 @@ class BeamScanner():
         return (success, "__moveToBeamCenter: " + msg)
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.pna.setMeasConfig(self.PNA_CONFIG_BEAMCENTER)
+        self.pna.setMeasConfig(FAST_CONFIG)
         controller = PID(0.02, 0.012, 0.012, setpoint=self.measurementSpec.targetLevel)
         controller.output_limits = (15, 100)
         setValue = 15 # percent
@@ -337,17 +302,15 @@ class BeamScanner():
                 msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
                 return (False, msg)
             iter -= 1
-        self.pna.setMeasConfig(self.PNA_CONFIG_SCANNING)
         msg = f"__rfSourceAutoLevel: target={self.measurementSpec.targetLevel} amp={amp} setValue={setValue} iter={iter}"
         print(msg)
         return (iter > 0, msg)
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
-        self.pnaMeasConfig.triggerSource = TriggerSource.EXTERNAL
         # add 10sec to timeout to account for accel/decel
-        self.pnaMeasConfig.timeout_sec = moveTimeout + 10
-        self.pnaMeasConfig.sweepPoints = self.measurementSpec.numScanPoints()
-        self.pna.setMeasConfig(self.pnaMeasConfig)
+        self.pnaConfig.timeout_sec = moveTimeout + 10
+        self.pnaConfig.sweepPoints = self.measurementSpec.numScanPoints()
+        self.pna.setMeasConfig(self.pnaConfig)
         return (True, "")
 
     def __getPNARaster(self, scan:ScanListItem, subScan:SubScan, y:float = 0) -> Tuple[bool, str]:
