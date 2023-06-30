@@ -1,4 +1,4 @@
-from ..TestEquipment.Agilent11713 import AttenuatorSwitchController
+from TestEquipment.Agilent11713 import AttenuatorSwitchController
 import copy
 
 class Attenuator():
@@ -15,7 +15,7 @@ class Attenuator():
 
     def reset(self):
         # set attenuation to max:
-        self.attenuatorSwitchController.setSwitches(tuple(True * 8))
+        self.attenuatorSwitchController.setSwitches([True] * 8)
 
     def setValue(self, atten: int = 101):
         divisors = (30, 30, 20, 10, 4, 4, 2, 1)

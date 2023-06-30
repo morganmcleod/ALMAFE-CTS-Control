@@ -1,4 +1,4 @@
-from ..TestEquipment.AgilentE363xA import PowerSupply
+from TestEquipment.AgilentE363xA import PowerSupply
 
 class NoiseSource():
     """Noise diode implemented in terms of a Agilent E363xA power supply"""

@@ -1,4 +1,4 @@
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims   #todo move Common out of CTSDevices
 import pyvisa
 import re
 

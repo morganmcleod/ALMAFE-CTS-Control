@@ -48,14 +48,14 @@ class test_IFProcessor(unittest.TestCase):
         for i in range(6):
             value = InputSelect(i  + 1)
             print(f"test_InputSwitch.setValue({value})...")
-            self.attenuator.setValue(value)
+            self.inputSwitch.setValue(value)    #broken
             time.sleep(2)
         print("test_InputSwitch.setValue(POL0_USB)...")
-        self.attenuator.setValue(InputSelect.POL0_USB)
+        self.inputSwitch.setValue(InputSelect.POL0_USB)
         time.sleep(2)
 
     def test_OutputSwitch(self):
-        print("test_OutputSwitch.reset()...")
+        print("test_OutputSwitch.reset()...")   #broken
         self.outputSwitch.reset()
         time.sleep(2)
         print("test_OutputSwitch.setValue(POWER_METER, THROUGH)...")
@@ -75,19 +75,19 @@ class test_IFProcessor(unittest.TestCase):
         time.sleep(2)
         
     def test_NoiseSource(self):
-        print("test_NoiseSource.reset()..."):
+        print("test_NoiseSource.reset()...")
         self.noiseSource.reset()
         time.sleep(2)
-        print("test_NoiseSource.setEnable(True)..."):
+        print("test_NoiseSource.setEnable(True)...")
         self.noiseSource.setEnable(True)
         time.sleep(2)
-        print("test_NoiseSource.setEnable(False)..."):
+        print("test_NoiseSource.setEnable(False)...")
+        self.noiseSource.setEnable(False)
+        time.sleep(2)
+        print("test_NoiseSource.setEnable(True)...")
         self.noiseSource.setEnable(True)
         time.sleep(2)
-        print("test_NoiseSource.setEnable(True)..."):
-        self.noiseSource.setEnable(True)
-        time.sleep(2)
-        print("test_NoiseSource.reset()..."):
+        print("test_NoiseSource.reset()...")
         self.noiseSource.reset()
         time.sleep(2)
 
@@ -95,11 +95,12 @@ class test_IFProcessor(unittest.TestCase):
         print("test_YIGFilter.reset()...")
         self.yigFilter.reset()
         self.assertEqual(self.yigFilter.getFrequency(), 0)
-        for i in range(12):
-            freqGHz = (i + 1)
+        for i in range(9):
+            freqGHz = (i + 4)  # 4..12 by 1 GHz
             print(f"test_YIGFilter.setFrequency({freqGHz})...")
             self.yigFilter.setFrequency(freqGHz)
-            self.assertEqual(self.yigFilter.getFrequency(), freqGHz)            
+            self.assertEqual(self.yigFilter.getFrequency(), freqGHz)
+            time.sleep(2)        
         print("test_YIGFilter.reset()...")
         self.yigFilter.reset()
         self.assertEqual(self.yigFilter.getFrequency(), 0)

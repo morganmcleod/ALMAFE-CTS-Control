@@ -1,4 +1,4 @@
-from ..TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
+from TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
 from enum import Enum
 
 class InputSelect(Enum):
@@ -22,7 +22,7 @@ class InputSwitch():
             method = DigitalMethod.BINARY,
         )
 
-    def selectInput(self, select: InputSelect) -> None:
+    def setValue(self, select: InputSelect) -> None:
         if select == InputSelect.NOISE_DIODE:
             dataOut = 64
         elif select == InputSelect.INPUT6:

@@ -1,4 +1,4 @@
-from ..TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
+from TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
 
 class YIGFilter():
     """The YIG filter in the IF processor"""

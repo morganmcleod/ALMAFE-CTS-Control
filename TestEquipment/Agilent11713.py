@@ -32,8 +32,8 @@ class AttenuatorSwitchController():
         cmd = "A" if value else "B"
         self.inst.write(f"{cmd}{index}")
 
-    def setSwitches(self, values: Tuple[bool]) -> None:
-        if len(values < 8) or len(values > 10):
+    def setSwitches(self, values: Sequence[bool]) -> None:
+        if len(values) < 8 or len(values) > 10:
             raise ValueError("AttenuatorSwitchController.setSwitches: values must be a sequence of 8 to 10 bool")
         
         cmd = ""

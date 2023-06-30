@@ -54,5 +54,5 @@ class SwitchController():
     
     def digitalWrite(self, data: List[int]) -> None:
         cmd = "DBW" if self.writeConfig.method == DigitalMethod.BINARY else "DWRITE"
-        cmd = f"{cmd} {self.writeConfig.slot}0{self.writeConfig.port.value}, {','.join(data)}"
+        cmd = f"{cmd} {self.writeConfig.slot}0{self.writeConfig.port.value}, {','.join(list(map(str, data)))}"
         self.inst.write(cmd)
