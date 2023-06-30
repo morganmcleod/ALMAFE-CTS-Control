@@ -1,58 +1,58 @@
 LNA01:
-  ID1: 0.7
-  ID2: 0.7
-  ID3: 0.7
+  ID1: 3.0
+  ID2: 3.0
+  ID3: 3.0
   ID4: null
   ID5: null
   ID6: null
-  VD1: 3.0
-  VD2: 3.0
-  VD3: 3.0
+  VD1: 0.7
+  VD2: 0.7
+  VD3: 0.7
   VD4: null
   VD5: null
   VD6: null
   lna: 1
   pol: 0
 LNA02:
-  ID1: 0.7
-  ID2: 0.7
-  ID3: 0.7
+  ID1: 3.0
+  ID2: 3.0
+  ID3: 3.0
   ID4: null
   ID5: null
   ID6: null
-  VD1: 3.0
-  VD2: 3.0
-  VD3: 3.0
+  VD1: 0.7
+  VD2: 0.7
+  VD3: 0.7
   VD4: null
   VD5: null
   VD6: null
   lna: 2
   pol: 0
 LNA11:
-  ID1: 0.7
-  ID2: 0.7
-  ID3: 0.7
+  ID1: 3.0
+  ID2: 3.0
+  ID3: 3.0
   ID4: null
   ID5: null
   ID6: null
-  VD1: 3.0
-  VD2: 3.0
-  VD3: 3.0
+  VD1: 0.7
+  VD2: 0.7
+  VD3: 0.7
   VD4: null
   VD5: null
   VD6: null
   lna: 1
   pol: 1
 LNA12:
-  ID1: 0.7
-  ID2: 0.7
-  ID3: 0.7
+  ID1: 3.0
+  ID2: 3.0
+  ID3: 3.0
   ID4: null
   ID5: null
   ID6: null
-  VD1: 3.0
-  VD2: 3.0
-  VD3: 3.0
+  VD1: 0.7
+  VD2: 0.7
+  VD3: 0.7
   VD4: null
   VD5: null
   VD6: null
@@ -78,4 +78,4 @@ SIS12:
   Vj: 9.0
   pol: 1
   sis: 2
-description: Cold defaults
+description: Cryo3 defaults

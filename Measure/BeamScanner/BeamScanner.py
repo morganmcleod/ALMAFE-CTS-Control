@@ -20,42 +20,6 @@ class BeamScanner():
     XY_SPEED_SCANNING = 20    # mm/sec
     POL_SPEED = 20            # deg/sec
 
-    PNA_CONFIG_SCANNING = MeasConfig(
-        channel = 1,
-        measType = MeasType.S21,
-        format = Format.SDATA,
-        sweepType = SweepType.CW_TIME,
-        sweepGenType = SweepGenType.STEPPED,
-        sweepPoints = 6000,
-        triggerSource = TriggerSource.IMMEDIATE,
-        bandWidthHz = 200,
-        centerFreq_Hz = 10.180e9,
-        spanFreq_Hz = 0,
-        timeout_sec = 6.03,
-        sweepTimeAuto = True,
-        measName = "CH1_S21_CW"
-    )
-    PNA_CONFIG_BEAMCENTER = MeasConfig(
-        channel = 1,
-        measType = MeasType.S21,
-        format = Format.SDATA,
-        sweepType = SweepType.CW_TIME,
-        sweepGenType = SweepGenType.STEPPED,
-        sweepPoints = 20,
-        triggerSource = TriggerSource.MANUAL,
-        bandWidthHz = 200,
-        centerFreq_Hz = 10.180e9,
-        spanFreq_Hz = 0,
-        timeout_sec = 6.03,
-        sweepTimeAuto = True,
-        measName = "CH1_S21_CW"
-    )
-    PNA_POWER_CONFIG = PowerConfig(
-        channel = 1, 
-        powerLevel_dBm = -10, 
-        attenuation_dB = 0
-    )
-
     def __init__(self, 
                 motorController:MCInterface, 
                 pna:PNAInterface, 
@@ -139,7 +103,7 @@ class BeamScanner():
     def __runOneScan(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         success, msg = self.__resetRasters()
         if success:
-            success, msg = self.__setWarmIFInput(scan, subScan)
+            success, msg = self.__setIFInput(scan, subScan)
         if success:
             success, msg = self.__rfSourceOff()
         if success:
@@ -263,7 +227,7 @@ class BeamScanner():
 
     def __resetPNA(self) -> Tuple[bool, str]:
         self.pna.reset()
-        self.pnaConfig = copy(DEFAULT_CONFIG)        
+        self.pnaConfig = copy.copy(DEFAULT_CONFIG)        
         self.pnaConfig.triggerSource = TriggerSource.EXTERNAL
         self.pna.setMeasConfig(self.pnaConfig)
         self.pna.setPowerConfig(DEFAULT_POWER_CONFIG)
@@ -275,7 +239,7 @@ class BeamScanner():
         self.nextRaster = -1
         return (True, "")
 
-    def __setWarmIFInput(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+    def __setIFInput(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
@@ -324,13 +288,13 @@ class BeamScanner():
         controller = PID(0.02, 0.012, 0.012, setpoint=self.measurementSpec.targetLevel)
         controller.output_limits = (15, 100)
         setValue = 15 # percent
-        iter = 100
+        iter = 10
         amp, phase = self.pna.getAmpPhase()
         if not amp:
             msg = f"__rfSourceAutoLevel: getAmpPhase error."
             return (False, msg)
         self.rfSrcDevice.setPAOutput(subScan.pol, setValue) 
-        while iter > 0 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
+        while iter > 0 and setValue < 100 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
             setValue = controller(amp)
             self.rfSrcDevice.setPAOutput(subScan.pol, setValue)
             amp, phase = self.pna.getAmpPhase()
@@ -338,7 +302,7 @@ class BeamScanner():
                 msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
                 return (False, msg)
             iter -= 1
-        self.pna.setMeasConfig(self.PNA_CONFIG_SCANNING)
+        self.pna.setMeasConfig(DEFAULT_CONFIG)
         msg = f"__rfSourceAutoLevel: target={self.measurementSpec.targetLevel} amp={amp} setValue={setValue} iter={iter}"
         print(msg)
         return (iter > 0, msg)
