@@ -1,11 +1,7 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from enum import Enum
 import pyvisa
-
-class TaskType(Enum):
-    STATIC = 0
-    DIGITAL = 1
 
 class DigitalPort(Enum):
     LOW_ORDER_8BIT = 0
@@ -17,11 +13,9 @@ class DigitalMethod(Enum):
     ASCII = 1
 
 class SwitchConfig(BaseModel):
-    taskType: TaskType = TaskType.STATIC
     slot: int = 0
     port: DigitalPort = DigitalPort.LOW_ORDER_8BIT
     method: DigitalMethod = DigitalMethod.BINARY
-    dataStream: int = 1
 
 class SwitchController():
     """The HP3488a switch controller"""
@@ -39,6 +33,11 @@ class SwitchController():
         self.inst.timeout = self.DEFAULT_TIMEOUT
         self.readConfig = SwitchConfig()
         self.writeConfig = SwitchConfig()
+        if reset:
+            self.reset()
+
+    def reset(self) -> None:
+        self.inst.write("CRESET 1, 2, 3")
 
     def staticRead(self) -> int:
         result = self.inst.query(f"SREAD {self.readConfig.slot}04")

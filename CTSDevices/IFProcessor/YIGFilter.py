@@ -1,4 +1,4 @@
-from .HP3488a import *
+from ..TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
 
 class YIGFilter():
     """The YIG filter in the IF processor"""
@@ -7,21 +7,21 @@ class YIGFilter():
     STEP_RESOLUTION = 2.7839    # resolution in MHz/step
     LATCH_BIT = 4096            # latch the new tuning
 
-    def __init__(self, resource="GPIB0::13::INSTR", idQuery=True, reset=True):
+    def __init__(self, resource="GPIB0::13::INSTR"):
         """Constructor
 
         :param str resource: VISA resource string, defaults to "GPIB0::13::INSTR"
-        :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
-        :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.switchController = SwitchController(resource)
         self.switchController.writeConfig = SwitchConfig(
-            taskType = TaskType.DIGITAL,
             slot = 3,
             port = DigitalPort.WORD_16BIT,
             method = DigitalMethod.ASCII
-            dataStream = 3
         )
+        self.reset()
+
+    def reset(self):
+        self.setFrequency(0)
         self.freqGhz = 0
 
     def setFrequency(self, freqGHz: float) -> None:
