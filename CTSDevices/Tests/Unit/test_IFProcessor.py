@@ -45,17 +45,16 @@ class test_IFProcessor(unittest.TestCase):
         time.sleep(2)
         
     def test_InputSwitch(self):
-        for i in range(6):
-            value = InputSelect(i  + 1)
-            print(f"test_InputSwitch.setValue({value})...")
-            self.inputSwitch.setValue(value)    #broken
+        for input in InputSelect:
+            print(f"test_InputSwitch.setValue({input.name})...")
+            self.inputSwitch.setValue(input)
             time.sleep(2)
         print("test_InputSwitch.setValue(POL0_USB)...")
         self.inputSwitch.setValue(InputSelect.POL0_USB)
         time.sleep(2)
 
     def test_OutputSwitch(self):
-        print("test_OutputSwitch.reset()...")   #broken
+        print("test_OutputSwitch.reset()...")
         self.outputSwitch.reset()
         time.sleep(2)
         print("test_OutputSwitch.setValue(POWER_METER, THROUGH)...")

@@ -22,7 +22,8 @@ class SwitchController():
     
     DEFAULT_TIMEOUT = 15000     # milliseconds
     
-    def __init__(self, resource="GPIB0::9::INSTR", reset=True):
+    def __init__(self, resource: bool = "GPIB0::9::INSTR", reset: bool = True, 
+                 readConfig: SwitchConfig = None, writeConfig: SwitchConfig = None):
         """Constructor
 
         :param str resource: VISA resource string, defaults to "GPIB0::13::INSTR"
@@ -31,8 +32,10 @@ class SwitchController():
         rm = pyvisa.ResourceManager()
         self.inst = rm.open_resource(resource)
         self.inst.timeout = self.DEFAULT_TIMEOUT
-        self.readConfig = SwitchConfig()
-        self.writeConfig = SwitchConfig()
+        if readConfig:            
+            self.readConfig = readConfig
+        if writeConfig:
+            self.writeConfig = writeConfig
         if reset:
             self.reset()
 

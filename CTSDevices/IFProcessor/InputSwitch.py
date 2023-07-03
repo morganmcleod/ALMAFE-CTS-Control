@@ -2,12 +2,12 @@ from TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, D
 from enum import Enum
 
 class InputSelect(Enum):
-    POL0_USB = 1
+    POL0_USB = 1            # these are also the bits of the control word to send
     POL0_LSB = 2
-    POL1_USB = 3
-    POL1_LSB = 4
-    NOISE_DIODE = 5
-    INPUT6 = 6
+    POL1_USB = 4
+    POL1_LSB = 8
+    NOISE_DIODE = 64
+    INPUT6 = 128
 
 class InputSwitch():
     def __init__(self, resource="GPIB0::9::INSTR"):
@@ -15,19 +15,11 @@ class InputSwitch():
 
         :param str resource: VISA resource string, defaults to "GPIB0::9::INSTR"
         """
-        self.switchController = SwitchController(resource)
-        self.switchController.writeConfig = SwitchConfig(
+        self.switchController = SwitchController(resource, writeConfig = SwitchConfig(
             slot = 1,
-            port = DigitalPort.LOW_ORDER_8BIT,
-            method = DigitalMethod.BINARY,
-        )
+            port = DigitalPort.LOW_ORDER_8BIT
+        ))
 
     def setValue(self, select: InputSelect) -> None:
-        if select == InputSelect.NOISE_DIODE:
-            dataOut = 64
-        elif select == InputSelect.INPUT6:
-            dataOut = 128
-        else:
-            dataOut = 2 ^ (select.value - 1)
-        self.switchController.staticWrite(255 - dataOut)
-
+        # send the compliment of the byte having the selected bit:
+        self.switchController.staticWrite(255 - select.value)

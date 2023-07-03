@@ -3,6 +3,7 @@ from TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, D
 class YIGFilter():
     """The YIG filter in the IF processor"""
     
+    MIN_TUNING_MHZ = 1000       # lower limit in MHz
     MAX_TUNING_MHZ = 12400      # upper limit in MHz
     STEP_RESOLUTION = 2.7839    # resolution in MHz/step
     LATCH_BIT = 4096            # latch the new tuning
@@ -12,12 +13,13 @@ class YIGFilter():
 
         :param str resource: VISA resource string, defaults to "GPIB0::13::INSTR"
         """
-        self.switchController = SwitchController(resource)
-        self.switchController.writeConfig = SwitchConfig(
+        self.switchController = SwitchController(resource, writeConfig = SwitchConfig(
             slot = 3,
             port = DigitalPort.WORD_16BIT,
             method = DigitalMethod.ASCII
-        )
+        ))
+        self.minGHz = self.MIN_TUNING_MHZ / 1000
+        self.maxGHz = self.MAX_TUNING_MHZ / 1000
         self.reset()
 
     def reset(self):
@@ -25,14 +27,16 @@ class YIGFilter():
         self.freqGhz = 0
 
     def setFrequency(self, freqGHz: float) -> None:
-        if freqGHz < 0:
-            freqGHz = 0
-        elif freqGHz > (self.MAX_TUNING_MHZ / 1000):
-            freqGHz = (self.MAX_TUNING_MHZ / 1000)
-        self.freqGhz = freqGHz
+        if freqGHz < self.minGHz:
+            freqGHz = self.minGHz
+        elif freqGHz > self.maxGHz:
+            freqGHz = self.maxGHz
 
+        self.freqGhz = freqGHz
+        # tuning word is the complement of the input value, scaled to 0..4095
         tuningWord = int((self.MAX_TUNING_MHZ - (1000 * freqGHz)) / self.STEP_RESOLUTION)
 
+        # we send the tuning word three times, the second time having the latch bit set:
         data = [tuningWord, tuningWord + self.LATCH_BIT, tuningWord]
         self.switchController.digitalWrite(data)
 
