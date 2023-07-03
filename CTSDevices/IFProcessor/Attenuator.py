@@ -4,6 +4,7 @@ import copy
 class Attenuator():
     MAX_ATTENUATION = 121
     DIVISORS = (40, 40, 20, 10, 4, 4, 2, 1)
+    RESET_SWITCHES = (True, True, True, True, True, True, True, True, False, False)
 
     def __init__(self, resource="GPIB0::28::INSTR", reset=True):
         """Constructor
@@ -18,7 +19,7 @@ class Attenuator():
 
     def reset(self):
         # set attenuation to max:
-        self.switchController.setSwitches([True] * 10)
+        self.switchController.setSwitches(self.RESET_SWITCHES)
 
     def setValue(self, atten: int = MAX_ATTENUATION):
         if atten < 0 or atten > self.MAX_ATTENUATION:
@@ -29,13 +30,13 @@ class Attenuator():
 
         for div in self.DIVISORS:
             if remaining < div:
-                switches.append(False)
+                switches.insert(0, False)
             else:
                 remaining -= div
-                switches.append(True)
+                switches.insert(0, True)
 
         switches.append(False)
-        switches.append(False)
+        switches.append(False)        
         self.switchController.setSwitches(switches)
 
 

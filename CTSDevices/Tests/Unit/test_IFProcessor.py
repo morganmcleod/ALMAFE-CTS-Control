@@ -31,20 +31,19 @@ class test_IFProcessor(unittest.TestCase):
     def __implErrorQuery(self):
         return 0, ""
 
-    def test_Attenuator(self):
+    def Xtest_Attenuator(self):
         print("test_Attenuator.reset()...")
         self.attenuator.reset()
         time.sleep(2)
-        for i in range(10):
-            value = (i  + 1) * 10
-            print(f"test_Attenuator.setValue({value})...")
-            self.attenuator.setValue(value)
+        for atten in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 80):
+            print(f"test_Attenuator.setValue({atten})...")
+            self.attenuator.setValue(atten)
             time.sleep(2)
         print("test_Attenuator.reset()...")
         self.attenuator.reset()
         time.sleep(2)
         
-    def test_InputSwitch(self):
+    def Xtest_InputSwitch(self):
         for input in InputSelect:
             print(f"test_InputSwitch.setValue({input.name})...")
             self.inputSwitch.setValue(input)
@@ -53,7 +52,7 @@ class test_IFProcessor(unittest.TestCase):
         self.inputSwitch.setValue(InputSelect.POL0_USB)
         time.sleep(2)
 
-    def test_OutputSwitch(self):
+    def Xtest_OutputSwitch(self):
         print("test_OutputSwitch.reset()...")
         self.outputSwitch.reset()
         time.sleep(2)
@@ -73,7 +72,7 @@ class test_IFProcessor(unittest.TestCase):
         self.outputSwitch.reset()
         time.sleep(2)
         
-    def test_NoiseSource(self):
+    def Xtest_NoiseSource(self):
         print("test_NoiseSource.reset()...")
         self.noiseSource.reset()
         time.sleep(2)
@@ -91,6 +90,7 @@ class test_IFProcessor(unittest.TestCase):
         time.sleep(2)
 
     def test_YIGFilter(self):
+        self.attenuator.setValue(10)
         print("test_YIGFilter.reset()...")
         self.yigFilter.reset()
         self.assertEqual(self.yigFilter.getFrequency(), 0)

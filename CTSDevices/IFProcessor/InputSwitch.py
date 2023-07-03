@@ -7,7 +7,7 @@ class InputSelect(Enum):
     POL1_USB = 4
     POL1_LSB = 8
     NOISE_DIODE = 64
-    INPUT6 = 128
+    INPUT6 = 32
 
 class InputSwitch():
     def __init__(self, resource="GPIB0::9::INSTR"):

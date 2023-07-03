@@ -34,7 +34,10 @@ class YIGFilter():
 
         self.freqGhz = freqGHz
         # tuning word is the complement of the input value, scaled to 0..4095
-        tuningWord = int((self.MAX_TUNING_MHZ - (1000 * freqGHz)) / self.STEP_RESOLUTION)
+        MHz = 1000 * freqGHz
+        tuning = self.MAX_TUNING_MHZ - MHz
+        tuning = tuning / self.STEP_RESOLUTION
+        tuningWord = int(round(tuning))
 
         # we send the tuning word three times, the second time having the latch bit set:
         data = [tuningWord, tuningWord + self.LATCH_BIT, tuningWord]
