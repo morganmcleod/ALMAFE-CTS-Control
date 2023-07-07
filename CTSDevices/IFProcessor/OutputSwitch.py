@@ -1,4 +1,4 @@
-from TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
+from CTSDevices.TestEquipment.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
 from enum import Enum
 
 class PadSelect(Enum):

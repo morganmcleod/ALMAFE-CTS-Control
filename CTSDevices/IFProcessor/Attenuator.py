@@ -1,4 +1,4 @@
-from TestEquipment.Agilent11713 import AttenuatorSwitchController
+from CTSDevices.TestEquipment.Agilent11713 import AttenuatorSwitchController
 import copy
 
 class Attenuator():

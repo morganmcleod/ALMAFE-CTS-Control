@@ -1,14 +1,49 @@
 import unittest
+from AMB.AMBConnectionDLL import AMBConnectionDLL
+from AMB.LODevice import LODevice
+from AMB.CCADevice import CCADevice
+from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from CTSDevices.IFProcessor.Attenuator import Attenuator
 from CTSDevices.IFProcessor.InputSwitch import InputSwitch, InputSelect
 from CTSDevices.IFProcessor.NoiseSource import NoiseSource
 from CTSDevices.IFProcessor.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
 from CTSDevices.IFProcessor.YIGFilter import YIGFilter
+import configparser
 import time
+
+CARTRIDGE_BAND = 6
+YTO_LOW = 12.22
+YTO_HIGH = 14.77
+CARTRIDGE_CONFIG = 433
 
 class test_IFProcessor(unittest.TestCase):
 
-    def setUp(self):        
+    @classmethod
+    def setUpClass(cls):
+        config = configparser.ConfigParser()
+        config.read('FrontEndAMBDLL.ini')
+        dllName = config['load']['dll']
+        cls.conn = AMBConnectionDLL(channel = 0, dllName = dllName)
+        cls.ccaDevice = CCADevice(cls.conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
+        cls.ccaDevice.initSession()
+        cls.ccaDevice.setBandPower(CARTRIDGE_BAND, True)
+
+        cls.loDevice = LODevice(cls.conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
+        cls.loDevice.initSession()
+        cls.loDevice.setBandPower(CARTRIDGE_BAND, True)
+        cls.loDevice.setYTOLimits(YTO_LOW, YTO_HIGH)
+
+        cls.cartAssembly = CartAssembly(cls.ccaDevice, cls.loDevice, CARTRIDGE_CONFIG)
+        cls.cartAssembly.setRecevierBias(241)
+        cls.cartAssembly.setAutoLOPower(0)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.ccaDevice.shutdown()
+        cls.loDevice.shutdown()
+        cls.conn.shutdown()
+
+    def setUp(self):
         self.attenuator = Attenuator()
         self.inputSwitch = InputSwitch()
         self.noiseSource = NoiseSource()

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from bisect import bisect_right
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
@@ -11,16 +11,20 @@ from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
+from simple_pid import PID
 
 class CartAssembly():
-    def __init__(self, ccaDevice:CCADevice, loDevice:LODevice):
+    def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
         self.ccaDevice = ccaDevice
         self.loDevice = loDevice
         self.reset()
+        if configId:
+            self.setConfig(configId)
         
     def reset(self):
         self.configId = self.keysPol0 = self.keysPol1 = None
         self.freqLOGHz = 0
+        self.mixerParam01 = MixerParams()
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -53,6 +57,36 @@ class CartAssembly():
         self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.Imag)
         self.ccaDevice.setSIS(1, 1, self.mixerParam01.VJ, self.mixerParam11.Imag)
         self.ccaDevice.setSIS(1, 2, self.mixerParam02.VJ, self.mixerParam12.Imag)
+        return True
+
+    def setAutoLOPower(self, pol: int) -> bool:
+        if pol < 0 or pol > 1:
+            raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
+
+        targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
+        targetIJMin = targetIJ - 3   # uA
+        targetIJMax = targetIJ + 3   # uA
+        setVD = 1.0
+        setVDMax = 2.5
+
+        controller = PID(-0.0004, 0.0005, 0.0006, setpoint = targetIJ)
+        controller.output_limits = (0, setVDMax)
+        controller.sample_time = 0.01
+
+        IJ = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
+        if IJ is None:
+            raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
+        self.loDevice.setPABias(pol, setVD)
+        iter = 20
+        while iter > 0 and setVD < setVDMax and not targetIJMin < IJ < targetIJMax:
+            setVD = controller(IJ)
+            self.loDevice.setPABias(pol, setVD)
+            IJ = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
+            if IJ is None:
+                raise ValueError(f"CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None at setVD={setVD} iter={iter}")
+            iter -= 1
+        print(f"CartAssembly.setAutoLOPower: setVD={setVD}, IJ={IJ}, iter={iter}")
+        return iter > 0
 
     def getSISCurrentTargets(self):
         return self.mixerParam01.IJ,  self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ
@@ -69,8 +103,8 @@ class CartAssembly():
         after = mixerParams[pos + 1]
         scale = FreqLO / (after.FreqLO - before.FreqLO)
         return MixerParam(
-            FreqLO = FreqLO    
-            VJ = before.VJ + ((after.VJ - before.VJ) * scale)
-            IJ = before.IJ + ((after.IJ - before.IJ) * scale)
+            FreqLO = FreqLO,
+            VJ = before.VJ + ((after.VJ - before.VJ) * scale),
+            IJ = before.IJ + ((after.IJ - before.IJ) * scale),
             IMAG = before.IMAG + ((after.IMAG - before.IMAG) * scale)
         )
