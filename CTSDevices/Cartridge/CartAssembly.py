@@ -1,9 +1,9 @@
 from typing import List, Optional
-from bisect import bisect_right
+from bisect import bisect_left
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
-from ..database.CTSDB import CTSDB
+from app.database.CTSDB import CTSDB
 
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
@@ -24,7 +24,6 @@ class CartAssembly():
     def reset(self):
         self.configId = self.keysPol0 = self.keysPol1 = None
         self.freqLOGHz = 0
-        self.mixerParam01 = MixerParams()
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -53,10 +52,10 @@ class CartAssembly():
         self.mixerParam02 = self.__interpolateMixerParams(FreqLO, self.mixerParams02)
         self.mixerParam11 = self.__interpolateMixerParams(FreqLO, self.mixerParams11)
         self.mixerParam12 = self.__interpolateMixerParams(FreqLO, self.mixerParams12)
-        self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.Imag)
-        self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.Imag)
-        self.ccaDevice.setSIS(1, 1, self.mixerParam01.VJ, self.mixerParam11.Imag)
-        self.ccaDevice.setSIS(1, 2, self.mixerParam02.VJ, self.mixerParam12.Imag)
+        self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.IMAG)
+        self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.IMAG)
+        self.ccaDevice.setSIS(1, 1, self.mixerParam01.VJ, self.mixerParam11.IMAG)
+        self.ccaDevice.setSIS(1, 2, self.mixerParam02.VJ, self.mixerParam12.IMAG)
         return True
 
     def setAutoLOPower(self, pol: int) -> bool:
@@ -73,35 +72,39 @@ class CartAssembly():
         controller.output_limits = (0, setVDMax)
         controller.sample_time = 0.01
 
-        IJ = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
-        if IJ is None:
+        sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
+        if sis is None:
             raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
         self.loDevice.setPABias(pol, setVD)
         iter = 20
-        while iter > 0 and setVD < setVDMax and not targetIJMin < IJ < targetIJMax:
-            setVD = controller(IJ)
+        while iter > 0 and setVD < setVDMax and not targetIJMin < abs(sis['Ij']) < targetIJMax:
+            setVD = controller(sis['Ij'])
             self.loDevice.setPABias(pol, setVD)
-            IJ = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
-            if IJ is None:
+            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
+            if sis is None:
                 raise ValueError(f"CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None at setVD={setVD} iter={iter}")
             iter -= 1
-        print(f"CartAssembly.setAutoLOPower: setVD={setVD}, IJ={IJ}, iter={iter}")
+        print(f"CartAssembly.setAutoLOPower: setVD={setVD}, IJ={sis['Ij']}, iter={iter}")
         return iter > 0
 
     def getSISCurrentTargets(self):
         return self.mixerParam01.IJ,  self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ
 
     def __interpolateMixerParams(self, FreqLO:float, mixerParams:List[MixerParam]) -> MixerParam:
-        pos = bisect_right(mixerParams, FreqLO, key=lambda x:x.FreqLO)
+        # workaround for Python 3.9
+        # 3.10 allows us to pass a key function to bisect_left
+        FreqLOs = [x.FreqLO for x in mixerParams]
+        
+        pos = bisect_left(FreqLOs, FreqLO)
         if pos == 0:
             return mixerParams[0]
         if pos == len(mixerParams):
             return mixerParams[-1]
         if mixerParams[pos].FreqLO == FreqLO:
             return mixerParams[pos]
-        before = mixerParams[pos]
-        after = mixerParams[pos + 1]
-        scale = FreqLO / (after.FreqLO - before.FreqLO)
+        before = mixerParams[pos - 1]
+        after = mixerParams[pos]
+        scale = (FreqLO - before.FreqLO) / (after.FreqLO - before.FreqLO)
         return MixerParam(
             FreqLO = FreqLO,
             VJ = before.VJ + ((after.VJ - before.VJ) * scale),
