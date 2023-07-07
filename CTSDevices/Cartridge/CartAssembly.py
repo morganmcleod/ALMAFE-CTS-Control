@@ -63,28 +63,33 @@ class CartAssembly():
             raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
 
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
-        targetIJMin = targetIJ - 3   # uA
-        targetIJMax = targetIJ + 3   # uA
+        print(f"target Ij = {targetIJ}")
+        targetIJMin = targetIJ - 0.5   # uA
+        targetIJMax = targetIJ + 0.5   # uA
         setVD = 1.0
         setVDMax = 2.5
+        averaging = 2
+        maxIter = 100
 
-        controller = PID(-0.0004, 0.0005, 0.0006, setpoint = targetIJ)
+        self.loDevice.setPABias(pol, setVD)
+
+        controller = PID(0.00675, 0.03, 0, setpoint = targetIJ, starting_output = setVD)
         controller.output_limits = (0, setVDMax)
-        controller.sample_time = 0.01
-
-        sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
+        controller.sample_time = 0.1
+        
+        sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
+        Ij = abs(sis['Ij']) * 1000
         if sis is None:
             raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
-        self.loDevice.setPABias(pol, setVD)
-        iter = 20
-        while iter > 0 and setVD < setVDMax and not targetIJMin < abs(sis['Ij']) < targetIJMax:
-            setVD = controller(sis['Ij'])
+        iter = maxIter
+        while iter > 0 and not targetIJMin < abs(sis['Ij'] * 1000) < targetIJMax:
+            print(maxIter - iter, round(setVD, 2), round(Ij, 3))
+            setVD = controller(Ij)
             self.loDevice.setPABias(pol, setVD)
-            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = 8)
-            if sis is None:
-                raise ValueError(f"CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None at setVD={setVD} iter={iter}")
+            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
+            Ij = abs(sis['Ij']) * 1000
             iter -= 1
-        print(f"CartAssembly.setAutoLOPower: setVD={setVD}, IJ={sis['Ij']}, iter={iter}")
+        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 2)} mV, IJ={round(Ij, 3)} uA, iter={iter}")
         return iter > 0
 
     def getSISCurrentTargets(self):
