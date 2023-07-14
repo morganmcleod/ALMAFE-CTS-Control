@@ -8,7 +8,7 @@ class YIGFilter():
     STEP_RESOLUTION = 2.7839    # resolution in MHz/step
     LATCH_BIT = 4096            # latch the new tuning
 
-    def __init__(self, resource="GPIB0::13::INSTR"):
+    def __init__(self, resource="GPIB0::9::INSTR"):
         """Constructor
 
         :param str resource: VISA resource string, defaults to "GPIB0::13::INSTR"
@@ -23,8 +23,8 @@ class YIGFilter():
         self.reset()
 
     def reset(self):
-        self.setFrequency(0)
-        self.freqGhz = 0
+        self.setFrequency(self.minGHz)
+        self.freqGhz = self.minGHz
 
     def setFrequency(self, freqGHz: float) -> None:
         if freqGHz < self.minGHz:

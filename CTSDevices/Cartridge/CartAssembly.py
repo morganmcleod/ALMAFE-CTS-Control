@@ -69,7 +69,7 @@ class CartAssembly():
         setVD = 1.0
         setVDMax = 2.5
         averaging = 2
-        maxIter = 100
+        maxIter = 20
 
         self.loDevice.setPABias(pol, setVD)
 

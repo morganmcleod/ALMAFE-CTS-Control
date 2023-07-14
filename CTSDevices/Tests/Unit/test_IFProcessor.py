@@ -66,7 +66,7 @@ class test_IFProcessor(unittest.TestCase):
     def __implErrorQuery(self):
         return 0, ""
 
-    def Xtest_Attenuator(self):
+    def test_Attenuator(self):
         print("test_Attenuator.reset()...")
         self.attenuator.reset()
         time.sleep(2)
@@ -78,7 +78,7 @@ class test_IFProcessor(unittest.TestCase):
         self.attenuator.reset()
         time.sleep(2)
         
-    def Xtest_InputSwitch(self):
+    def test_InputSwitch(self):
         for input in InputSelect:
             print(f"test_InputSwitch.setValue({input.name})...")
             self.inputSwitch.setValue(input)
@@ -87,7 +87,7 @@ class test_IFProcessor(unittest.TestCase):
         self.inputSwitch.setValue(InputSelect.POL0_USB)
         time.sleep(2)
 
-    def Xtest_OutputSwitch(self):
+    def test_OutputSwitch(self):
         print("test_OutputSwitch.reset()...")
         self.outputSwitch.reset()
         time.sleep(2)
@@ -107,7 +107,7 @@ class test_IFProcessor(unittest.TestCase):
         self.outputSwitch.reset()
         time.sleep(2)
         
-    def Xtest_NoiseSource(self):
+    def test_NoiseSource(self):
         print("test_NoiseSource.reset()...")
         self.noiseSource.reset()
         time.sleep(2)
@@ -128,14 +128,13 @@ class test_IFProcessor(unittest.TestCase):
         self.attenuator.setValue(10)
         print("test_YIGFilter.reset()...")
         self.yigFilter.reset()
-        self.assertEqual(self.yigFilter.getFrequency(), 0)
-        for i in range(9):
-            freqGHz = (i + 4)  # 4..12 by 1 GHz
+        self.assertEqual(self.yigFilter.getFrequency(), self.yigFilter.minGHz)
+        for freqGHz in (4, 5, 6, 7, 8, 9, 10, 11, 12):
             print(f"test_YIGFilter.setFrequency({freqGHz})...")
             self.yigFilter.setFrequency(freqGHz)
             self.assertEqual(self.yigFilter.getFrequency(), freqGHz)
             time.sleep(2)        
         print("test_YIGFilter.reset()...")
         self.yigFilter.reset()
-        self.assertEqual(self.yigFilter.getFrequency(), 0)
+        self.assertEqual(self.yigFilter.getFrequency(), self.yigFilter.minGHz)
         
