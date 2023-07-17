@@ -11,7 +11,13 @@ from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
-from simple_pid import PID
+
+from CTSDevices.Common.BinarySearchController import BinarySearchControler
+
+import matplotlib.pyplot as plt
+
+from drawnow import drawnow, figure
+import time
 
 class CartAssembly():
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
@@ -64,32 +70,62 @@ class CartAssembly():
 
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
         print(f"target Ij = {targetIJ}")
-        targetIJMin = targetIJ - 0.5   # uA
-        targetIJMax = targetIJ + 0.5   # uA
-        setVD = 1.0
-        setVDMax = 2.5
+        setVD = 1.2
         averaging = 2
-        maxIter = 20
+
+        controller = BinarySearchControler(
+            outputRange = [0, 2.5], 
+            initialStep = 0.1, 
+            initialOutput = setVD, 
+            setPoint = targetIJ,
+            tolerance = 0.1,
+            maxIter = 50)
 
         self.loDevice.setPABias(pol, setVD)
 
-        controller = PID(0.00675, 0.03, 0, setpoint = targetIJ, starting_output = setVD)
-        controller.output_limits = (0, setVDMax)
-        controller.sample_time = 0.1
-        
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-        Ij = abs(sis['Ij']) * 1000
         if sis is None:
             raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
-        iter = maxIter
-        while iter > 0 and not targetIJMin < abs(sis['Ij'] * 1000) < targetIJMax:
-            print(maxIter - iter, round(setVD, 2), round(Ij, 3))
-            setVD = controller(Ij)
-            self.loDevice.setPABias(pol, setVD)
-            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-            Ij = abs(sis['Ij']) * 1000
-            iter -= 1
-        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 2)} mV, IJ={round(Ij, 3)} uA, iter={iter}")
+        Ij = abs(sis['Ij']) * 1000
+
+        X, Y = [0], [Ij]
+        def draw_fig():
+            nonlocal X, Y
+            plt.plot(X, Y)
+            plt.xlabel('iter')
+            plt.ylabel('Ij [uA]')
+        
+        fig, ax = plt.subplots()
+        plt.ion()
+        ax.plot(X, Y, 'b-')
+        
+        tprev = time.time()
+        tsum = 0
+        iter = 0
+        done = False
+        while not done:
+            controller.process(Ij)
+            if controller.isComplete():
+                done = True
+            else:
+                setVD = controller.output
+                self.loDevice.setPABias(pol, setVD)
+                sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
+                Ij = abs(sis['Ij']) * 1000
+
+            X.append(X[-1] + 1)
+            Y.append(Ij)
+            drawnow(draw_fig)
+
+            # print(f"iter={controller.iter} stepSize={controller.step} VD={round(setVD, 3)} Ij={round(Ij, 3)}")
+
+            tsum += (time.time() - tprev)
+            tprev = time.time()
+
+        print(f"success={controller.success} fail={controller.fail}")
+
+        iterTime = tsum / controller.iter
+        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 3)} mV, IJ={round(Ij, 3)} uA, iter={controller.iter} iterTime={iterTime}")
         return iter > 0
 
     def getSISCurrentTargets(self):
