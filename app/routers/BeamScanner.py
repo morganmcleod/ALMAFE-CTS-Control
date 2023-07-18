@@ -11,6 +11,7 @@ from DBBand6Cart.TestTypes import TestTypeIds
 from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
 from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption
+from socket import getfqdn
 
 router = APIRouter(prefix="/beamscan")
 manager = ConnectionManager()
@@ -164,6 +165,7 @@ async def get_MoveStatus():
 async def put_Start(cartTest:CartTest):
     cartTestsDb = CartTests(driver = CTSDB())
     cartTest.fkTestType = TestTypeIds.BEAM_PATTERN.value
+    cartTest.testSysName = getfqdn()
     BeamScanner.beamScanner.keyCartTest = cartTestsDb.create(cartTest)
     if (BeamScanner.beamScanner.keyCartTest):
         BeamScanner.beamScanner.start()

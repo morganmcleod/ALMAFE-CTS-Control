@@ -5,6 +5,7 @@ from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from CTSDevices.IFProcessor.InputSwitch import InputSelect
+from CTSDevices.IFProcessor.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from simple_pid import PID
@@ -98,97 +99,105 @@ class BeamScanner():
                     success, msg = self.__runOneScan(scan, subScan)
                     print(f"{success}:{msg}")
                     self.scanStatus.activeSubScan = None
+                    if success:
+                        self.scanStatus.message = "Scan complete"
+                    else:
+                        self.scanStatus.message = "Error: " + msg
                 self.scanStatus.activeScan = None
+        self.scanStatus.scanComplete = True
         self.scanStatus.measurementComplete = True
-        self.scanStatus.message = "Scan complete"
 
     def __runOneScan(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        success, msg = self.__resetRasters()
-        if success:
-            success, msg = self.__setIFInput(scan, subScan)
-        if success:
-            success, msg = self.__rfSourceOff()
-        if success:
-            success, msg = self.__lockLO(scan, subScan)
-        if success:
-            success, msg = self.__setReceiverBias(scan, subScan)
-        if success:
-            success, msg = self.__lockRF(scan, subScan)
-        if success:
-            success, msg = self.__setYIGFilter(scan, subScan)
-        if success:
-            success, msg = self.__moveToBeamCenter(scan, subScan)
-        if success:
-            success, msg = self.__rfSourceAutoLevel(scan, subScan)
-       
-        if not success:
-            return (success, msg)
+        try:
+            success, msg = self.__resetRasters()
+            if success:
+                success, msg = self.__configureIfProcessor(scan, subScan)
+            if success:
+                success, msg = self.__rfSourceOff()
+            if success:
+                success, msg = self.__lockLO(scan, subScan)
+            if success:
+                success, msg = self.__setReceiverBias(scan, subScan)
+            if success:
+                success, msg = self.__lockRF(scan, subScan)
+            if success:
+                success, msg = self.__setYIGFilter(scan, subScan)
+            if success:
+                success, msg = self.__moveToBeamCenter(scan, subScan)
+            if success:
+                success, msg = self.__rfSourceAutoLevel(scan, subScan)
+        
+            if not success:
+                return (success, msg)
 
-        lastCenterPwrTime = None
-        rasterIndex = 0;
-        # loop on y axis:
-        for yPos in self.measurementSpec.makeYAxisList():
+            lastCenterPwrTime = None
+            rasterIndex = 0;
+            # loop on y axis:
+            for yPos in self.measurementSpec.makeYAxisList():
 
-            # check for User Stop signal
-            if self.stopNow:
-                self.__abortScan("User Stop")
-                return False
+                # check for User Stop signal
+                if self.stopNow:
+                    self.__abortScan("User Stop")
+                    return False
 
-            # time to record the beam center power?
-            if not lastCenterPwrTime or (time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
-                lastCenterPwrTime = time()
-                success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
+                # time to record the beam center power?
+                if not lastCenterPwrTime or (time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
+                    lastCenterPwrTime = time()
+                    success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
+                    if not success:
+                        self.__abortScan(msg)
+                        return (success, msg)
+
+                # check for User Stop signal
+                if self.stopNow:
+                    self.__abortScan("User Stop")
+                    return False
+
+                # go to start of this raster:
+                nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
+                self.raster = Raster(
+                    rasterIndex = rasterIndex, 
+                    startPos = nextPos, 
+                    xStep = self.measurementSpec.resolution
+                )
+                success, msg = self.__moveScanner(nextPos, withTrigger = False)
                 if not success:
                     self.__abortScan(msg)
                     return (success, msg)
 
-            # check for User Stop signal
-            if self.stopNow:
-                self.__abortScan("User Stop")
-                return False
+                # calculate next position and move timeout:
+                nextPos = Position(x = self.measurementSpec.scanEnd.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
+                self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
+                moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
 
-            # go to start of this raster:
-            nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
-            self.raster = Raster(
-                rasterIndex = rasterIndex, 
-                startPos = nextPos, 
-                xStep = self.measurementSpec.resolution
-            )
-            success, msg = self.__moveScanner(nextPos, withTrigger = False)
+                # configure external triggering:
+                success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
+                if not success:
+                    self.__abortScan(msg)
+                    return (success, msg)
+
+                # start the move:
+                success, msg = self.__moveScanner(nextPos, withTrigger = True, moveTimeout = moveTimeout)
+                if not success:
+                    self.__abortScan(msg)
+                    return (success, msg)
+                
+                # get the PNA trace data:
+                success, msg = self.__getPNARaster(scan, subScan, y = yPos)
+                if not success:
+                    self.__abortScan(msg)
+                    return (success, msg)
+
+            # record the beam center power a final time:
+            success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
             if not success:
                 self.__abortScan(msg)
                 return (success, msg)
-
-            # calculate next position and move timeout:
-            nextPos = Position(x = self.measurementSpec.scanEnd.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
-            self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
-            moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
-
-            # configure external triggering:
-            success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
-            if not success:
-                self.__abortScan(msg)
-                return (success, msg)
-
-            # start the move:
-            success, msg = self.__moveScanner(nextPos, withTrigger = True, moveTimeout = moveTimeout)
-            if not success:
-                self.__abortScan(msg)
-                return (success, msg)
-            
-            # get the PNA trace data:
-            success, msg = self.__getPNARaster(scan, subScan, y = yPos)
-            if not success:
-                self.__abortScan(msg)
-                return (success, msg)
-
-        # record the beam center power a final time:
-        success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
-        if not success:
-            self.__abortScan(msg)
-            return (success, msg)
-        else:
-            return (True, "__runOneScan complete")
+            else:
+                return (True, "__runOneScan complete")
+        except Exception as e:
+            print(e)
+            return (False, "__runOneScan Exception: " + str(e))
 
     def __moveScanner(self, nextPos:Position, withTrigger:bool, moveTimeout = None) -> Tuple[bool, str]:
         self.mc.setXYSpeed(self.XY_SPEED_SCANNING if withTrigger else self.XY_SPEED_POSITIONING)
@@ -241,7 +250,7 @@ class BeamScanner():
         self.nextRaster = -1
         return (True, "")
 
-    def __setIFInput(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+    def __configureIfProcessor(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if scan.RF > scan.LO:
             if subScan.pol == 0:
                 position = InputSelect.POL0_USB
@@ -253,6 +262,8 @@ class BeamScanner():
             else:
                 position = InputSelect.POL1_LSB
         self.ifProcessor.inputSwitch.setValue(position)
+        self.ifProcessor.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.ifProcessor.attenuator.setValue(10)   # TODO:  move into MeasConfig?
         return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
