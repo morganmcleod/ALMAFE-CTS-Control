@@ -72,6 +72,7 @@ class CartAssembly():
         print(f"target Ij = {targetIJ}")
         setVD = 1.2
         averaging = 2
+        maxIter = 50
 
         controller = BinarySearchControler(
             outputRange = [0, 2.5], 
@@ -79,7 +80,7 @@ class CartAssembly():
             initialOutput = setVD, 
             setPoint = targetIJ,
             tolerance = 0.1,
-            maxIter = 50)
+            maxIter = maxIter)
 
         self.loDevice.setPABias(pol, setVD)
 
@@ -101,7 +102,6 @@ class CartAssembly():
         
         tprev = time.time()
         tsum = 0
-        iter = 0
         done = False
         while not done:
             controller.process(Ij)
@@ -122,12 +122,11 @@ class CartAssembly():
             tsum += (time.time() - tprev)
             tprev = time.time()
 
-        print(f"success={controller.success} fail={controller.fail}")
-
         iterTime = tsum / controller.iter
-        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 3)} mV, IJ={round(Ij, 3)} uA, iter={controller.iter} iterTime={iterTime}")
-        return iter > 0
-
+        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 3)} mV, IJ={round(Ij, 3)} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
+        plt.close()
+        return controller.success
+    
     def getSISCurrentTargets(self):
         return self.mixerParam01.IJ,  self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ
 

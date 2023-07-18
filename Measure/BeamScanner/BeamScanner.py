@@ -4,8 +4,9 @@ from CTSDevices.PNA.schemas import MeasConfig, PowerConfig, MeasType, SweepType,
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from CTSDevices.IFProcessor.InputSwitch import InputSelect
 from AMB.LODevice import LODevice
-from AMB.CCADevice import CCADevice
+from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from simple_pid import PID
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from time import time, sleep
@@ -21,19 +22,20 @@ class BeamScanner():
     POL_SPEED = 20            # deg/sec
 
     def __init__(self, 
-                motorController:MCInterface, 
-                pna:PNAInterface, 
-                loReference:SignalGenerator, 
-                ccaDevice:CCADevice, 
-                loDevice:LODevice, 
-                rfSrcDevice:LODevice):
+        motorController:MCInterface, 
+        pna:PNAInterface, 
+        loReference:SignalGenerator, 
+        cartAssembly:CartAssembly,
+        rfSrcDevice:LODevice,
+        ifProcessor:object):
+        
         self.mc = motorController
         self.pna = pna
         self.loReference = loReference
         self.rfReference = None     # normally we don't use the RF source reference synth.  Set this to do so for debugging.
-        self.ccaDevice = ccaDevice
-        self.loDevice = loDevice
+        self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
+        self.ifProcessor = ifProcessor
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 3)
         self.measurementSpec = MeasurementSpec()
         self.scanList = ScanList()
@@ -240,26 +242,43 @@ class BeamScanner():
         return (True, "")
 
     def __setIFInput(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+        if scan.RF > scan.LO:
+            if subScan.pol == 0:
+                position = InputSelect.POL0_USB
+            else:
+                position = InputSelect.POL1_USB
+        else:
+            if subScan.pol == 0:
+                position = InputSelect.POL0_LSB
+            else:
+                position = InputSelect.POL1_LSB
+        self.ifProcessor.inputSwitch.setValue(position)
         return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
-        self.rfSrcDevice.setPAOutput(pol =0, percent = 0)
+        self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
         return (True, "")
 
     def __lockLO(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.loDevice.selectLockSideband(self.loDevice.LOCK_ABOVE_REF)
-        wcaFreq, ytoFreq, ytoCourse = self.loDevice.setLOFrequency(scan.LO)
+        self.cartAssembly.loDevice.selectLockSideband(self.cartAssembly.loDevice.LOCK_ABOVE_REF)
+        wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
         if wcaFreq > 0:
-            pllConfig = self.loDevice.getPLLConfig()
+            pllConfig = self.cartAssembly.loDevice.getPLLConfig()
             self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
             self.loReference.setAmplitude(12.0)
             self.loReference.setRFOutput(True)
-            wcaFreq, ytoFreq, ytoCourse = self.loDevice.lockPLL()
+            wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()
         msg = f"__lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
         return (wcaFreq != 0, msg)
 
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        return (True, "")
+        if self.cartAssembly.setRecevierBias(scan.LO):
+            if self.cartAssembly.setAutoLOPower(subScan.pol):
+                return (True, "")
+            else:
+                return (False, "cartAssembly.setAutoLOPower failed.")
+        else:
+            return (False, "cartAssembly.setRecevierBias failed.  Provide config ID?")
 
     def __lockRF(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
@@ -276,6 +295,7 @@ class BeamScanner():
         return (wcaFreq != 0, msg)
 
     def __setYIGFilter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO))
         return (True, "")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
@@ -293,10 +313,10 @@ class BeamScanner():
         if not amp:
             msg = f"__rfSourceAutoLevel: getAmpPhase error."
             return (False, msg)
-        self.rfSrcDevice.setPAOutput(subScan.pol, setValue) 
+        self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue) 
         while iter > 0 and setValue < 100 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
             setValue = controller(amp)
-            self.rfSrcDevice.setPAOutput(subScan.pol, setValue)
+            self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
             amp, phase = self.pna.getAmpPhase()
             if not amp:
                 msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."

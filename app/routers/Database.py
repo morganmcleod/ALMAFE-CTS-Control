@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from Response import ListResponse, prepareListResponse
+from Response import ListResponse, prepareListResponse, MessageResponse
 router = APIRouter(prefix="/database")
 
 from app.database.CTSDB import CTSDB
@@ -8,6 +8,8 @@ from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
+
+from hardware.FEMC import cartAssembly
 
 @router.get("/config/", response_model = ListResponse)
 async def getConfigs(serialNum:int = None, configId:int = None, callback:str = None):
@@ -20,10 +22,17 @@ async def getConfigs(serialNum:int = None, configId:int = None, callback:str = N
     '''
     # fetch configs from database:
     DB = CartConfigs(driver = CTSDB())
-    items = DB.read(keyCartAssys = configId, serialNum = serialNum, latestOnly = False if serialNum else True)
+    items = DB.read(keyColdCart = configId, serialNum = serialNum, latestOnly = False if serialNum else True)
     
     # prepare and return result:
     return prepareListResponse(items, callback)
+
+@router.put("/config/{configId}", response_model = MessageResponse)
+async def putCartConfig(configId:int):
+    if cartAssembly.setConfig(configId):
+        return MessageResponse(message = f"Selected cartridge config {configId}", success = True)
+    else:
+        return MessageResponse(message = f"ERROR selecting cartridge config {configId}", success = False)
 
 @router.get("/config/keys/", response_model = CartKeys)
 async def getConfigKeys(configId:int, pol:int, callback:str = None):
