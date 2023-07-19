@@ -21,7 +21,6 @@ class BeamScanner():
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
     POL_SPEED = 20                  # deg/sec
-    IF_PROCESSOR_OFFSET = 0.180e9   # offset from mixer in the IF Processor
 
     def __init__(self, 
         motorController:MCInterface, 
@@ -310,7 +309,7 @@ class BeamScanner():
         return (wcaFreq != 0, msg)
 
     def __setYIGFilter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO) + self.IF_PROCESSOR_OFFSET)
+        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO))
         return (True, "")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
