@@ -7,7 +7,7 @@ from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem,
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
-from .IFProcessor import ifProcessor
+from .WarmIFPlate import warmIFPlate
 from .DebugOptions import *
 
 if SIMULATE:
@@ -23,7 +23,7 @@ else:
 pna.setMeasConfig(MeasConfig())
 pna.setPowerConfig(PowerConfig())
 
-beamScanner = BeamScanner(motorController, pna, loReference, cartAssembly, rfSrcDevice, ifProcessor)
+beamScanner = BeamScanner(motorController, pna, loReference, cartAssembly, rfSrcDevice, warmIFPlate)
 
 if TESTING:
     # we can use the RF reference synth to test locking the RF source.  

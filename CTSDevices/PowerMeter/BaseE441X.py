@@ -9,7 +9,7 @@ class BaseE441X():
     """
 
     DEFAULT_TIMEOUT = 15000
-
+    
     def __init__(self, resource="GPIB0::13::INSTR", idQuery=True, reset=True):
         """Constructor
 

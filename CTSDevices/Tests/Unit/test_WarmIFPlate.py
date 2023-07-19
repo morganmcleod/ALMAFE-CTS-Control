@@ -3,11 +3,11 @@ from AMB.AMBConnectionDLL import AMBConnectionDLL
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
-from CTSDevices.IFProcessor.Attenuator import Attenuator
-from CTSDevices.IFProcessor.InputSwitch import InputSwitch, InputSelect
-from CTSDevices.IFProcessor.NoiseSource import NoiseSource
-from CTSDevices.IFProcessor.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
-from CTSDevices.IFProcessor.YIGFilter import YIGFilter
+from CTSDevices.WarmIFPlate.Attenuator import Attenuator
+from CTSDevices.WarmIFPlate.InputSwitch import InputSwitch, InputSelect
+from CTSDevices.WarmIFPlate.NoiseSource import NoiseSource
+from CTSDevices.WarmIFPlate.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
+from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
 import configparser
 import time
 
@@ -16,7 +16,7 @@ YTO_LOW = 12.22
 YTO_HIGH = 14.77
 CARTRIDGE_CONFIG = 433
 
-class test_IFProcessor(unittest.TestCase):
+class test_WarmIFPlate(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

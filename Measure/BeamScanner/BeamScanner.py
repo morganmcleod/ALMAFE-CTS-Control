@@ -4,8 +4,8 @@ from CTSDevices.PNA.schemas import MeasConfig, PowerConfig, MeasType, SweepType,
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.IFProcessor.InputSwitch import InputSelect
-from CTSDevices.IFProcessor.OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
+from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from simple_pid import PID
@@ -28,7 +28,7 @@ class BeamScanner():
         loReference:SignalGenerator, 
         cartAssembly:CartAssembly,
         rfSrcDevice:LODevice,
-        ifProcessor:object):
+        warmIFPlate:object):
         
         self.mc = motorController
         self.pna = pna
@@ -36,7 +36,7 @@ class BeamScanner():
         self.rfReference = None     # normally we don't use the RF source reference synth.  Set this to do so for debugging.
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
-        self.ifProcessor = ifProcessor
+        self.warmIFPlate = warmIFPlate
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 3)
         self.measurementSpec = MeasurementSpec()
         self.scanList = ScanList()
@@ -120,8 +120,6 @@ class BeamScanner():
                 success, msg = self.__setReceiverBias(scan, subScan)
             if success:
                 success, msg = self.__lockRF(scan, subScan)
-            if success:
-                success, msg = self.__setYIGFilter(scan, subScan)
             if success:
                 success, msg = self.__moveToBeamCenter(scan, subScan)
             if success:
@@ -264,9 +262,10 @@ class BeamScanner():
                 position = InputSelect.POL0_LSB
             else:
                 position = InputSelect.POL1_LSB
-        self.ifProcessor.inputSwitch.setValue(position)
-        self.ifProcessor.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-        self.ifProcessor.attenuator.setValue(22)   # TODO:  move into MeasConfig?
+        self.warmIFPlate.inputSwitch.setValue(position)
+        self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
+        self.warmIFPlate.attenuator.setValue(22)   # TODO:  move into MeasConfig?
         return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
@@ -307,10 +306,6 @@ class BeamScanner():
             wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
         msg = f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
         return (wcaFreq != 0, msg)
-
-    def __setYIGFilter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO))
-        return (True, "")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.measurementSpec.beamCenter.pol = self.measurementSpec.levelAngles[subScan.pol]
