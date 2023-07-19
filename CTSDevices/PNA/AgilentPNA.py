@@ -157,5 +157,18 @@ class AgilentPNA(BaseAgilentPNA):
             phase = atan2(imag, real) * 180 / pi
             return (amp, phase)
         else:
-            print("getAmpPhase error")
+            print(f"getAmpPhase error: checkSweepComplete returned False")
             return (None, None)
+
+    def workaroundPhaseLockLost(self):
+        """The E8362B in CTS2 reports PHASE LOCK LOST if the frequency range extends above ~13 GHz
+        This workaround is to clear that error state.  It is harmless to run on other units.
+        """
+        self.configureFreqCenterSpan(
+            channel = 1,
+            centerFreq_Hz = 6e9,
+            spanFreq_Hz = 12e9
+        )
+        code, msg = self.errorQuery()
+        while code:
+            code, msg = self.pna.errorQuery()

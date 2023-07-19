@@ -18,9 +18,10 @@ import copy
 
 class BeamScanner():
 
-    XY_SPEED_POSITIONING = 40 # mm/sec
-    XY_SPEED_SCANNING = 20    # mm/sec
-    POL_SPEED = 20            # deg/sec
+    XY_SPEED_POSITIONING = 40       # mm/sec
+    XY_SPEED_SCANNING = 20          # mm/sec
+    POL_SPEED = 20                  # deg/sec
+    IF_PROCESSOR_OFFSET = 0.180e9   # offset from mixer in the IF Processor
 
     def __init__(self, 
         motorController:MCInterface, 
@@ -222,7 +223,9 @@ class BeamScanner():
         if not success:
             return (success, msg)
         self.pna.setMeasConfig(FAST_CONFIG)
-        self.scanStatus.amplitude, self.scanStatus.phase = self.pna.getAmpPhase()
+        amp, phase = self.pna.getAmpPhase()        
+        self.scanStatus.amplitude = amp if amp else -999
+        self.scanStatus.phase = phase if phase else 0
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
         print(self.scanStatus.getCenterPowerText())
@@ -238,6 +241,7 @@ class BeamScanner():
 
     def __resetPNA(self) -> Tuple[bool, str]:
         self.pna.reset()
+        self.pna.workaroundPhaseLockLost()
         self.pnaConfig = copy.copy(DEFAULT_CONFIG)        
         self.pnaConfig.triggerSource = TriggerSource.EXTERNAL
         self.pna.setMeasConfig(self.pnaConfig)
@@ -262,8 +266,8 @@ class BeamScanner():
             else:
                 position = InputSelect.POL1_LSB
         self.ifProcessor.inputSwitch.setValue(position)
-        self.ifProcessor.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-        self.ifProcessor.attenuator.setValue(10)   # TODO:  move into MeasConfig?
+        self.ifProcessor.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.ifProcessor.attenuator.setValue(22)   # TODO:  move into MeasConfig?
         return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
@@ -306,7 +310,7 @@ class BeamScanner():
         return (wcaFreq != 0, msg)
 
     def __setYIGFilter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO))
+        self.ifProcessor.yigFilter.setFrequency(abs(scan.RF - scan.LO) + self.IF_PROCESSOR_OFFSET)
         return (True, "")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
@@ -319,24 +323,27 @@ class BeamScanner():
         controller = PID(0.02, 0.012, 0.012, setpoint=self.measurementSpec.targetLevel)
         controller.output_limits = (15, 100)
         setValue = 15 # percent
-        iter = 10
+        maxIter = 10
+        iter = 0
+        self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue) 
         amp, phase = self.pna.getAmpPhase()
         if not amp:
+            self.pna.setMeasConfig(DEFAULT_CONFIG)
             msg = f"__rfSourceAutoLevel: getAmpPhase error."
             return (False, msg)
-        self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue) 
-        while iter > 0 and setValue < 100 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
+        while iter < maxIter and setValue < 100 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
+            iter += 1
             setValue = controller(amp)
             self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
             amp, phase = self.pna.getAmpPhase()
             if not amp:
+                self.pna.setMeasConfig(DEFAULT_CONFIG)
                 msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
                 return (False, msg)
-            iter -= 1
         self.pna.setMeasConfig(DEFAULT_CONFIG)
         msg = f"__rfSourceAutoLevel: target={self.measurementSpec.targetLevel} amp={amp} setValue={setValue} iter={iter}"
         print(msg)
-        return (iter > 0, msg)
+        return (iter < maxIter, msg)
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
         # add 10sec to timeout to account for accel/decel
