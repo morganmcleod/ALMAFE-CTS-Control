@@ -15,18 +15,18 @@ dllName = config['load']['dll']
 conn = AMBConnectionDLL(channel = 0, dllName = dllName)
 
 ccaDevice = CCADevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
-ccaDevice.initSession()
+ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
 ccaDevice.setBandPower(CARTRIDGE_BAND, True)
 
 loDevice = LODevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
-loDevice.initSession()
+ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
 loDevice.setBandPower(CARTRIDGE_BAND, True)
 loDevice.setYTOLimits(12.22, 14.77)
 
 cartAssembly = CartAssembly(ccaDevice, loDevice)
 
 rfSrcDevice = LODevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT)
-rfSrcDevice.initSession()
+ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
 rfSrcDevice.setBandPower(RF_SOURCE_PORT, True)
 rfSrcDevice.setYTOLimits(11.6, 15.43)
 rfSrcDevice.paPol = RF_SOURCE_PA_POL

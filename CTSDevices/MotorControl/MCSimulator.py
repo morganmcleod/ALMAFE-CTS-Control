@@ -1,11 +1,10 @@
-'''
-'''
 from .schemas import MotorStatus, MoveStatus, Position
 from .MCInterface import MCInterface, MCError
 from random import random
 from time import time
 from math import sqrt
 from copy import deepcopy
+import logging
 
 class MCSimulator(MCInterface):
     X_MIN = 0
@@ -18,6 +17,7 @@ class MCSimulator(MCInterface):
     POL_SPEED = 10
     
     def __init__(self):
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.start = False
         self.stop = False
         self.xySpeed = self.XY_SPEED
@@ -209,7 +209,7 @@ class MCSimulator(MCInterface):
         )
         status = self.getMotorStatus()
         pos = self.getPosition()
-        # print(f"{status.getText()} {pos.getText()}")
+        self.logger.debug(f"{status.getText()} {pos.getText()}")
         if (not timedOut and not status.inMotion() and pos == self.nextPos):
             result.success = True
         elif status.powerFail():

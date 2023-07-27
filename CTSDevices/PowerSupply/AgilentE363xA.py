@@ -1,6 +1,7 @@
 from CTSDevices.Common.RemoveDelims import removeDelims   #todo move Common out of CTSDevices
 import pyvisa
 import re
+import logging
 
 class PowerSupply():
     """The Agilent E363xA power supply"""
@@ -14,6 +15,7 @@ class PowerSupply():
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         rm = pyvisa.ResourceManager()
         self.inst = rm.open_resource(resource)
         self.inst.timeout = self.DEFAULT_TIMEOUT
@@ -22,7 +24,7 @@ class PowerSupply():
 
         ok = True
         if ok and idQuery:
-            ok = self.idQuery(doPrint = True)
+            ok = self.idQuery()
         if ok and reset:
             ok = self.reset()
 
@@ -31,7 +33,7 @@ class PowerSupply():
         """
         self.inst.close()
     
-    def idQuery(self, doPrint: bool = False) -> bool:
+    def idQuery(self) -> bool:
         """Perform an ID query and check compatibility
 
         :return bool: True if the instrument is compatible with this class.
@@ -47,8 +49,7 @@ class PowerSupply():
                 self.model = match.group()
             else:
                 self.model = response.split(',')[1:4]
-            if doPrint:
-                print(self.mfr + " " + self.model)
+            self.logger.debug(self.mfr + " " + self.model)
         return False
     
     def reset(self):

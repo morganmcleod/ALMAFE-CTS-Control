@@ -1,10 +1,14 @@
 import unittest
 from CTSDevices.PowerMeter.BaseE441X import Channel, Trigger, Unit
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, StdErrConfig
+import logging
 
 class test_PowerMeter(unittest.TestCase):
+
+    DO_PRINT = False
     
-    def setUp(self):        
+    def setUp(self):
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.pm = PowerMeter()
         self.pm.twoChannel = False
         
@@ -18,7 +22,8 @@ class test_PowerMeter(unittest.TestCase):
         if not code:
             return False
         while code:
-            print(code, msg)
+            if self.DO_PRINT:
+                self.logger.info(code, msg)
             code, msg = self.pm.errorQuery()
         return True
 
@@ -29,7 +34,7 @@ class test_PowerMeter(unittest.TestCase):
         self.assertTrue(self.pm.reset())
         
     def test_idQuery(self):
-        self.assertTrue(self.pm.idQuery(True))
+        self.assertTrue(self.pm.idQuery())
         
     def test_errorQuery(self):
         self.assertFalse(self.__implErrorQuery())

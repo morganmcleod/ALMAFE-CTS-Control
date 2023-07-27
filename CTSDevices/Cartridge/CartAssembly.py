@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from bisect import bisect_left
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
@@ -12,15 +12,13 @@ from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
-from CTSDevices.Common.BinarySearchController import BinarySearchControler
-
-import matplotlib.pyplot as plt
-
-from drawnow import drawnow, figure
+from CTSDevices.Common.BinarySearchController import BinarySearchController
 import time
+import logging
 
 class CartAssembly():
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.ccaDevice = ccaDevice
         self.loDevice = loDevice
         self.reset()
@@ -29,26 +27,30 @@ class CartAssembly():
         
     def reset(self):
         self.configId = self.keysPol0 = self.keysPol1 = None
+        self.mixerParam01 = None
+        self.mixerParam02 = None
+        self.mixerParam11 = None
+        self.mixerParam12 = None
         self.freqLOGHz = 0
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
-        keysPol0 = DB.readKeys(configId, pol = 0)
-        keysPol1 = DB.readKeys(configId, pol = 1)
-        if keysPol0 and keysPol1:
+        self.keysPol0 = DB.readKeys(configId, pol = 0)
+        self.keysPol1 = DB.readKeys(configId, pol = 1)
+        if self.keysPol0 and self.keysPol1:
             self.configId = configId
         else:
             return False
         DB = MixerParams(driver = CTSDB())
-        self.mixerParams01 = DB.read(keysPol0.keyChip1)
-        self.mixerParams02 = DB.read(keysPol0.keyChip2)
-        self.mixerParams11 = DB.read(keysPol1.keyChip1)
-        self.mixerParams12 = DB.read(keysPol1.keyChip2)
+        self.mixerParams01 = DB.read(self.keysPol0.keyChip1)
+        self.mixerParams02 = DB.read(self.keysPol0.keyChip2)
+        self.mixerParams11 = DB.read(self.keysPol1.keyChip1)
+        self.mixerParams12 = DB.read(self.keysPol1.keyChip2)
         DB = PreampParams(driver = CTSDB())
-        self.preampParams01 = DB.read(keysPol0.keyPreamp1)
-        self.preampParams02 = DB.read(keysPol0.keyPreamp2)
-        self.preampParams11 = DB.read(keysPol1.keyPreamp1)
-        self.preampParams12 = DB.read(keysPol1.keyPreamp2)
+        self.preampParams01: List[PreampParam] = DB.read(self.keysPol0.keyPreamp1)
+        self.preampParams02: List[PreampParam] = DB.read(self.keysPol0.keyPreamp2)
+        self.preampParams11: List[PreampParam] = DB.read(self.keysPol1.keyPreamp1)
+        self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
         return True
 
     def setRecevierBias(self, FreqLO:float) -> bool:
@@ -60,8 +62,21 @@ class CartAssembly():
         self.mixerParam12 = self.__interpolateMixerParams(FreqLO, self.mixerParams12)
         self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.IMAG)
         self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.IMAG)
-        self.ccaDevice.setSIS(1, 1, self.mixerParam01.VJ, self.mixerParam11.IMAG)
-        self.ccaDevice.setSIS(1, 2, self.mixerParam02.VJ, self.mixerParam12.IMAG)
+        self.ccaDevice.setSIS(1, 1, self.mixerParam11.VJ, self.mixerParam11.IMAG)
+        self.ccaDevice.setSIS(1, 2, self.mixerParam12.VJ, self.mixerParam12.IMAG)
+        pp = self.preampParams01[0]
+        self.ccaDevice.setLNA(0, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                    pp.ID1, pp.ID2, pp.ID3)
+        pp = self.preampParams02[0]
+        self.ccaDevice.setLNA(0, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                    pp.ID1, pp.ID2, pp.ID3)
+        pp = self.preampParams11[0]
+        self.ccaDevice.setLNA(1, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                    pp.ID1, pp.ID2, pp.ID3)
+        pp = self.preampParams12[0]
+        self.ccaDevice.setLNA(1, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                    pp.ID1, pp.ID2, pp.ID3)                                    
+        self.ccaDevice.setLNAEnable(True)
         return True
 
     def setAutoLOPower(self, pol: int) -> bool:
@@ -69,17 +84,17 @@ class CartAssembly():
             raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
 
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
-        print(f"target Ij = {targetIJ}")
+        self.logger.info(f"target Ij = {targetIJ}")
         setVD = 1.2
         averaging = 2
-        maxIter = 50
+        maxIter = 30
 
-        controller = BinarySearchControler(
+        controller = BinarySearchController(
             outputRange = [0, 2.5], 
             initialStep = 0.1, 
             initialOutput = setVD, 
             setPoint = targetIJ,
-            tolerance = 0.1,
+            tolerance = 0.5,
             maxIter = maxIter)
 
         self.loDevice.setPABias(pol, setVD)
@@ -89,17 +104,6 @@ class CartAssembly():
             raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
         Ij = abs(sis['Ij']) * 1000
 
-        X, Y = [0], [Ij]
-        def draw_fig():
-            nonlocal X, Y
-            plt.plot(X, Y)
-            plt.xlabel('iter')
-            plt.ylabel('Ij [uA]')
-        
-        fig, ax = plt.subplots()
-        plt.ion()
-        ax.plot(X, Y, 'b-')
-        
         tprev = time.time()
         tsum = 0
         done = False
@@ -113,22 +117,17 @@ class CartAssembly():
                 sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
                 Ij = abs(sis['Ij']) * 1000
 
-            X.append(X[-1] + 1)
-            Y.append(Ij)
-            drawnow(draw_fig)
-
-            # print(f"iter={controller.iter} stepSize={controller.step} VD={round(setVD, 3)} Ij={round(Ij, 3)}")
+            self.logger.info(f"iter={controller.iter} VD={setVD:.3f} Ij={Ij:.3f}")
 
             tsum += (time.time() - tprev)
             tprev = time.time()
 
         iterTime = tsum / controller.iter
-        print(f"CartAssembly.setAutoLOPower: setVD={round(setVD, 3)} mV, IJ={round(Ij, 3)} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
-        plt.close()
+        self.logger.info(f"CartAssembly.setAutoLOPower: setVD={setVD:.3f} mV, IJ={Ij:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
     
-    def getSISCurrentTargets(self):
-        return self.mixerParam01.IJ,  self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ
+    def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:
+        return (self.mixerParam01.IJ, self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ)
 
     def __interpolateMixerParams(self, FreqLO:float, mixerParams:List[MixerParam]) -> MixerParam:
         # workaround for Python 3.9

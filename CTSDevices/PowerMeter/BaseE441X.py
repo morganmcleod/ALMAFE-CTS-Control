@@ -2,6 +2,7 @@ from ..Common.RemoveDelims import removeDelims
 from .schemas import Channel, Trigger, Unit
 import re
 import pyvisa
+import logging
 
 class BaseE441X():
     """Base class for Agilent/Keysight Power Meters E441xA, E441xB, N191xA
@@ -17,6 +18,7 @@ class BaseE441X():
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         rm = pyvisa.ResourceManager()
         self.inst = rm.open_resource(resource)
         self.inst.timeout = self.DEFAULT_TIMEOUT
@@ -36,7 +38,7 @@ class BaseE441X():
         """
         self.inst.close()
 
-    def idQuery(self, doPrint = False):
+    def idQuery(self):
         """Perform an ID query and check compatibility
 
         :return bool: True if the instrument is compatible with this class.
@@ -56,8 +58,7 @@ class BaseE441X():
             # check whether sensor 2 is connected:
             if self.twoChannel and not int(self.inst.query("STAT:DEV:COND?")) & 4:
                 self.twoChannel = False
-            if doPrint:
-                print(mfr + " " + model + (", two channel" if self.twoChannel else ", one channel"))
+            self.logger.debug(mfr + " " + model + (", two channel" if self.twoChannel else ", one channel"))
             return True
         return False
 

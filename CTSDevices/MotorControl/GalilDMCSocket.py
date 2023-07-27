@@ -14,7 +14,7 @@ from math import sqrt
 from typing import Union
 
 class MotorController(MCInterface):
-    SOCKET_TIMEOUT = 5
+    SOCKET_TIMEOUT = 10    # sec
     STEPS_PER_DEGREE = 225
     STEPS_PER_MM = 5000
     X_MIN = 0
@@ -55,7 +55,15 @@ class MotorController(MCInterface):
             if not sent:
                 raise MCError("socket connection broken")
             else:
-                data = s.recv(replySize)
+                data = None
+                iter = 0
+                while not data and iter < 3:
+                    try:
+                        data = s.recv(replySize)
+                    except socket.timeout:
+                        iter += 1
+                if not data:
+                    raise MCError("socket connection broken")
                 if data == b'':
                     raise MCError("socket connection broken")
                 return data
@@ -244,8 +252,8 @@ class MotorController(MCInterface):
         '''
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
-        polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.25
+        polTime = abs(vector.pol) / self.polSpeed + 1.0
+        return max(xyTime, polTime) * 1.5
 
     def setNextPos(self, nextPos: Position):
         if not self.positionInBounds(nextPos):

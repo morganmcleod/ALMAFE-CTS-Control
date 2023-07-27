@@ -4,6 +4,7 @@ import time
 from typing import Tuple
 from statistics import mean
 from math import log10, pi, sqrt, atan2
+import logging
 
 DEFAULT_CONFIG = MeasConfig(
     channel = 1,
@@ -52,6 +53,7 @@ class AgilentPNA(BaseAgilentPNA):
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.measConfig = None
         self.powerConfig = None
         super(AgilentPNA, self).__init__(resource, idQuery, reset)
@@ -97,6 +99,7 @@ class AgilentPNA(BaseAgilentPNA):
         self.configureTriggerChannel(config.channel, triggerPoint = True, mode = TriggerMode.CONTINUOUS)
         # Use BNC1 for external trigger:
         self.inst.write(":CONT:SIGN BNC1,TILHIGH;")
+        time.sleep(1)
 
     def setPowerConfig(self, config:PowerConfig):
         """Set the output power and attenuation configuration for a channel
@@ -133,9 +136,9 @@ class AgilentPNA(BaseAgilentPNA):
                 phase = [atan2(imag, real) * 180 / pi for real, imag in zip(real_a, imag_a)]
                 return amp, phase
             else:
-                print("getTrace no data")
+                self.logger.error("getTrace no data")
         else:
-            print("getTrace timeout")
+            self.logger.error("getTrace timeout")
         return None, None
             
     def getAmpPhase(self) -> Tuple[float]:
@@ -157,7 +160,7 @@ class AgilentPNA(BaseAgilentPNA):
             phase = atan2(imag, real) * 180 / pi
             return (amp, phase)
         else:
-            print(f"getAmpPhase error: checkSweepComplete returned False")
+            self.logger.error(f"getAmpPhase error: checkSweepComplete returned False")
             return (None, None)
 
     def workaroundPhaseLockLost(self):

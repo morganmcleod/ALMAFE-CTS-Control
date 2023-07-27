@@ -8,13 +8,14 @@ from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
 from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
-from simple_pid import PID
+from CTSDevices.Common.BinarySearchController import BinarySearchController
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
-from time import time, sleep
+import time
 from datetime import datetime
 import concurrent.futures
 from typing import Tuple
 import copy
+import logging
 
 class BeamScanner():
 
@@ -30,6 +31,7 @@ class BeamScanner():
         rfSrcDevice:LODevice,
         warmIFPlate:object):
         
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.mc = motorController
         self.pna = pna
         self.loReference = loReference
@@ -70,7 +72,7 @@ class BeamScanner():
         self.mc.stopMove()
         if self.futures:
             concurrent.futures.wait(self.futures)
-        print("BeamScanner: stopped")
+        self.logger.info("BeamScanner: stopped")
 
     def __runAllScans(self):
         success, msg = self.__resetRasters();
@@ -87,17 +89,17 @@ class BeamScanner():
             if scan.enable:
                 self.__reset()
                 self.scanStatus.activeScan = scan.index
-                print(scan.getText())
+                self.logger.info(scan.getText())
                 scan.makeSubScans()
                 for subScan in scan.subScans:
                     if self.stopNow:
                         self.__abortScan("User Stop")
                         return
-                    print(subScan.getText())
+                    self.logger.info(subScan.getText())
                     self.scanStatus.message = "Started: " + subScan.getText()
                     self.scanStatus.activeSubScan = subScan.getText()
                     success, msg = self.__runOneScan(scan, subScan)
-                    print(f"{success}:{msg}")
+                    self.logger.info(f"{success}:{msg}")
                     self.scanStatus.activeSubScan = None
                     if success:
                         self.scanStatus.message = "Scan complete"
@@ -124,9 +126,11 @@ class BeamScanner():
                 success, msg = self.__moveToBeamCenter(scan, subScan)
             if success:
                 success, msg = self.__rfSourceAutoLevel(scan, subScan)
-        
+            
             if not success:
                 return (success, msg)
+
+            self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())
 
             lastCenterPwrTime = None
             rasterIndex = 0;
@@ -139,8 +143,9 @@ class BeamScanner():
                     return False
 
                 # time to record the beam center power?
-                if not lastCenterPwrTime or (time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
-                    lastCenterPwrTime = time()
+                if not lastCenterPwrTime or (time.time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
+                    lastCenterPwrTime = time.time()
+
                     success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
                     if not success:
                         self.__abortScan(msg)
@@ -194,7 +199,7 @@ class BeamScanner():
             else:
                 return (True, "__runOneScan complete")
         except Exception as e:
-            print(e)
+            self.logger.exception(e)
             return (False, "__runOneScan Exception: " + str(e))
 
     def __moveScanner(self, nextPos:Position, withTrigger:bool, moveTimeout = None) -> Tuple[bool, str]:
@@ -202,12 +207,12 @@ class BeamScanner():
         self.mc.setPolSpeed(self.POL_SPEED)
         if not moveTimeout:
             moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
-        # print(f"move to {nextPos.getText()} trigger={withTrigger} moveTimeout={moveTimeout}").
+        self.logger.debug(f"move to {nextPos.getText()} trigger={withTrigger} moveTimeout={moveTimeout:.1f}")
         self.mc.setNextPos(nextPos)
         self.mc.startMove(withTrigger, moveTimeout)
         moveStatus = self.mc.getMoveStatus()
         while not self.stopNow and not moveStatus.shouldStop():
-            sleep(0.1)                
+            time.sleep(0.1)                
             moveStatus = self.mc.getMoveStatus()
         self.mc.stopMove()
         if self.stopNow:
@@ -220,16 +225,19 @@ class BeamScanner():
         if not success:
             return (success, msg)
         self.pna.setMeasConfig(FAST_CONFIG)
+        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
+
         amp, phase = self.pna.getAmpPhase()        
         self.scanStatus.amplitude = amp if amp else -999
         self.scanStatus.phase = phase if phase else 0
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
-        print(self.scanStatus.getCenterPowerText())
+        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())            
+        self.logger.info(self.scanStatus.getCenterPowerText())
         return (True, "__measureCenterPower")
 
     def __abortScan(self, msg) -> Tuple[bool, str]:
-        print(msg)
+        self.logger.info(msg)
         self.scanStatus.activeScan = None
         self.scanStatus.activeSubScan = None
         self.scanStatus.message = msg
@@ -252,21 +260,24 @@ class BeamScanner():
         return (True, "")
 
     def __configureIfProcessor(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        if scan.RF > scan.LO:
-            if subScan.pol == 0:
+        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
+        self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
+        self.warmIFPlate.attenuator.setValue(22)   # TODO:  move into MeasConfig?
+        return (True, "")
+    
+    def __selectIFInput(self, isUSB: bool, pol: int):
+        if isUSB:
+            if pol == 0:
                 position = InputSelect.POL0_USB
             else:
                 position = InputSelect.POL1_USB
         else:
-            if subScan.pol == 0:
+            if pol == 0:
                 position = InputSelect.POL0_LSB
             else:
                 position = InputSelect.POL1_LSB
         self.warmIFPlate.inputSwitch.setValue(position)
-        self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-        self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
-        self.warmIFPlate.attenuator.setValue(22)   # TODO:  move into MeasConfig?
-        return (True, "")
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
         self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
@@ -286,10 +297,12 @@ class BeamScanner():
 
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if self.cartAssembly.setRecevierBias(scan.LO):
-            if self.cartAssembly.setAutoLOPower(subScan.pol):
+            ret0 = self.cartAssembly.setAutoLOPower(0)
+            ret1 = self.cartAssembly.setAutoLOPower(1)
+            if ret0 and ret1:
                 return (True, "")
             else:
-                return (False, "cartAssembly.setAutoLOPower failed.")
+                return (False, f"cartAssembly.setAutoLOPower failed: pol0:{ret0} pol1:{ret1}")
         else:
             return (False, "cartAssembly.setRecevierBias failed.  Provide config ID?")
 
@@ -314,30 +327,51 @@ class BeamScanner():
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.pna.setMeasConfig(FAST_CONFIG)
-        controller = PID(0.02, 0.012, 0.012, setpoint=self.measurementSpec.targetLevel)
-        controller.output_limits = (15, 100)
+
         setValue = 15 # percent
-        maxIter = 10
-        iter = 0
+        maxIter = 25
+        
+        controller = BinarySearchController(
+            outputRange = [15, 100], 
+            initialStep = 0.1, 
+            initialOutput = setValue, 
+            setPoint = self.measurementSpec.targetLevel,
+            tolerance = 1,
+            maxIter = maxIter)
+        
         self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue) 
-        amp, phase = self.pna.getAmpPhase()
+        amp, _ = self.pna.getAmpPhase()
+        done = error = False
+        msg = ""
+        iter = 0
+
         if not amp:
-            self.pna.setMeasConfig(DEFAULT_CONFIG)
-            msg = f"__rfSourceAutoLevel: getAmpPhase error."
-            return (False, msg)
-        while iter < maxIter and setValue < 100 and not (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
+            error = True
+        while not done and not error: 
             iter += 1
-            setValue = controller(amp)
-            self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
-            amp, phase = self.pna.getAmpPhase()
-            if not amp:
-                self.pna.setMeasConfig(DEFAULT_CONFIG)
-                msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
-                return (False, msg)
+            if iter >= maxIter or setValue >= 100:
+                error = True
+                msg = f"__rfSourceAutoLevel: iter={iter} maxIter={maxIter} setValue={setValue}%"
+            elif (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
+                done = True
+                msg = f"__rfSourceAutoLevel: success iter={iter} amp={amp:.1f} dB"
+            else:
+                controller.process(amp)
+                setValue = controller.output
+                self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
+                time.sleep(0.2)
+                amp, _ = self.pna.getAmpPhase()
+                if amp is None:
+                    error = True
+                    msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
+                self.logger.info(f"__rfSourceAutoLevel: iter={iter} amp={amp:.1f} dB")
+
         self.pna.setMeasConfig(DEFAULT_CONFIG)
-        msg = f"__rfSourceAutoLevel: target={self.measurementSpec.targetLevel} amp={amp} setValue={setValue} iter={iter}"
-        print(msg)
-        return (iter < maxIter, msg)
+        if error:
+            self.logger.error(msg)
+        else:
+            self.logger.info(msg)
+        return (not error, msg)
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
         # add 10sec to timeout to account for accel/decel

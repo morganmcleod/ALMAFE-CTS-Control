@@ -9,6 +9,7 @@ class test_AgilentPNA(unittest.TestCase):
     DO_PRINT = False
 
     def setUp(self):        
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.pna = AgilentPNA()
         # clear any previous errors:
         self.__implErrorQuery()
@@ -27,7 +28,7 @@ class test_AgilentPNA(unittest.TestCase):
             return False
         while code:
             if self.DO_PRINT:
-                print(code, msg)
+                self.logger.debug(code, msg)
             code, msg = self.pna.errorQuery()
         return True
     
@@ -79,11 +80,11 @@ class test_AgilentPNA(unittest.TestCase):
         for _ in range(10):
             amp, phase = self.pna.getAmpPhase()
             if self.DO_PRINT:
-                print(f"amplitude={amp} phase={phase}")
+                self.logger.debug(f"amplitude={amp} phase={phase}")
             self.assertFalse(self.__implErrorQuery())
         
     def test_idQuery(self):
-        self.assertTrue(self.pna.idQuery(doPrint = self.DO_PRINT))
+        self.assertTrue(self.pna.idQuery())
         self.assertFalse(self.__implErrorQuery())
         
     def test_reset(self):
@@ -91,7 +92,7 @@ class test_AgilentPNA(unittest.TestCase):
         self.assertFalse(self.__implErrorQuery())
         
     def test_listMeasurementParameters(self):
-        params = self.pna.listMeasurementParameters(doPrint = self.DO_PRINT)
+        params = self.pna.listMeasurementParameters()
         self.assertFalse(self.__implErrorQuery())
         self.assertTrue(params)
 

@@ -1,19 +1,7 @@
-import os
-import sys
-from pathlib import Path
-
 # FastAPI and ASGI:
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# add the top-level project path to PYTHONPATH:
-# projectRoot = Path.cwd()
-# sys.path.append("L:\\Python\\ALMAFE-Lib")
-# sys.path.append("L:\\Python\\ALMAFE-AMBDeviceLibrary")
-
-# and change to that directory:
-# os.chdir(projectRoot)
 
 # Imports for this app:
 from Response import MessageResponse, VersionResponse, prepareResponse
@@ -26,8 +14,12 @@ from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.Database import router as databaseRouter
 
-# globals:
+# logging:
+import logging
+LOG_TO_FILE = True
+LOG_FILE = 'ALMAFE-CTS-Control.log'
 
+# globals:
 tags_metadata = [
     {
         "name": "API",
@@ -105,4 +97,20 @@ async def get_API_Version(callback:str = None):
     return prepareResponse(result, callback)
 
 if __name__ == "__main__":
+    logger = logging.getLogger("ALMAFE-CTS-Control")
+    logger.setLevel(logging.DEBUG)
+    if LOG_TO_FILE:
+        handler = logging.FileHandler(LOG_FILE)
+    else:
+        handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(fmt = '%(asctime)s %(levelname)s:%(message)s'))
+    logger.addHandler(handler)
+
+    logger2 = logging.getLogger("ALMAFE-AMBDeviceLibrary")
+    logger2.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(fmt = '%(asctime)s %(levelname)s:%(message)s'))
+    logger.addHandler(handler)
+
+    logger.info("---- ALMAFE-CTS-Control start ----")
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

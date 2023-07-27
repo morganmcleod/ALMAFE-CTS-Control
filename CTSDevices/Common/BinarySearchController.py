@@ -1,13 +1,13 @@
 import math
 
-class BinarySearchControler():
+class BinarySearchController():
 
     def __init__(self, outputRange = [0, 1], 
-                       initialStep = 0.1, 
-                       initialOutput = 0, 
-                       setPoint = 0.5,
-                       tolerance = 0.01,
-                       maxIter = 50) -> None:
+                       initialStep: float = 0.1, 
+                       initialOutput: float = 0.0, 
+                       setPoint: float = 0.5,
+                       tolerance: float = 0.01,
+                       maxIter: int = 30) -> None:
         self.outputRange = outputRange
         self.initialStep = initialStep
         self.initialOutput = initialOutput

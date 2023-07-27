@@ -14,7 +14,6 @@ class PNASimulator(PNAInterface):
         :return str: manufacturer and model or None
         """
         ret = "PNASimuilator"
-        print("idQuery: " + ret)
         return ret
     
     def errorQuery(self) -> Tuple[int, str]:
@@ -24,7 +23,6 @@ class PNASimulator(PNAInterface):
         """Reset instrument to defaults
         :return bool: True if reset successful
         """
-        print("PNASimulator reset")
         return True
     
     def setMeasConfig(self, config: MeasConfig):

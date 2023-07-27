@@ -3,6 +3,7 @@ import serial
 import time
 from CTSDevices.Common.RemoveDelims import removeDelims
 from typing import Tuple
+import logging
 
 class State(Enum):
     OPEN = 0
@@ -16,10 +17,6 @@ class Chopper():
     Monitor and control is via RS232. The CTS and DSR lines are used as digital inputs for the HC and FC signals.
     """
 
-    DEBUG = False
-    """If True, all responses from the controller will be printed.
-    """
-
     def __init__(self, resource="COM1", findOpen = True):
         """Constructor
 
@@ -27,6 +24,7 @@ class Chopper():
         :param bool findOpen: if True, index the chopper before returning. defaults to True
         :raises Exception: If the serial port cannot be opened.
         """
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.inst = serial.Serial(
             resource, 
             9600, 
@@ -96,8 +94,7 @@ class Chopper():
         new = 100 * (pos // 100) + 75
         self.__gotoPosition(new)
         if not self.__waitForStop():
-            if self.DEBUG:
-                print("Chopper open: timeout")
+            self.logger.debug("Chopper open: timeout")
        
     def close(self):
         """Move the chopper to the closed position
@@ -107,8 +104,7 @@ class Chopper():
         new = 100 * (pos // 100) + 25
         self.__gotoPosition(new)
         if not self.__waitForStop():
-            if self.DEBUG:
-                print("Chopper close: timeout")
+            self.logger.debug("Chopper close: timeout")
 
     def gotoPosition(self, pos:int):
         """Go to the specified index position
@@ -151,8 +147,7 @@ class Chopper():
         if not self.__waitForStop():
             timeout = True
         if timeout:
-            if self.DEBUG:
-                print("Chopper __findOpen: timeout")
+            self.logger.debug("Chopper __findOpen: timeout")
 
     def __waitForFC(self, stopValue:bool) -> bool:
         """Wait for the full-clock signal to have the specifed stopValue
@@ -240,8 +235,7 @@ class Chopper():
         read = removeDelims(read)
         if len(read) >= 3:
             currPos = int(float(read[2]))
-            if self.DEBUG:
-                print("currPos", currPos)
+            self.logger.debug("currPos", currPos)
             return currPos
         else:
             return 0
@@ -271,8 +265,5 @@ class Chopper():
         time.sleep(0.1)
         num = self.inst.in_waiting
         read = self.inst.read(num)
-        if self.DEBUG:
-            print(read)
+        self.logger.debug(read)
         return read.decode()
-
-c = Chopper('COM3')

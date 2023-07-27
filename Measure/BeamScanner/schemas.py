@@ -35,6 +35,13 @@ class SubScan(BaseModel):
     isCopol: bool
     is180: bool = False
 
+    def getScanPol(self):
+        '''Compute which IF channel polarization to select diring scan
+        '''
+        if self.is180 or self.isCopol:
+            return self.pol
+        return 1 - self.pol
+
     def getText(self):
         return f"Pol{self.pol} {'copol' if self.isCopol else 'xpol'}{' 180' if self.is180 else ''}"
 

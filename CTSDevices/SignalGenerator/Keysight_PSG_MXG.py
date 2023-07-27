@@ -1,7 +1,7 @@
 from ..Common.RemoveDelims import removeDelims
 import re
 import pyvisa
-
+import logging
 
 class SignalGenerator():
 
@@ -14,6 +14,7 @@ class SignalGenerator():
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
         rm = pyvisa.ResourceManager()
         try:
             self.inst = rm.open_resource(resource)
@@ -24,7 +25,7 @@ class SignalGenerator():
             if ok and reset:
                 ok = self.reset()
         except pyvisa.VisaIOError as err:
-            print(err)
+            self.logger.error(err)
             self.inst = None
 
     def __del__(self):
@@ -34,7 +35,7 @@ class SignalGenerator():
             self.inst.close()
             self.inst = None
 
-    def idQuery(self, doPrint = False):
+    def idQuery(self):
         """Perform an ID query and check compatibility
 
         :return bool: True if the instrument is compatible with this class.
@@ -53,8 +54,7 @@ class SignalGenerator():
                 model = match.group()
 
         if mfr and model:
-            if doPrint:
-                print(mfr + " " + model)
+            self.logger.debug(mfr + " " + model)
             return True
         return False
 

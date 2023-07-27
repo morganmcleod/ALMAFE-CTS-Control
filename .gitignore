@@ -1,3 +1,4 @@
 *.pyc
 .vscode
 ALMAFE-CTS-Database.ini
+*.log

@@ -28,7 +28,8 @@ beamScanner = BeamScanner(motorController, pna, loReference, cartAssembly, rfSrc
 if TESTING:
     # we can use the RF reference synth to test locking the RF source.  
     # Normally not used for beam pattern measurement.
-    beamScanner.rfReference = rfReference
+    # beamScanner.rfReference = rfReference
+    pass
 
 beamScanner.measurementSpec = MeasurementSpec(
     resolution = 14,
@@ -38,7 +39,7 @@ beamScanner.measurementSpec = MeasurementSpec(
 if TESTING:
     beamScanner.scanList = ScanList(
         items = [
-            ScanListItem(RF = 211, LO=221, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = False, xpol1=False, copol180=False))
+            ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = False, xpol1=False, copol180=False))
         ]
     )
 else:

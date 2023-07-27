@@ -13,11 +13,15 @@ from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption
 from socket import getfqdn
 
+import logging
+logger = logging.getLogger("ALMAFE-CTS-Control")
+
 router = APIRouter(prefix="/beamscan")
 manager = ConnectionManager()
 
 @router.websocket("/position_ws")
 async def websocket_scandata_request(websocket: WebSocket):
+    global logger
     await manager.connect(websocket)
     lastPosition = None            
     try:
@@ -29,10 +33,11 @@ async def websocket_scandata_request(websocket: WebSocket):
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        print("WebSocketDisconnect: /position_ws")
+        logger.exception("WebSocketDisconnect: /position_ws")
 
 @router.websocket("/rasters_ws")
 async def websocket_scandata_push(websocket: WebSocket):
+    global logger
     await manager.connect(websocket)
     try:
         while True:
@@ -42,9 +47,9 @@ async def websocket_scandata_push(websocket: WebSocket):
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        print("WebSocketDisconnect: /rasters_ws")
+        logger.exception("WebSocketDisconnect: /rasters_ws")
     except Exception as e:
-        print(e)
+        logger.exception(e)
 
 @router.get("/mc/query", response_model = MessageResponse)
 async def get_Query(query: str):

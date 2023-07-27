@@ -5,6 +5,7 @@ from CTSDevices.Common.RemoveDelims import removeDelims
 import re
 import pyvisa
 import time
+import logging
 
 class BaseAgilentPNA(PNAInterface):
 
@@ -12,6 +13,7 @@ class BaseAgilentPNA(PNAInterface):
     DEFAULT_TIMEOUT = 10000
 
     def __init__(self, resource="GPIB0::16::INSTR", idQuery=True, reset=True):
+        self.logger = logging.getLogger()
         rm = pyvisa.ResourceManager()
         self.inst = rm.open_resource(resource)
         self.inst.timeout = self.DEFAULT_TIMEOUT
@@ -21,7 +23,7 @@ class BaseAgilentPNA(PNAInterface):
         if ok and reset:
             ok = self.reset()
 
-    def idQuery(self, doPrint = False) -> Optional[str]:
+    def idQuery(self) -> Optional[str]:
         """Perform an ID query and check compatibility
         :return str: manufacturer and model or None
         """
@@ -37,8 +39,7 @@ class BaseAgilentPNA(PNAInterface):
 
         if mfr and model:
             ret = mfr + " " + model
-            if doPrint:
-                print(ret)
+            self.logger.debug(ret)
             return ret
         return None
 
@@ -58,10 +59,9 @@ class BaseAgilentPNA(PNAInterface):
         else:
             return False
 
-    def listMeasurementParameters(self, channel:int = 1, doPrint:bool = False):
+    def listMeasurementParameters(self, channel:int = 1):
         measNames = removeDelims(self.inst.query(f":CALC{channel}:PAR:CAT?;"))
-        if doPrint:
-            print(measNames)
+        self.logger.debug(measNames)
         if measNames == ['NO', 'CATALOG']:
             measNames = []
         return measNames

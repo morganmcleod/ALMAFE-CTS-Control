@@ -1,5 +1,6 @@
 from CTSDevices.SwitchController.HP3488a import SwitchController, SwitchConfig, DigitalPort, DigitalMethod
 from enum import Enum
+import time
 
 class PadSelect(Enum):
     PAD_OUT = 0
@@ -33,5 +34,7 @@ class OutputSwitch():
                        load: LoadSelect = LoadSelect.THROUGH,
                        pad: PadSelect = PadSelect.PAD_OUT) -> None:
         # send the compliment of the byte having the selected bits:
-        self.switchController.staticWrite(255 - (output.value + load.value + pad.value)        )
+        self.switchController.staticWrite(255)
+        time.sleep(0.2)
+        self.switchController.staticWrite(255 - (output.value + load.value + pad.value))
 
