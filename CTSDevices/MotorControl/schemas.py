@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 
 class MotorStatus(BaseModel):
-    xPower: bool
-    yPower: bool
-    polPower: bool
-    xMotion: bool
-    yMotion: bool
-    polMotion: bool
+    xPower: bool = False
+    yPower: bool = False
+    polPower: bool = False
+    xMotion: bool = False
+    yMotion: bool = False
+    polMotion: bool = False
 
     def powerFail(self) -> bool:
         return not (self.xPower and self.yPower and self.polPower)
@@ -43,7 +43,15 @@ class Position(BaseModel):
             return False
         return self.x == other.x and \
             self.y == other.y and \
-            abs(self.pol - other.pol) < 0.1
+            abs(self.pol - other.pol) < 0.05
+
+    def setMinZero(self):
+        if self.x < 0:
+            self.x = 0
+        if self.y < 0:
+            self.y = 0
+        if self.pol < 0:
+            self.pol = 0
 
     def calcMove(self, dest):
         return Position(x = self.x - dest.x,

@@ -29,9 +29,6 @@ class MCSimulator(MCInterface):
         )
         self.nextPos = deepcopy(self.pos)
     
-    def setup(self):
-        pass
-    
     def isConnected(self) -> bool:
         return True
     

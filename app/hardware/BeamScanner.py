@@ -14,7 +14,6 @@ if SIMULATE:
     motorController = MCSimulator()
 else:
     motorController = MotorController()
-motorController.setup()
 
 if SIMULATE:
     pna = PNASimulator()

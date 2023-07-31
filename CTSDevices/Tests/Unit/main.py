@@ -4,8 +4,8 @@ from os.path import dirname
 import unittest
 import logging
 
-LOG_TO_FILE = False
-LOG_FILE = 'ALMAFE-CTS-Control.log'
+LOG_TO_FILE = True
+LOG_FILE = 'CTSDevices_Unittest.log'
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 logger.setLevel(logging.DEBUG)
@@ -21,8 +21,9 @@ logger.info("-----------------------------------------------------------------")
 # from CTSDevices.Tests.Unit.test_KeysightE441X import test_PowerMeter
 # from CTSDevices.Tests.Unit.test_AgilentPNA import test_AgilentPNA
 # from CTSDevices.Tests.Unit.test_PNASimulator import test_PNASimulator
-from CTSDevices.Tests.Unit.test_WarmIFPlate import test_WarmIFPlate
+# from CTSDevices.Tests.Unit.test_WarmIFPlate import test_WarmIFPlate
 # from CTSDevices.Tests.Unit.test_CartAssembly import test_CartAssembly
+from CTSDevices.Tests.Unit.test_GalilDMCSocket import test_GalilDMCSocket
 
 if __name__ == "__main__":
     try:
