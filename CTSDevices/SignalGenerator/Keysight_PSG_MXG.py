@@ -102,7 +102,7 @@ class SignalGenerator():
 
     def setAmplitude(self, amp_dB:float) -> bool:
         if self.inst:
-            self.inst.write(f":POW:LEV {amp_dB:.4} DBM")
+            self.inst.write(f":POW:LEV {amp_dB:.4f} DBM")
             return True
         else:
             return False

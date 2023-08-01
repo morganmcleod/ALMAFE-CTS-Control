@@ -127,7 +127,7 @@ class ScanStatus(BaseModel):
     error: bool = False
 
     def getCenterPowerText(self):
-        return f"{self.timeStamp}: {self.amplitude:.2} dB, {self.phase:.2} deg{' scanComplete' if self.scanComplete else ''}"
+        return f"{self.timeStamp}: {self.amplitude:.2f} dB, {self.phase:.2f} deg{' scanComplete' if self.scanComplete else ''}"
 
     def getText(self):
         return f"{self.key}:{self.fkBeamPatterns} active:{self.activeScan}:{self.activeSubScan} " \

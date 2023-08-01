@@ -92,6 +92,7 @@ class MotorController(MCInterface):
         self.__connectSocket()
         self.xySpeed = self.getXYSpeed()
         self.polSpeed = self.getPolSpeed()
+        self.__setVectorSpeed(self.xySpeed)
         # Stop command. All motors come to decelerated stop.
         hs = self.query(b'ST;')
         self.__checkHandshake("MotorController.reset", b':', hs)
@@ -179,7 +180,7 @@ class MotorController(MCInterface):
         except:
             return False
 
-    def setXYSpeed(self, speed:float = XY_SPEED):
+    def setXYSpeed(self, speed:float):
         '''
         speed: mm/second
         '''
@@ -188,6 +189,12 @@ class MotorController(MCInterface):
         self.xySpeed = speed
         hs = self.query(f"SP {speedSteps}, {speedSteps};")
         self.__checkHandshake("MotorController.setXYSpeed", b':', hs)
+        self.__setVectorSpeed(speed)
+
+    def __setVectorSpeed(self, speed:float):
+        speedSteps = speed * self.STEPS_PER_MM
+        hs = self.query(f"VS {speedSteps};")
+        self.__checkHandshake("MotorController.__setVectorSpeed", b':', hs)
 
     def getXYSpeed(self) -> float:
         '''
@@ -202,7 +209,7 @@ class MotorController(MCInterface):
         speed = float(speed / self.STEPS_PER_MM)
         return speed
 
-    def setXYAccel(self, accel:float = XY_ACCEL):
+    def setXYAccel(self, accel:float):
         '''
         accel mm/sec^2
         '''
@@ -222,7 +229,7 @@ class MotorController(MCInterface):
         accel = float(accel / self.STEPS_PER_MM)
         return accel
 
-    def setXYDecel(self, decel:float = XY_DECEL):
+    def setXYDecel(self, decel:float):
         '''
         decel mm/sec^2
         '''
@@ -242,7 +249,7 @@ class MotorController(MCInterface):
         decel = float(decel / self.STEPS_PER_MM)
         return decel
 
-    def setPolSpeed(self, speed:float = POL_SPEED):
+    def setPolSpeed(self, speed:float):
         '''
         speed: degrees/second
         '''
@@ -263,7 +270,7 @@ class MotorController(MCInterface):
         speed = float(speed / self.STEPS_PER_DEGREE)
         return speed
 
-    def setPolAccel(self, accel:float = POL_ACCEL):
+    def setPolAccel(self, accel:float):
         '''
         accel: deg/sec^2
         '''
@@ -283,7 +290,7 @@ class MotorController(MCInterface):
         accel = float(accel / self.STEPS_PER_DEGREE)
         return accel
 
-    def setPolDecel(self, decel:float = POL_DECEL):
+    def setPolDecel(self, decel:float):
         '''
         decel: deg/sec^2
         '''
@@ -410,8 +417,8 @@ class MotorController(MCInterface):
         '''
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
-        polTime = abs(vector.pol) / self.polSpeed + 1.0
-        return max(xyTime, polTime) * 1.5
+        polTime = abs(vector.pol) / self.polSpeed
+        return max(xyTime, polTime) * 1.25 + 1.0
 
     def setNextPos(self, nextPos: Position):
         nextPos.setMinZero()
@@ -470,14 +477,15 @@ class MotorController(MCInterface):
             result.powerFail = True
         return result
 
-    def waitForMove(self, timeout:float = None) -> MotorStatus:
+    def waitForMove(self, timeout: float = None) -> MoveStatus:
         startTime = time.time()
-        result = self.getMotorStatus()
-        while result.inMotion() and not result.powerFail():
-            if timeout and time.time() >= startTime + timeout:
+        elapsed = 0.0
+        moveStatus = self.getMoveStatus()
+        while not self.stop and not moveStatus.shouldStop():
+            elapsed = time.time() - startTime
+            if timeout and elapsed > timeout:
                 break
-            time.sleep(0.5)
-            result = self.getMotorStatus()
-            pos = self.getPosition()
-            self.logger.debug(f"inMotion:{result.inMotion()} position:{pos}")
-        return result
+            time.sleep(0.1)                
+            moveStatus = self.getMoveStatus()            
+        self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
+        return moveStatus

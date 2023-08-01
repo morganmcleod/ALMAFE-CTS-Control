@@ -210,10 +210,7 @@ class BeamScanner():
         self.logger.debug(f"move to {nextPos.getText()} trigger={withTrigger} moveTimeout={moveTimeout:.1f}")
         self.mc.setNextPos(nextPos)
         self.mc.startMove(withTrigger, moveTimeout)
-        moveStatus = self.mc.getMoveStatus()
-        while not self.stopNow and not moveStatus.shouldStop():
-            time.sleep(0.1)                
-            moveStatus = self.mc.getMoveStatus()
+        moveStatus = self.mc.waitForMove()
         self.mc.stopMove()
         if self.stopNow:
             return (False, "__moveScanner: User Stop")
@@ -232,9 +229,10 @@ class BeamScanner():
         self.scanStatus.phase = phase if phase else 0
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
-        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())            
-        self.logger.info(self.scanStatus.getCenterPowerText())
-        return (True, "__measureCenterPower")
+        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())
+        msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
+        self.logger.info(msg)
+        return (True, msg)
 
     def __abortScan(self, msg) -> Tuple[bool, str]:
         self.logger.info(msg)
