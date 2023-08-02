@@ -145,6 +145,13 @@ async def get_PLL(request: Request):
     data = target.getPLL()
     return PLL.parse_obj(data)
 
+@router.get("/pll/lock", response_model = LockInfo)
+async def get_PLL_lockinfo(request: Request):
+    target, _ = getTarget(request)
+    assert(target)
+    data = target.getLockInfo()
+    return LockInfo.parse_obj(data)
+
 @router.get("/pll/config", response_model = PLLConfig)
 async def get_PLL_Config(request: Request):
     target, _ = getTarget(request)

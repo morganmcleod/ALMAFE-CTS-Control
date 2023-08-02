@@ -30,10 +30,7 @@ if TESTING:
     # beamScanner.rfReference = rfReference
     pass
 
-beamScanner.measurementSpec = MeasurementSpec(
-    resolution = 14,
-    centerPowersInterval = 60
-)
+beamScanner.measurementSpec = MeasurementSpec()
 
 if TESTING:
     beamScanner.scanList = ScanList(

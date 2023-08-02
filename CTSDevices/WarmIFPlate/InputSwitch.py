@@ -19,7 +19,13 @@ class InputSwitch():
             slot = 1,
             port = DigitalPort.LOW_ORDER_8BIT
         ))
+        self.position = None
+        self.setValue(InputSelect.POL0_USB)
 
     def setValue(self, select: InputSelect) -> None:
         # send the compliment of the byte having the selected bit:
         self.switchController.staticWrite(255 - select.value)
+        self.position = select
+
+    def getValue(self) -> InputSelect:
+        return self.position

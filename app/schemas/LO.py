@@ -42,9 +42,8 @@ class YTO(ConfigYTO):
     '''
     courseTune: int
     ytoFreqGHz: float
-    loFreqGHz: float
     def getText(self):
-        return f"{self.courseTune} in ({super(PLL, self).getText()}) yto:{self.ytoFreqGHz}, final:{self.loFreqGHz}"
+        return f"{self.courseTune} in ({super(YTO, self).getText()}) freq:{self.ytoFreqGHz}"
 
 class SetYTO(BaseModel):
     courseTune: int
@@ -69,7 +68,7 @@ class LockPLL(BaseModel):
     '''
     freqLOGHz:float
     def getText(self):
-        return f"{self.freqLOGHz} GHzssss"
+        return f"{self.freqLOGHz} GHz"
 
 class AdjustPLL(BaseModel):
     '''
@@ -110,6 +109,7 @@ class PLL(LockInfo):
     temperature: the PLL assembly temperature in Celcius
     nullPLL: True if the PLL Null Integrator bit is set, defeating the PLL and forcing corrV to 0.
     '''
+    loFreqGHz: float
     courseTune: int
     corrV: float
     temperature: float
