@@ -14,6 +14,7 @@ class SourcePosition(Enum):
     POL0_COPOL = 1
     POL1_COPOL = 2
     POL0_180 = 3
+    POL1_180 = 4
 
 class SubScansOption(BaseModel):
     copol0: bool = True
@@ -35,12 +36,36 @@ class SubScan(BaseModel):
     isCopol: bool
     is180: bool = False
 
-    def getScanPol(self):
+    def getScanPol(self) -> int:
         '''Compute which IF channel polarization to select diring scan
         '''
         if self.is180 or self.isCopol:
             return self.pol
         return 1 - self.pol
+    
+    def getScanPort(self, isUSB:bool) -> ScanPort:
+        if self.pol == 0:
+            if self.isCopol:
+                return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
+            else:
+                return ScanPort.POL1_USB if isUSB else ScanPort.POL1_LSB
+        else:
+            if self.isCopol:
+                return ScanPort.POL1_USB if isUSB else ScanPort.POL1_LSB
+            else:
+                return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
+
+    def getSourcePosition(self) -> SourcePosition:
+        if self.pol == 0:
+            if self.isCopol:
+                return SourcePosition.POL0_COPOL if not self.is180 else SourcePosition.POL0_180
+            else:
+                return SourcePosition.POL1_COPOL
+        else:
+            if self.isCopol:
+                return SourcePosition.POL1_COPOL if not self.is180 else SourcePosition.POL1_180
+            else:
+                return SourcePosition.POL0_COPOL
 
     def getText(self):
         return f"Pol{self.pol} {'copol' if self.isCopol else 'xpol'}{' 180' if self.is180 else ''}"
@@ -54,6 +79,9 @@ class ScanListItem(BaseModel):
     subScansText: str = ""
     subScans: List[SubScan] = []
     
+    def isUSB(self):
+        return self.RF > self.LO
+
     def getText(self):
         return f"{'enabled' if self.enable else 'disabled'}: RF={self.RF} LO={self.LO}: {self.subScansOption.getText()}"
     

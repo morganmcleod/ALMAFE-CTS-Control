@@ -10,6 +10,10 @@ from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
+from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
+from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
+from app.database.CTSDB import CTSDB
+
 import time
 from datetime import datetime
 import concurrent.futures
@@ -44,6 +48,8 @@ class BeamScanner():
         self.scanList = ScanList()
         self.futures = None
         self.keyCartTest = 0
+        self.centerPowersTable = BPCenterPowers(driver = CTSDB())
+        self.beamPatternsTable = BeamPatterns(driver = CTSDB())
         self.__reset()
         
     def __reset(self):
@@ -98,6 +104,19 @@ class BeamScanner():
                     self.logger.info(subScan.getText())
                     self.scanStatus.message = "Started: " + subScan.getText()
                     self.scanStatus.activeSubScan = subScan.getText()
+                    self.scanStatus.fkBeamPatterns = self.beamPatternsTable.create(BeamPattern(
+                        fkCartTest = self.keyCartTest,
+                        FreqLO = scan.LO,
+                        FreqCarrier = scan.RF,
+                        Beam_Center_X = self.measurementSpec.beamCenter.x,
+                        Beam_Center_Y = self.measurementSpec.beamCenter.y,                        
+                        Scan_Angle = self.measurementSpec.scanAngles[subScan.pol],
+                        Scan_Port = subScan.getScanPort(scan.isUSB()).value,
+                        Lvl_Angle = self.measurementSpec.levelAngles[subScan.pol],
+                        AutoLevel = self.measurementSpec.targetLevel,
+                        Resolution = self.measurementSpec.resolution,
+                        SourcePosition = subScan.getSourcePosition().value
+                    ))
                     success, msg = self.__runOneScan(scan, subScan)
                     self.logger.info(f"{success}:{msg}")
                     self.scanStatus.activeSubScan = None
@@ -229,6 +248,12 @@ class BeamScanner():
         self.scanStatus.phase = phase if phase else 0
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
+        self.centerPowersTable.create(BPCenterPower(
+            fkBeamPatterns = self.scanStatus.fkBeamPatterns, 
+            Amplitude = self.scanStatus.amplitude,
+            Phase = self.scanStatus.phase,
+            ScanComplete = self.scanStatus.scanComplete            
+        ))
         self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())
         msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
         self.logger.info(msg)
