@@ -12,12 +12,13 @@ from CTSDevices.Common.BinarySearchController import BinarySearchController
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
+from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
 from app.database.CTSDB import CTSDB
 
 import time
 from datetime import datetime
 import concurrent.futures
-from typing import Tuple
+from typing import Any, Tuple
 import copy
 import logging
 
@@ -50,6 +51,7 @@ class BeamScanner():
         self.keyCartTest = 0
         self.centerPowersTable = BPCenterPowers(driver = CTSDB())
         self.beamPatternsTable = BeamPatterns(driver = CTSDB())
+        self.beamPatternsRawDataTable = BPRawData(driver = CTSDB())
         self.__reset()
         
     def __reset(self):
@@ -117,6 +119,8 @@ class BeamScanner():
                         Resolution = self.measurementSpec.resolution,
                         SourcePosition = subScan.getSourcePosition().value
                     ))
+                    self.xAxisList = self.measurementSpec.makeXAxisList()
+                    self.yAxisList = self.measurementSpec.makeYAxisList()
                     success, msg = self.__runOneScan(scan, subScan)
                     self.logger.info(f"{success}:{msg}")
                     self.scanStatus.activeSubScan = None
@@ -154,7 +158,7 @@ class BeamScanner():
             lastCenterPwrTime = None
             rasterIndex = 0;
             # loop on y axis:
-            for yPos in self.measurementSpec.makeYAxisList():
+            for yPos in self.yAxisList:
 
                 # check for User Stop signal
                 if self.stopNow:
@@ -209,6 +213,9 @@ class BeamScanner():
                 if not success:
                     self.__abortScan(msg)
                     return (success, msg)
+
+                # Write to database:
+                success, msg = self.__writeRasterToDatabase(scan, subScan, y = yPos)
 
             # record the beam center power a final time:
             success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
@@ -344,7 +351,10 @@ class BeamScanner():
         return (wcaFreq != 0, msg)
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        self.measurementSpec.beamCenter.pol = self.measurementSpec.levelAngles[subScan.pol]
+        angle = self.measurementSpec.levelAngles[subScan.pol]
+        if subScan.is180:
+            angle += 180
+        self.measurementSpec.beamCenter.pol = angle
         success, msg = self.__moveScanner(self.measurementSpec.beamCenter, withTrigger = False)
         return (success, "__moveToBeamCenter: " + msg)
 
@@ -413,4 +423,20 @@ class BeamScanner():
         else:
             return (False, "pna.getTrace returned no data")
 
-            
+    def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, y:float) -> Tuple[bool, str]:
+        count = self.beamPatternsRawDataTable.create([BPRawDatum(
+            fkBeamPattern = self.scanStatus.fkBeamPatterns,
+            Pol = subScan.pol,
+            Position_X = x,
+            Position_Y = y,
+            SourceAngle = self.measurementSpec.scanAngles[subScan.pol],
+            Power = amp,
+            Phase = phase
+        ) for x, amp, phase in zip(self.xAxisList, self.raster.amplitude, self.raster.phase)])
+        if count == len(self.xAxisList):
+            return (True, "")
+        else:
+            msg = f"__writeRasterToDatabase: Only {count} records out of {len(self.xAxisList)} were written."
+            self.logger.error(msg)
+            return (False, msg)
+        

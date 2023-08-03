@@ -30,10 +30,10 @@ class MotorController(MCInterface):
     STEPS_PER_MM = 5000
     X_MIN = 0
     Y_MIN = 0
-    POL_MIN = 0
     X_MAX = 400
     Y_MAX = 300
-    POL_MAX = 360
+    POL_MIN = -170
+    POL_MAX = 100
     DEFAULT_HOST = "169.254.1.1"
     DEFAULT_PORT = 2055
     DELIMS = b'[:,\s\r\n]'
@@ -370,6 +370,12 @@ class MotorController(MCInterface):
         hs = self.query(cmd)
         self.__checkHandshake("MotorController.setZeroAxis", b':', hs)
 
+    def servoHere(self):
+        if self.getMotorStatus().inMotion():
+            raise MCError("Cannot servo here while scanner is in motion.")
+        hs = self.query(b'SH;')
+        self.__checkHandshake("MotorController.servoHere", b':', hs)
+
     def getMotorStatus(self) -> MotorStatus:
         replySize = 22
         data = self.query(b'TS;', replySize)
@@ -418,10 +424,22 @@ class MotorController(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.25 + 1.0
+        return max(xyTime, polTime) * 1.5 + 1.0
 
     def setNextPos(self, nextPos: Position):
-        nextPos.setMinZero()
+        if nextPos.x < 0:
+            nextPos.x = 0
+        if nextPos.x > self.X_MAX:
+            nextPos.x = self.X_MAX
+        if nextPos.y < 0:
+            nextPos.y = 0
+        if nextPos.y > self.Y_MAX:
+            nextPos.y = self.Y_MAX
+        if nextPos.pol < self.POL_MIN:
+            nextPos.pol = self.POL_MIN
+        if nextPos.pol > self.POL_MAX:
+            nextPos.pol = self.POL_MAX
+        
         if not self.positionInBounds(nextPos):
             raise ValueError(f"SetNextPos out of bounds: {nextPos.getText()}")
         if self.getMotorStatus().inMotion():

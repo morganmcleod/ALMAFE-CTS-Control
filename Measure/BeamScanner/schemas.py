@@ -45,15 +45,9 @@ class SubScan(BaseModel):
     
     def getScanPort(self, isUSB:bool) -> ScanPort:
         if self.pol == 0:
-            if self.isCopol:
-                return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
-            else:
-                return ScanPort.POL1_USB if isUSB else ScanPort.POL1_LSB
+            return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
         else:
-            if self.isCopol:
-                return ScanPort.POL1_USB if isUSB else ScanPort.POL1_LSB
-            else:
-                return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
+            return ScanPort.POL1_USB if isUSB else ScanPort.POL1_LSB
 
     def getSourcePosition(self) -> SourcePosition:
         if self.pol == 0:
@@ -117,11 +111,11 @@ class MeasurementSpec(BaseModel):
     scanStart: Position = Position(x=73, y=77)
     scanEnd: Position = Position(x=223, y=217)
     resolution: float = 0.5
-    scanAngles: List[float] = [13.5, 103.5]
-    levelAngles: List[float] = [13.5, 103.5]
+    scanAngles: List[float] = [-103.5, -13.5]
+    levelAngles: List[float] = [-103.5, -13.5]
     targetLevel: float = -5.0
     centersInterval: float = 300 # 5 minutes
-
+        
     def makeYAxisList(self) -> List[float]:
         y = float(self.scanStart.y)
         result = []
@@ -131,6 +125,17 @@ class MeasurementSpec(BaseModel):
         # append final value if needed:
         if result[-1] < self.scanEnd.y:
             result.append(float(self.scanEnd.y))
+        return result
+    
+    def makeXAxisList(self) -> List[float]:
+        x = float(self.scanStart.x)
+        result = []
+        while x <= self.scanEnd.x:
+            result.append(x)
+            x += float(self.resolution)
+        # append final value if needed:
+        if result[-1] < self.scanEnd.x:
+            result.append(float(self.scanEnd.x))
         return result
 
     def numScanPoints(self) -> int:

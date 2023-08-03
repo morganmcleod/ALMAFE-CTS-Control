@@ -45,14 +45,6 @@ class Position(BaseModel):
             self.y == other.y and \
             abs(self.pol - other.pol) < 0.05
 
-    def setMinZero(self):
-        if self.x < 0:
-            self.x = 0
-        if self.y < 0:
-            self.y = 0
-        if self.pol < 0:
-            self.pol = 0
-
     def calcMove(self, dest):
         return Position(x = self.x - dest.x,
                         y = self.y - dest.y,

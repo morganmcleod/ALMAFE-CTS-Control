@@ -127,6 +127,15 @@ async def put_SetZeroAxis(axis:str):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
+@router.put("/mc/servo_here", response_model = MessageResponse)
+async def put_ServoHere():
+    try:
+        BeamScanner.motorController.setZeroAxis(axis)
+        return MessageResponse(message = f"Set zero for axis '{axis}'", success = True)
+    except Exception as e:
+        return MessageResponse(message = str(e), success = False)
+
+
 @router.get("/mc/status", response_model = MotorStatus)
 async def get_MotorStatus():
     return BeamScanner.motorController.getMotorStatus()
