@@ -102,7 +102,7 @@ class CartAssembly():
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
             raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
-        Ij = abs(sis['Ij']) * 1000
+        Ij = abs(sis['Ij'])
 
         tprev = time.time()
         tsum = 0
@@ -115,7 +115,7 @@ class CartAssembly():
                 setVD = controller.output
                 self.loDevice.setPABias(pol, setVD)
                 sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-                Ij = abs(sis['Ij']) * 1000
+                Ij = abs(sis['Ij'])
 
             self.logger.info(f"iter={controller.iter} VD={setVD:.3f} Ij={Ij:.3f}")
 
