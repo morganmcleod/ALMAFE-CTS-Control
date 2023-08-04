@@ -13,8 +13,10 @@ from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubSca
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
 from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
+from DBBand6Cart.BPErrors import BPErrorLevel, BPError, BPErrors
 from app.database.CTSDB import CTSDB
 
+import os
 import time
 from datetime import datetime
 import concurrent.futures
@@ -51,7 +53,8 @@ class BeamScanner():
         self.keyCartTest = 0
         self.centerPowersTable = BPCenterPowers(driver = CTSDB())
         self.beamPatternsTable = BeamPatterns(driver = CTSDB())
-        self.beamPatternsRawDataTable = BPRawData(driver = CTSDB())
+        self.bpRawDataTable = BPRawData(driver = CTSDB())
+        self.bpErrorsTable = BPErrors(driver = CTSDB())
         self.__reset()
         
     def __reset(self):
@@ -87,11 +90,20 @@ class BeamScanner():
         self.logger.info("BeamScanner: stopped")
 
     def __runAllScans(self):
-        success, msg = self.__resetRasters();
+        success, msg = self.__resetRasters();        
         if not success:
             return
         success, msg = self.__resetPNA()
         if not success:
+            self.bpErrorsTable.create(BPError(
+                fkBeamPattern = 0,
+                Level = BPErrorLevel.ERROR,
+                Message = msg,
+                Model = os.path.split(__file__)[1],
+                Source = __name__,
+                FreqSrc = 0,
+                FreqRcvr = 0
+            ))        
             return
 
         self.mc.setTriggerInterval(self.measurementSpec.resolution)
@@ -163,6 +175,15 @@ class BeamScanner():
                 success, msg = self.__rfSourceAutoLevel(scan, subScan)
             
             if not success:
+                self.bpErrorsTable.create(BPError(
+                    fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                    Level = BPErrorLevel.ERROR,
+                    Message = msg,
+                    Model = os.path.split(__file__)[1],
+                    Source = __name__,
+                    FreqSrc = scan.RF,
+                    FreqRcvr = scan.LO
+                ))
                 return (success, msg)
 
             self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
@@ -183,6 +204,15 @@ class BeamScanner():
 
                     success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
                     if not success:
+                        self.bpErrorsTable.create(BPError(
+                            fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                            Level = BPErrorLevel.ERROR,
+                            Message = msg,
+                            Model = os.path.split(__file__)[1],
+                            Source = __name__,
+                            FreqSrc = scan.RF,
+                            FreqRcvr = scan.LO
+                        ))
                         self.__abortScan(msg)
                         return (success, msg)
 
@@ -200,6 +230,15 @@ class BeamScanner():
                 )
                 success, msg = self.__moveScanner(nextPos, withTrigger = False)
                 if not success:
+                    self.bpErrorsTable.create(BPError(
+                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                        Level = BPErrorLevel.ERROR,
+                        Message = msg,
+                        Model = os.path.split(__file__)[1],
+                        Source = __name__,
+                        FreqSrc = scan.RF,
+                        FreqRcvr = scan.LO
+                    ))
                     self.__abortScan(msg)
                     return (success, msg)
 
@@ -211,18 +250,45 @@ class BeamScanner():
                 # configure external triggering:
                 success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
                 if not success:
+                    self.bpErrorsTable.create(BPError(
+                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                        Level = BPErrorLevel.ERROR,
+                        Message = msg,
+                        Model = os.path.split(__file__)[1],
+                        Source = __name__,
+                        FreqSrc = scan.RF,
+                        FreqRcvr = scan.LO
+                    ))
                     self.__abortScan(msg)
                     return (success, msg)
 
                 # start the move:
                 success, msg = self.__moveScanner(nextPos, withTrigger = True, moveTimeout = moveTimeout)
                 if not success:
+                    self.bpErrorsTable.create(BPError(
+                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                        Level = BPErrorLevel.ERROR,
+                        Message = msg,
+                        Model = os.path.split(__file__)[1],
+                        Source = __name__,
+                        FreqSrc = scan.RF,
+                        FreqRcvr = scan.LO
+                    ))
                     self.__abortScan(msg)
                     return (success, msg)
                 
                 # get the PNA trace data:
                 success, msg = self.__getPNARaster(scan, subScan, y = yPos)
                 if not success:
+                    self.bpErrorsTable.create(BPError(
+                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                        Level = BPErrorLevel.ERROR,
+                        Message = msg,
+                        Model = os.path.split(__file__)[1],
+                        Source = __name__,
+                        FreqSrc = scan.RF,
+                        FreqRcvr = scan.LO
+                    ))
                     self.__abortScan(msg)
                     return (success, msg)
 
@@ -232,6 +298,15 @@ class BeamScanner():
             # record the beam center power a final time:
             success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
             if not success:
+                self.bpErrorsTable.create(BPError(
+                    fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                    Level = BPErrorLevel.ERROR,
+                    Message = msg,
+                    Model = os.path.split(__file__)[1],
+                    Source = __name__,
+                    FreqSrc = scan.RF,
+                    FreqRcvr = scan.LO
+                ))
                 self.__abortScan(msg)
                 return (success, msg)
             else:
@@ -432,7 +507,7 @@ class BeamScanner():
             return (False, "pna.getTrace returned no data")
 
     def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, y:float) -> Tuple[bool, str]:
-        count = self.beamPatternsRawDataTable.create([BPRawDatum(
+        count = self.bpRawDataTable.create([BPRawDatum(
             fkBeamPattern = self.scanStatus.fkBeamPatterns,
             Pol = subScan.pol,
             Position_X = x,

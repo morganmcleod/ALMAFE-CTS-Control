@@ -1,2 +1,2 @@
 SIMULATE = False
-TESTING = True
+TESTING = False
