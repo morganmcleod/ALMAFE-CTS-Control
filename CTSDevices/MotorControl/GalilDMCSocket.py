@@ -32,8 +32,8 @@ class MotorController(MCInterface):
     Y_MIN = 0
     X_MAX = 400
     Y_MAX = 300
-    POL_MIN = -170
-    POL_MAX = 100
+    POL_MIN = -200
+    POL_MAX = 180
     DEFAULT_HOST = "169.254.1.1"
     DEFAULT_PORT = 2055
     DELIMS = b'[:,\s\r\n]'

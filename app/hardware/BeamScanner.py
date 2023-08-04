@@ -35,7 +35,7 @@ beamScanner.measurementSpec = MeasurementSpec()
 if TESTING:
     beamScanner.scanList = ScanList(
         items = [
-            ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = False, xpol1=False, copol180=False))
+            ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1 = True, copol180 = True))
         ]
     )
 else:

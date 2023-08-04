@@ -36,14 +36,20 @@ class SubScan(BaseModel):
     isCopol: bool
     is180: bool = False
 
-    def getScanPol(self) -> int:
-        '''Compute which IF channel polarization to select diring scan
+    def getScanAngleIndex(self) -> int:
+        '''Compute which pol angle to use during scan
+        
+        Not isCopol means we are measuring port 'pol' but at the other polarization angle.
         '''
-        if self.is180 or self.isCopol:
+        if self.isCopol or self.is180:
             return self.pol
         return 1 - self.pol
     
     def getScanPort(self, isUSB:bool) -> ScanPort:
+        '''Compute which port to sellect during scan.
+
+        Always measure using port 'pol'.
+        '''
         if self.pol == 0:
             return ScanPort.POL0_USB if isUSB else ScanPort.POL0_LSB
         else:
@@ -111,8 +117,7 @@ class MeasurementSpec(BaseModel):
     scanStart: Position = Position(x=73, y=77)
     scanEnd: Position = Position(x=223, y=217)
     resolution: float = 0.5
-    scanAngles: List[float] = [-103.5, -13.5]
-    levelAngles: List[float] = [-103.5, -13.5]
+    scanAngles: List[float] = [-13.5, -103.5]
     targetLevel: float = -5.0
     centersInterval: float = 300 # 5 minutes
         

@@ -30,10 +30,26 @@ async def websocket_scandata_request(websocket: WebSocket):
             if position != lastPosition:
                 lastPosition = position
                 await manager.send(position.dict(), websocket)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /position_ws")
+
+@router.websocket("/motorstatus_ws")
+async def websocket_scandata_request(websocket: WebSocket):
+    global logger
+    await manager.connect(websocket)
+    lastMotorStatus = None            
+    try:
+        while True:        
+            motorStatus = BeamScanner.motorController.getMotorStatus()
+            if motorStatus != lastMotorStatus:
+                lastMotorStatus = motorStatus
+                await manager.send(motorStatus.dict(), websocket)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /motorstatus_ws")
 
 @router.websocket("/rasters_ws")
 async def websocket_scandata_push(websocket: WebSocket):

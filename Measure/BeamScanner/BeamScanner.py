@@ -26,7 +26,7 @@ class BeamScanner():
 
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
-    POL_SPEED = 20                  # deg/sec
+    POL_SPEED = 10                  # deg/sec
 
     def __init__(self, 
         motorController:MCInterface, 
@@ -57,6 +57,8 @@ class BeamScanner():
     def __reset(self):
         self.scanStatus = ScanStatus(key = self.keyCartTest)
         self.__resetRasters()
+        self.scanAngle = 0
+        self.levelAngle = 0
 
     def getRasters(self):
         if self.nextRaster == -1:
@@ -72,6 +74,8 @@ class BeamScanner():
     def start(self):
         self.stopNow = False
         self.scanStatus = ScanStatus()
+        # make this not None for now, so client will display that measurement has started:
+        self.scanStatus.activeScan = 0
         self.futures = []
         self.futures.append(self.executor.submit(self.__runAllScans))
 
@@ -106,15 +110,23 @@ class BeamScanner():
                     self.logger.info(subScan.getText())
                     self.scanStatus.message = "Started: " + subScan.getText()
                     self.scanStatus.activeSubScan = subScan.getText()
+
+                    # compute angles for this scan:
+                    self.scanAngle = self.measurementSpec.scanAngles[subScan.getScanAngleIndex()]
+                    self.levelAngle = self.measurementSpec.scanAngles[subScan.pol]
+                    if subScan.is180:
+                        self.scanAngle += 180
+                        self.levelAngle += 180
+
                     self.scanStatus.fkBeamPatterns = self.beamPatternsTable.create(BeamPattern(
                         fkCartTest = self.keyCartTest,
                         FreqLO = scan.LO,
                         FreqCarrier = scan.RF,
                         Beam_Center_X = self.measurementSpec.beamCenter.x,
                         Beam_Center_Y = self.measurementSpec.beamCenter.y,                        
-                        Scan_Angle = self.measurementSpec.scanAngles[subScan.pol],
+                        Scan_Angle = self.scanAngle,
                         Scan_Port = subScan.getScanPort(scan.isUSB()).value,
-                        Lvl_Angle = self.measurementSpec.levelAngles[subScan.pol],
+                        Lvl_Angle = self.levelAngle,
                         AutoLevel = self.measurementSpec.targetLevel,
                         Resolution = self.measurementSpec.resolution,
                         SourcePosition = subScan.getSourcePosition().value
@@ -153,7 +165,7 @@ class BeamScanner():
             if not success:
                 return (success, msg)
 
-            self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())
+            self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
 
             lastCenterPwrTime = None
             rasterIndex = 0;
@@ -180,7 +192,7 @@ class BeamScanner():
                     return False
 
                 # go to start of this raster:
-                nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
+                nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.scanAngle)
                 self.raster = Raster(
                     rasterIndex = rasterIndex, 
                     startPos = nextPos, 
@@ -192,7 +204,7 @@ class BeamScanner():
                     return (success, msg)
 
                 # calculate next position and move timeout:
-                nextPos = Position(x = self.measurementSpec.scanEnd.x, y = yPos, pol = self.measurementSpec.scanAngles[subScan.pol])
+                nextPos = Position(x = self.measurementSpec.scanEnd.x, y = yPos, pol = self.scanAngle)
                 self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
                 moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
 
@@ -261,7 +273,6 @@ class BeamScanner():
             Phase = self.scanStatus.phase,
             ScanComplete = self.scanStatus.scanComplete            
         ))
-        self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.getScanPol())
         msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
         self.logger.info(msg)
         return (True, msg)
@@ -351,10 +362,7 @@ class BeamScanner():
         return (wcaFreq != 0, msg)
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        angle = self.measurementSpec.levelAngles[subScan.pol]
-        if subScan.is180:
-            angle += 180
-        self.measurementSpec.beamCenter.pol = angle
+        self.measurementSpec.beamCenter.pol = self.levelAngle
         success, msg = self.__moveScanner(self.measurementSpec.beamCenter, withTrigger = False)
         return (success, "__moveToBeamCenter: " + msg)
 
@@ -429,7 +437,7 @@ class BeamScanner():
             Pol = subScan.pol,
             Position_X = x,
             Position_Y = y,
-            SourceAngle = self.measurementSpec.scanAngles[subScan.pol],
+            SourceAngle = self.scanAngle,
             Power = amp,
             Phase = phase
         ) for x, amp, phase in zip(self.xAxisList, self.raster.amplitude, self.raster.phase)])
