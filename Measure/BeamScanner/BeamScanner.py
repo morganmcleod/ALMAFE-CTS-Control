@@ -28,7 +28,7 @@ class BeamScanner():
 
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
-    POL_SPEED = 10                  # deg/sec
+    POL_SPEED = 2.5                 # deg/sec
 
     def __init__(self, 
         motorController:MCInterface, 
@@ -196,6 +196,22 @@ class BeamScanner():
                 # check for User Stop signal
                 if self.stopNow:
                     self.__abortScan("User Stop")
+                    return False
+                
+                # check for motor power failure:
+                motorStatus = self.mc.getMotorStatus()
+                if motorStatus.powerFail():
+                    self.bpErrorsTable.create(BPError(
+                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                        Level = BPErrorLevel.ERROR,
+                        Message = "__runOneScan: motor power failure. Aborting all scans!",
+                        Model = os.path.split(__file__)[1],
+                        Source = __name__,
+                        FreqSrc = scan.RF,
+                        FreqRcvr = scan.LO
+                    ))
+                    self.stopNow = True
+                    self.__abortScan("Motor power failure")
                     return False
 
                 # time to record the beam center power?

@@ -314,7 +314,7 @@ class MotorController(MCInterface):
         '''
         Voltage in range -9.9982 to +9.9982
         '''
-        data = self.query(b'TTC;', replySize = 9)
+        data = self.query(b'TTC;', replySize = 10)
         data = removeDelims(data, self.DELIMS)
         torque = float(data[0])
         assert(self.MIN_POL_TORQUE <= torque <= self.MAX_POL_TORQUE)
@@ -503,7 +503,9 @@ class MotorController(MCInterface):
             elapsed = time.time() - startTime
             if timeout and elapsed > timeout:
                 break
-            time.sleep(0.1)                
-            moveStatus = self.getMoveStatus()            
+            time.sleep(0.5)
+            moveStatus = self.getMoveStatus()
+            self.logger.debug(f"waitForMove: pol torque:{self.getPolTorque()}")
+        
         self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
         return moveStatus
