@@ -7,6 +7,7 @@ class MotorStatus(BaseModel):
     xMotion: bool = False
     yMotion: bool = False
     polMotion: bool = False
+    polTorque: float = 0
 
     def powerFail(self) -> bool:
         return not (self.xPower and self.yPower and self.polPower)
@@ -15,7 +16,7 @@ class MotorStatus(BaseModel):
         return self.xMotion or self.yMotion or self.polMotion  
 
     def getText(self) -> str:
-        return f"powerFail={self.powerFail()} inMotion={self.inMotion()}"
+        return f"powerFail={self.powerFail()} inMotion={self.inMotion()} polTorque={self.polTorque}"
 
 class MoveStatus(BaseModel):
     success: bool = False

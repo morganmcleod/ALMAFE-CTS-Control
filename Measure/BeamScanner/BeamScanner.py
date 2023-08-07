@@ -63,16 +63,12 @@ class BeamScanner():
         self.scanAngle = 0
         self.levelAngle = 0
 
-    def getRasters(self):
-        if self.nextRaster == -1:
-            self.nextRaster = 0
+    def getRasters(self, startIndex: int = None):
+        if startIndex < 0:
             return Rasters()
-        elif self.nextRaster < len(self.rasters):
-            response = Rasters(startIndex = self.nextRaster, rasters = self.rasters[self.nextRaster:])
-            self.nextRaster = len(self.rasters)
-            return response
-        else:
-            return None
+        elif startIndex > len(self.rasters):
+            startIndex = 0
+        return Rasters(startIndex = startIndex, rasters = self.rasters[startIndex:])
 
     def start(self):
         self.stopNow = False
@@ -388,7 +384,6 @@ class BeamScanner():
 
     def __resetRasters(self) -> Tuple[bool, str]:
         self.rasters = []
-        self.nextRaster = -1
         return (True, "")
 
     def __configureIfProcessor(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:

@@ -117,7 +117,7 @@ class MeasurementSpec(BaseModel):
     scanStart: Position = Position(x=73, y=77)
     scanEnd: Position = Position(x=223, y=217)
     resolution: float = 0.5
-    scanAngles: List[float] = [-13.5, -103.5]
+    scanAngles: List[float] = [-103.5, -13.5]
     targetLevel: float = -5.0
     centersInterval: float = 300 # 5 minutes
         

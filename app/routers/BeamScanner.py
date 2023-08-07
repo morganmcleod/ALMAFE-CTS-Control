@@ -10,7 +10,7 @@ from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
 from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
 from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
-from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption
+from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption, Rasters
 from socket import getfqdn
 
 import logging
@@ -51,21 +51,25 @@ async def websocket_scandata_request(websocket: WebSocket):
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /motorstatus_ws")
 
-@router.websocket("/rasters_ws")
-async def websocket_scandata_push(websocket: WebSocket):
-    global logger
-    await manager.connect(websocket)
-    try:
-        while True:
-            rasters = BeamScanner.beamScanner.getRasters()
-            if rasters:
-                await manager.send(rasters.dict(), websocket)
-            await asyncio.sleep(0.5)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rasters_ws")
-    except Exception as e:
-        logger.exception(e)
+# @router.websocket("/rasters_ws")
+# async def websocket_scandata_push(websocket: WebSocket):
+#     global logger
+#     await manager.connect(websocket)
+#     try:
+#         while True:
+#             rasters = BeamScanner.beamScanner.getRasters()
+#             if rasters:
+#                 await manager.send(rasters.dict(), websocket)
+#             await asyncio.sleep(0.5)
+#     except WebSocketDisconnect:
+#         manager.disconnect(websocket)
+#         logger.exception("WebSocketDisconnect: /rasters_ws")
+#     except Exception as e:
+#         logger.exception(e)
+
+@router.get("/rasters", response_model = Rasters)
+async def get_Rasters(startIndex: int):
+    return BeamScanner.beamScanner.getRasters(startIndex)
 
 @router.get("/mc/query", response_model = MessageResponse)
 async def get_Query(query: str):

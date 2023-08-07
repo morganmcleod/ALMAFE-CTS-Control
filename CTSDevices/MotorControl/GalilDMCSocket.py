@@ -8,9 +8,8 @@ from .schemas import MotorStatus, MoveStatus, Position
 from .MCInterface import MCInterface, MCError
 from ..Common.RemoveDelims import removeDelims
 import socket
-import re
 import time
-from math import sqrt
+from math import sqrt, copysign
 from typing import Union
 import logging
 import queue
@@ -318,6 +317,7 @@ class MotorController(MCInterface):
         data = removeDelims(data, self.DELIMS)
         torque = float(data[0])
         assert(self.MIN_POL_TORQUE <= torque <= self.MAX_POL_TORQUE)
+        torque = round(copysign(abs(torque) / self.MAX_POL_TORQUE, torque) * 100, 1)
         return torque
 
     def homeAxis(self, axis:str = 'xy', timeout:float = None):
@@ -390,7 +390,8 @@ class MotorController(MCInterface):
             polPower = bool(1 - (int(data[2]) >> 5) & 1),
             xMotion = bool((int(data[0]) >> 7) & 1),      # bit 7
             yMotion = bool((int(data[1]) >> 7) & 1),
-            polMotion = bool((int(data[2]) >> 7) & 1)
+            polMotion = bool((int(data[2]) >> 7) & 1),
+            polTorque = self.getPolTorque()
         )
         return self.motorStatus
     
@@ -505,7 +506,9 @@ class MotorController(MCInterface):
                 break
             time.sleep(0.5)
             moveStatus = self.getMoveStatus()
-            self.logger.debug(f"waitForMove: pol torque:{self.getPolTorque()}")
+            torque = self.getPolTorque()
+            if abs(torque) > 20:
+                self.logger.warning(f"waitForMove: pol torque:{torque} %")
         
         self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
         return moveStatus
