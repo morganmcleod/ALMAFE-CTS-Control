@@ -126,7 +126,7 @@ class BeamScanner():
                         self.scanAngle += 180
                         self.levelAngle += 180
 
-                    self.scanStatus.fkBeamPatterns = self.beamPatternsTable.create(BeamPattern(
+                    keyId = self.beamPatternsTable.create(BeamPattern(
                         fkCartTest = self.keyCartTest,
                         FreqLO = scan.LO,
                         FreqCarrier = scan.RF,
@@ -139,15 +139,33 @@ class BeamScanner():
                         Resolution = self.measurementSpec.resolution,
                         SourcePosition = subScan.getSourcePosition().value
                     ))
-                    self.xAxisList = self.measurementSpec.makeXAxisList()
-                    self.yAxisList = self.measurementSpec.makeYAxisList()
-                    success, msg = self.__runOneScan(scan, subScan)
-                    self.logger.info(f"{success}:{msg}")
+                    if not keyId:
+                        msg = "__runAllScans: beamPatternsTable.create returned None"
+                        success = False
+                    else:
+                        self.scanStatus.fkBeamPatterns = keyId
+                        self.xAxisList = self.measurementSpec.makeXAxisList()
+                        self.yAxisList = self.measurementSpec.makeYAxisList()
+                        success, msg = self.__runOneScan(scan, subScan)
+
                     self.scanStatus.activeSubScan = None
+                    
                     if success:
+                        self.logger.info(f"{success}:{msg}")
                         self.scanStatus.message = "Scan complete"
                     else:
+                        self.logger.error(f"{success}:{msg}")
                         self.scanStatus.message = "Error: " + msg
+                        self.bpErrorsTable.create(BPError(
+                            fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                            Level = BPErrorLevel.ERROR,
+                            Message = msg,
+                            Model = os.path.split(__file__)[1],
+                            Source = __name__,
+                            FreqSrc = scan.RF,
+                            FreqRcvr = scan.LO
+                        ))
+
                 self.scanStatus.activeScan = None
         self.scanStatus.scanComplete = True
         self.scanStatus.measurementComplete = True
