@@ -8,9 +8,9 @@ router = APIRouter()
 
 def getTarget(request: Request):
     if "/rfref" in request.url.path:
-        return (rfReference, "LO Ref")
+        return (rfReference, "RF Ref")
     elif "/loref" in request.url.path:
-        return (loReference, "RF Ref")
+        return (loReference, "LO Ref")
     else:
         return (None, "")
 
