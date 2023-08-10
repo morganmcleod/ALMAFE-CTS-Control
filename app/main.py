@@ -114,8 +114,7 @@ if __name__ == "__main__":
 
     logger2 = logging.getLogger("ALMAFE-AMBDeviceLibrary")
     logger2.setLevel(logging.DEBUG)
-    handler.setFormatter(logging.Formatter(fmt = '%(asctime)s %(levelname)s:%(message)s'))
-    logger.addHandler(handler)
+    logger2.addHandler(handler)
 
     logger.info("---- ALMAFE-CTS-Control start ----")
 
