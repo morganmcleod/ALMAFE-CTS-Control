@@ -122,7 +122,7 @@ class CartAssembly():
             tsum += (time.time() - tprev)
             tprev = time.time()
 
-        iterTime = tsum / controller.iter
+        iterTime = tsum / (controller.iter + 1)
         self.logger.info(f"CartAssembly.setAutoLOPower: setVD={setVD:.3f} mV, IJ={Ij:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
     

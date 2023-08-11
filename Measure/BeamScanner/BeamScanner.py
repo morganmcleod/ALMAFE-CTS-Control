@@ -85,21 +85,16 @@ class BeamScanner():
             concurrent.futures.wait(self.futures)
         self.logger.info("BeamScanner: stopped")
 
-    def __runAllScans(self):
+    def __runAllScans(self) -> None:
         success, msg = self.__resetRasters();        
         if not success:
             return
         success, msg = self.__resetPNA()
         if not success:
-            self.bpErrorsTable.create(BPError(
-                fkBeamPattern = 0,
-                Level = BPErrorLevel.ERROR,
-                Message = msg,
-                Model = os.path.split(__file__)[1],
-                Source = __name__,
-                FreqSrc = 0,
-                FreqRcvr = 0
-            ))        
+            self.__logBPError(
+                source = self.__runAllScans.__name__,
+                msg = msg
+            )
             return
 
         self.mc.setTriggerInterval(self.measurementSpec.resolution)
@@ -126,6 +121,7 @@ class BeamScanner():
                         self.scanAngle += 180
                         self.levelAngle += 180
 
+                    # create the BeamPatterns record for this scan:
                     keyId = self.beamPatternsTable.create(BeamPattern(
                         fkCartTest = self.keyCartTest,
                         FreqLO = scan.LO,
@@ -143,6 +139,7 @@ class BeamScanner():
                         msg = "__runAllScans: beamPatternsTable.create returned None"
                         success = False
                     else:
+                        # run the scan:
                         self.scanStatus.fkBeamPatterns = keyId
                         self.xAxisList = self.measurementSpec.makeXAxisList()
                         self.yAxisList = self.measurementSpec.makeYAxisList()
@@ -154,17 +151,13 @@ class BeamScanner():
                         self.logger.info(f"{success}:{msg}")
                         self.scanStatus.message = "Scan complete"
                     else:
-                        self.logger.error(f"{success}:{msg}")
                         self.scanStatus.message = "Error: " + msg
-                        self.bpErrorsTable.create(BPError(
-                            fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                            Level = BPErrorLevel.ERROR,
-                            Message = msg,
-                            Model = os.path.split(__file__)[1],
-                            Source = __name__,
-                            FreqSrc = scan.RF,
-                            FreqRcvr = scan.LO
-                        ))
+                        self.__logBPError(
+                            source = self.__runAllScans.__name__, 
+                            msg = msg,
+                            freqSrc = scan.RF,
+                            freqRcvr = scan.LO
+                        )
 
                 self.scanStatus.activeScan = None
         self.scanStatus.scanComplete = True
@@ -189,15 +182,12 @@ class BeamScanner():
                 success, msg = self.__rfSourceAutoLevel(scan, subScan)
             
             if not success:
-                self.bpErrorsTable.create(BPError(
-                    fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                    Level = BPErrorLevel.ERROR,
-                    Message = msg,
-                    Model = os.path.split(__file__)[1],
-                    Source = __name__,
-                    FreqSrc = scan.RF,
-                    FreqRcvr = scan.LO
-                ))
+                self.__logBPError(
+                    source = self.__runOneScan.__name__, 
+                    msg = msg,
+                    freqSrc = scan.RF,
+                    freqRcvr = scan.LO
+                )
                 return (success, msg)
 
             self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
@@ -210,23 +200,47 @@ class BeamScanner():
                 # check for User Stop signal
                 if self.stopNow:
                     self.__abortScan("User Stop")
-                    return False
+                    return (False, "User Stop")
                 
                 # check for motor power failure:
                 motorStatus = self.mc.getMotorStatus()
+                msg = "__runOneScan: motor power failure. Aborting all scans!"
                 if motorStatus.powerFail():
-                    self.bpErrorsTable.create(BPError(
-                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                        Level = BPErrorLevel.ERROR,
-                        Message = "__runOneScan: motor power failure. Aborting all scans!",
-                        Model = os.path.split(__file__)[1],
-                        Source = __name__,
-                        FreqSrc = scan.RF,
-                        FreqRcvr = scan.LO
-                    ))
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
                     self.stopNow = True
                     self.__abortScan("Motor power failure")
-                    return False
+                    return (False, "Motor power failure")
+                
+                # check for lost LO lock:
+                lockInfo = self.cartAssembly.loDevice.getLockInfo()
+                if not lockInfo['isLocked']:
+                    msg = "__runOneScan: lost LO lock. Aborting this scan."
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
+                    self.__abortScan("LOST LO LOCK")
+                    return (False, "LOST LO LOCK")
+
+                # check for lost RF source lock:
+                lockInfo = self.rfSrcDevice.getLockInfo()
+                if not lockInfo['isLocked']:
+                    msg = "__runOneScan: lost RF source lock. Aborting this scan."
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
+                    self.__abortScan("LOST RF SOURCE LOCK")
+                    return (False, "LOST RF SOURCE LOCK")
 
                 # time to record the beam center power?
                 if not lastCenterPwrTime or (time.time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
@@ -234,22 +248,19 @@ class BeamScanner():
 
                     success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
                     if not success:
-                        self.bpErrorsTable.create(BPError(
-                            fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                            Level = BPErrorLevel.ERROR,
-                            Message = msg,
-                            Model = os.path.split(__file__)[1],
-                            Source = __name__,
-                            FreqSrc = scan.RF,
-                            FreqRcvr = scan.LO
-                        ))
+                        self.__logBPError(
+                            source = self.__runOneScan.__name__, 
+                            msg = msg,
+                            freqSrc = scan.RF,
+                            freqRcvr = scan.LO
+                        )
                         self.__abortScan(msg)
                         return (success, msg)
 
                 # check for User Stop signal
                 if self.stopNow:
                     self.__abortScan("User Stop")
-                    return False
+                    return (False, "User Stop")
 
                 # go to start of this raster:
                 nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.scanAngle)
@@ -260,15 +271,12 @@ class BeamScanner():
                 )
                 success, msg = self.__moveScanner(nextPos, withTrigger = False)
                 if not success:
-                    self.bpErrorsTable.create(BPError(
-                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                        Level = BPErrorLevel.ERROR,
-                        Message = msg,
-                        Model = os.path.split(__file__)[1],
-                        Source = __name__,
-                        FreqSrc = scan.RF,
-                        FreqRcvr = scan.LO
-                    ))
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
                     self.__abortScan(msg)
                     return (success, msg)
 
@@ -280,45 +288,36 @@ class BeamScanner():
                 # configure external triggering:
                 success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
                 if not success:
-                    self.bpErrorsTable.create(BPError(
-                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                        Level = BPErrorLevel.ERROR,
-                        Message = msg,
-                        Model = os.path.split(__file__)[1],
-                        Source = __name__,
-                        FreqSrc = scan.RF,
-                        FreqRcvr = scan.LO
-                    ))
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
                     self.__abortScan(msg)
                     return (success, msg)
 
                 # start the move:
                 success, msg = self.__moveScanner(nextPos, withTrigger = True, moveTimeout = moveTimeout)
                 if not success:
-                    self.bpErrorsTable.create(BPError(
-                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                        Level = BPErrorLevel.ERROR,
-                        Message = msg,
-                        Model = os.path.split(__file__)[1],
-                        Source = __name__,
-                        FreqSrc = scan.RF,
-                        FreqRcvr = scan.LO
-                    ))
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
                     self.__abortScan(msg)
                     return (success, msg)
                 
                 # get the PNA trace data:
                 success, msg = self.__getPNARaster(scan, subScan, y = yPos)
                 if not success:
-                    self.bpErrorsTable.create(BPError(
-                        fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                        Level = BPErrorLevel.ERROR,
-                        Message = msg,
-                        Model = os.path.split(__file__)[1],
-                        Source = __name__,
-                        FreqSrc = scan.RF,
-                        FreqRcvr = scan.LO
-                    ))
+                    self.__logBPError(
+                        source = self.__runOneScan.__name__, 
+                        msg = msg,
+                        freqSrc = scan.RF,
+                        freqRcvr = scan.LO
+                    )
                     self.__abortScan(msg)
                     return (success, msg)
 
@@ -328,15 +327,12 @@ class BeamScanner():
             # record the beam center power a final time:
             success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
             if not success:
-                self.bpErrorsTable.create(BPError(
-                    fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                    Level = BPErrorLevel.ERROR,
-                    Message = msg,
-                    Model = os.path.split(__file__)[1],
-                    Source = __name__,
-                    FreqSrc = scan.RF,
-                    FreqRcvr = scan.LO
-                ))
+                self.__logBPError(
+                    source = self.__runOneScan.__name__, 
+                    msg = msg,
+                    freqSrc = scan.RF,
+                    freqRcvr = scan.LO
+                )
                 self.__abortScan(msg)
                 return (success, msg)
             else:
@@ -381,6 +377,18 @@ class BeamScanner():
         msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
         self.logger.info(msg)
         return (True, msg)
+
+    def __logBPError(self, source: str, msg: str, freqSrc = 0, freqRcvr = 0, level = BPErrorLevel.ERROR) -> None:
+        self.logger.error(msg)
+        self.bpErrorsTable.create(BPError(
+            fkBeamPattern = self.scanStatus.fkBeamPatterns,
+            Level = level,
+            Message = msg,
+            Model = os.path.split(__file__)[1],
+            Source = source,
+            FreqSrc = freqSrc,
+            FreqRcvr = freqRcvr
+        ))
 
     def __abortScan(self, msg) -> Tuple[bool, str]:
         self.logger.info(msg)
@@ -431,14 +439,15 @@ class BeamScanner():
     def __lockLO(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.cartAssembly.loDevice.selectLockSideband(self.cartAssembly.loDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
-        if wcaFreq > 0:
-            pllConfig = self.cartAssembly.loDevice.getPLLConfig()
-            self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
-            self.loReference.setAmplitude(12.0)
-            self.loReference.setRFOutput(True)
-            wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()
-        msg = f"__lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
-        return (wcaFreq != 0, msg)
+        if wcaFreq == 0:
+            return (False, "FAILED LO LOCK")
+
+        pllConfig = self.cartAssembly.loDevice.getPLLConfig()
+        self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
+        self.loReference.setAmplitude(12.0)
+        self.loReference.setRFOutput(True)
+        wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()            
+        return (True, f"__lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if self.cartAssembly.setRecevierBias(scan.LO):
@@ -454,16 +463,17 @@ class BeamScanner():
     def __lockRF(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(scan.RF)
-        if wcaFreq > 0:
-            if self.rfReference:
-                # for debug only.  Normally the RF ref synth is not used for beam patterns:
-                pllConfig = self.rfSrcDevice.getPLLConfig()
-                self.rfReference.setFrequency((scan.RF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
-                self.rfReference.setAmplitude(16.0)
-                self.rfReference.setRFOutput(True)
-            wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
-        msg = f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
-        return (wcaFreq != 0, msg)
+        if wcaFreq == 0:
+            return (False, "FAILED RF SOURCE LOCK")
+
+        if self.rfReference:
+            # for debug only.  Normally the RF ref synth is not used for beam patterns:
+            pllConfig = self.rfSrcDevice.getPLLConfig()
+            self.rfReference.setFrequency((scan.RF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
+            self.rfReference.setAmplitude(16.0)
+            self.rfReference.setRFOutput(True)
+        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
+        return (True, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.measurementSpec.beamCenter.pol = self.levelAngle
@@ -513,7 +523,12 @@ class BeamScanner():
 
         self.pna.setMeasConfig(DEFAULT_CONFIG)
         if error:
-            self.logger.error(msg)
+            self.__logBPError(
+                source = self.__rfSourceAutoLevel.__name__,
+                msg = msg,
+                freqSrc = scan.RF,
+                freqRcvr = scan.LO
+            )
         else:
             self.logger.info(msg)
         return (not error, msg)
@@ -549,6 +564,11 @@ class BeamScanner():
             return (True, "")
         else:
             msg = f"__writeRasterToDatabase: Only {count} records out of {len(self.xAxisList)} were written."
-            self.logger.error(msg)
+            self.__logBPError(
+                source = self.__writeRasterToDatabase.__name__, 
+                msg = msg,
+                freqSrc = scan.RF,
+                freqRcvr = scan.LO
+            )
             return (False, msg)
         
