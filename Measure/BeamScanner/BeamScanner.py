@@ -372,8 +372,7 @@ class BeamScanner():
             fkBeamPatterns = self.scanStatus.fkBeamPatterns, 
             Amplitude = self.scanStatus.amplitude,
             Phase = self.scanStatus.phase,
-            ScanComplete = self.scanStatus.scanComplete,
-            timeStamp = datetime.now()         
+            ScanComplete = self.scanStatus.scanComplete
         ))
         msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
         self.logger.info(msg)
@@ -387,7 +386,6 @@ class BeamScanner():
             Message = msg,
             Model = os.path.split(__file__)[1],
             Source = source,
-            timeStamp = datetime.now(),
             FreqSrc = freqSrc,
             FreqRcvr = freqRcvr
         ))
@@ -560,8 +558,7 @@ class BeamScanner():
             Position_Y = y,
             SourceAngle = self.scanAngle,
             Power = amp,
-            Phase = phase,
-            timeStamp = datetime.now()
+            Phase = phase
         ) for x, amp, phase in zip(self.xAxisList, self.raster.amplitude, self.raster.phase)])
         if count == len(self.xAxisList):
             return (True, "")
