@@ -311,7 +311,7 @@ class MotorController(MCInterface):
 
     def getPolTorque(self) -> float:
         '''
-        Voltage in range -9.9982 to +9.9982
+        + or - percentage
         '''
         data = self.query(b'TTC;', replySize = 10)
         data = removeDelims(data, self.DELIMS)

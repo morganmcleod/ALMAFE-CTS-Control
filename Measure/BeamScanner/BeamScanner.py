@@ -15,6 +15,7 @@ from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
 from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
 from DBBand6Cart.BPErrors import BPErrorLevel, BPError, BPErrors
 from app.database.CTSDB import CTSDB
+from DebugOptions import *
 
 import os
 import time
@@ -63,13 +64,40 @@ class BeamScanner():
         self.scanAngle = 0
         self.levelAngle = 0
 
-    def getRasters(self, startIndex: int = None):
-        if startIndex < 0:
-            return Rasters()
-        elif startIndex > len(self.rasters):
-            startIndex = 0
-        return Rasters(startIndex = startIndex, rasters = self.rasters[startIndex:])
+    def getRasters(self, 
+                   first: int = 0, 
+                   last: int = -1,
+                   latestOnly: bool = False) -> Rasters:
+        """Return a subset of the rasters collected so far
 
+        :param int first: Start of range to retrieve.
+        :param int last: End of range to retrieve.  -1 means get all the rest.
+        :param bool latestOnly: If True, ignore first and last.  Instead return the most recent raster.
+        :return Rasters
+        """
+        available = len(self.rasters)
+        if latestOnly:
+            # return the last raster if available
+            if available > 0:
+                index = available - 1
+                return Rasters(startIndex = index, rasters = [self.rasters[index]])
+            else:
+                # nothing to return:
+                return Rasters()
+        
+        # if first > len(self.rasters):
+        #     # if requesting past the last, reset to the first:
+        #     first = 0
+        
+        if last < first or last >= available:
+            last = available - 1
+
+        # return what's requested, if available:
+        if 0 <= first < available:
+            return Rasters(first = first, rasters = self.rasters[first:last])            
+        else:
+            return Rasters()
+        
     def start(self):
         self.stopNow = False
         self.scanStatus = ScanStatus()
@@ -122,19 +150,22 @@ class BeamScanner():
                         self.levelAngle += 180
 
                     # create the BeamPatterns record for this scan:
-                    keyId = self.beamPatternsTable.create(BeamPattern(
-                        fkCartTest = self.keyCartTest,
-                        FreqLO = scan.LO,
-                        FreqCarrier = scan.RF,
-                        Beam_Center_X = self.measurementSpec.beamCenter.x,
-                        Beam_Center_Y = self.measurementSpec.beamCenter.y,                        
-                        Scan_Angle = self.scanAngle,
-                        Scan_Port = subScan.getScanPort(scan.isUSB()).value,
-                        Lvl_Angle = self.levelAngle,
-                        AutoLevel = self.measurementSpec.targetLevel,
-                        Resolution = self.measurementSpec.resolution,
-                        SourcePosition = subScan.getSourcePosition().value
-                    ))
+                    if SIMULATE:
+                        keyId = 1
+                    else:
+                        keyId = self.beamPatternsTable.create(BeamPattern(
+                            fkCartTest = self.keyCartTest,
+                            FreqLO = scan.LO,
+                            FreqCarrier = scan.RF,
+                            Beam_Center_X = self.measurementSpec.beamCenter.x,
+                            Beam_Center_Y = self.measurementSpec.beamCenter.y,                        
+                            Scan_Angle = self.scanAngle,
+                            Scan_Port = subScan.getScanPort(scan.isUSB()).value,
+                            Lvl_Angle = self.levelAngle,
+                            AutoLevel = self.measurementSpec.targetLevel,
+                            Resolution = self.measurementSpec.resolution,
+                            SourcePosition = subScan.getSourcePosition().value
+                        ))
                     if not keyId:
                         msg = "__runAllScans: beamPatternsTable.create returned None"
                         success = False
@@ -218,7 +249,7 @@ class BeamScanner():
                 
                 # check for lost LO lock:
                 lockInfo = self.cartAssembly.loDevice.getLockInfo()
-                if not lockInfo['isLocked']:
+                if not lockInfo['isLocked'] and not SIMULATE:
                     msg = "__runOneScan: lost LO lock. Aborting this scan."
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -231,7 +262,7 @@ class BeamScanner():
 
                 # check for lost RF source lock:
                 lockInfo = self.rfSrcDevice.getLockInfo()
-                if not lockInfo['isLocked']:
+                if not lockInfo['isLocked'] and not SIMULATE:
                     msg = "__runOneScan: lost RF source lock. Aborting this scan."
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -368,27 +399,29 @@ class BeamScanner():
         self.scanStatus.phase = phase if phase else 0
         self.scanStatus.timeStamp = datetime.now()
         self.scanStatus.scanComplete = scanComplete
-        self.centerPowersTable.create(BPCenterPower(
-            fkBeamPatterns = self.scanStatus.fkBeamPatterns, 
-            Amplitude = self.scanStatus.amplitude,
-            Phase = self.scanStatus.phase,
-            ScanComplete = self.scanStatus.scanComplete
-        ))
+        if not SIMULATE:
+            self.centerPowersTable.create(BPCenterPower(
+                fkBeamPatterns = self.scanStatus.fkBeamPatterns, 
+                Amplitude = self.scanStatus.amplitude,
+                Phase = self.scanStatus.phase,
+                ScanComplete = self.scanStatus.scanComplete
+            ))
         msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
         self.logger.info(msg)
         return (True, msg)
 
     def __logBPError(self, source: str, msg: str, freqSrc = 0, freqRcvr = 0, level = BPErrorLevel.ERROR) -> None:
         self.logger.error(msg)
-        self.bpErrorsTable.create(BPError(
-            fkBeamPattern = self.scanStatus.fkBeamPatterns,
-            Level = level,
-            Message = msg,
-            Model = os.path.split(__file__)[1],
-            Source = source,
-            FreqSrc = freqSrc,
-            FreqRcvr = freqRcvr
-        ))
+        if not SIMULATE:
+            self.bpErrorsTable.create(BPError(
+                fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                Level = level,
+                Message = msg,
+                Model = os.path.split(__file__)[1],
+                Source = source,
+                FreqSrc = freqSrc,
+                FreqRcvr = freqRcvr
+            ))
 
     def __abortScan(self, msg) -> Tuple[bool, str]:
         self.logger.info(msg)
@@ -400,7 +433,10 @@ class BeamScanner():
 
     def __resetPNA(self) -> Tuple[bool, str]:
         self.pna.reset()
-        self.pna.workaroundPhaseLockLost()
+        try:
+            self.pna.workaroundPhaseLockLost()
+        except:
+            pass
         self.pnaConfig = copy.copy(DEFAULT_CONFIG)        
         self.pnaConfig.triggerSource = TriggerSource.EXTERNAL
         self.pna.setMeasConfig(self.pnaConfig)
@@ -439,7 +475,7 @@ class BeamScanner():
     def __lockLO(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.cartAssembly.loDevice.selectLockSideband(self.cartAssembly.loDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
-        if wcaFreq == 0:
+        if wcaFreq == 0 and not SIMULATE:
             return (False, "FAILED LO LOCK")
 
         pllConfig = self.cartAssembly.loDevice.getPLLConfig()
@@ -453,7 +489,7 @@ class BeamScanner():
         if self.cartAssembly.setRecevierBias(scan.LO):
             ret0 = self.cartAssembly.setAutoLOPower(0)
             ret1 = self.cartAssembly.setAutoLOPower(1)
-            if ret0 and ret1:
+            if (ret0 and ret1) or SIMULATE:
                 return (True, "")
             else:
                 return (False, f"cartAssembly.setAutoLOPower failed: pol0:{ret0} pol1:{ret1}")
@@ -463,7 +499,7 @@ class BeamScanner():
     def __lockRF(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(scan.RF)
-        if wcaFreq == 0:
+        if wcaFreq == 0 and not SIMULATE:
             return (False, "FAILED RF SOURCE LOCK")
 
         if self.rfReference:
@@ -522,6 +558,8 @@ class BeamScanner():
                 self.logger.info(f"__rfSourceAutoLevel: iter={iter} amp={amp:.1f} dB")
 
         self.pna.setMeasConfig(DEFAULT_CONFIG)
+        if SIMULATE:
+            error = False
         if error:
             self.__logBPError(
                 source = self.__rfSourceAutoLevel.__name__,
@@ -551,6 +589,8 @@ class BeamScanner():
             return (False, "pna.getTrace returned no data")
 
     def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, y:float) -> Tuple[bool, str]:
+        if SIMULATE:
+            return (True, "Simulate write to database")
         count = self.bpRawDataTable.create([BPRawDatum(
             fkBeamPattern = self.scanStatus.fkBeamPatterns,
             Pol = subScan.pol,

@@ -4,6 +4,7 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 import configparser
+from DebugOptions import *
 
 CARTRIDGE_BAND = 6
 RF_SOURCE_PORT = 7
@@ -14,19 +15,22 @@ config.read('FrontEndAMBDLL.ini')
 dllName = config['load']['dll']
 conn = AMBConnectionDLL(channel = 0, dllName = dllName)
 
+# set FE_MODE depending on debug options:
+feMode = FEMCDevice.MODE_SIMULATE if SIMULATE else FEMCDevice.MODE_TROUBLESHOOTING 
+
 ccaDevice = CCADevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
-ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
+ccaDevice.setFeMode(feMode)
 ccaDevice.setBandPower(CARTRIDGE_BAND, True)
 
 loDevice = LODevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND)
-ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
+ccaDevice.setFeMode(feMode)
 loDevice.setBandPower(CARTRIDGE_BAND, True)
 loDevice.setYTOLimits(12.22, 14.77)
 
 cartAssembly = CartAssembly(ccaDevice, loDevice)
 
 rfSrcDevice = LODevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT)
-ccaDevice.setFeMode(ccaDevice.MODE_TROUBLESHOOTING)
+ccaDevice.setFeMode(feMode)
 rfSrcDevice.setBandPower(RF_SOURCE_PORT, True)
 rfSrcDevice.setYTOLimits(11.6, 15.43)
 rfSrcDevice.paPol = RF_SOURCE_PA_POL

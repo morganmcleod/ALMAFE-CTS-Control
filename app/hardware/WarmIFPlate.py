@@ -4,7 +4,7 @@ from CTSDevices.WarmIFPlate.NoiseSource import NoiseSource
 from CTSDevices.WarmIFPlate.OutputSwitch import OutputSwitch
 from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
 from CTSDevices.WarmIFPlate.Simulator import AttenuatorSimulator, InputSwitchSimulator, NoiseSourceSimulator, OutputSwitchSimulator, YIGFilterSimulator
-from .DebugOptions import *
+from DebugOptions import *
 
 class WarmIFPlate():
     def __init__(self, attenuator, inputSwitch, noiseSource, outputSwitch, yigFilter):

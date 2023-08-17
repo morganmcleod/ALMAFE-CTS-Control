@@ -1,7 +1,7 @@
 from .schemas import MotorStatus, MoveStatus, Position
 from .MCInterface import MCInterface, MCError
 from random import random
-from time import time
+import time
 from math import sqrt
 from copy import deepcopy
 import logging
@@ -9,10 +9,10 @@ import logging
 class MCSimulator(MCInterface):
     X_MIN = 0
     Y_MIN = 0
-    POL_MIN = 0
-    X_MAX = 300
+    X_MAX = 400
     Y_MAX = 300
-    POL_MAX = 360
+    POL_MIN = -200
+    POL_MAX = 180
     XY_SPEED = 20
     POL_SPEED = 10
     
@@ -76,7 +76,7 @@ class MCSimulator(MCInterface):
     
     def getPolTorque(self) -> float:
         '''
-        Voltage in range -9.9982 to +9.9982
+        + or - percentage
         '''
         return 0.99
     
@@ -136,7 +136,7 @@ class MCSimulator(MCInterface):
         if not self.start:
             return self.pos
         else:
-            elapsed = time() - self.startTime
+            elapsed = time.time() - self.startTime
             if elapsed >= self.moveTime:
                 self.pos = deepcopy(self.nextPos)
                 self.start = False
@@ -184,7 +184,7 @@ class MCSimulator(MCInterface):
             raise MCError("Cannot start move while scanner is already in motion.")
         
         self.timeout = timeout
-        self.startTime = time()
+        self.startTime = time.time()
         # for simulation, this movetime is used in getPosition so it must be smaller than the estimate:
         # simulation has infitnite accel/decel!
         self.moveTime = self.estimateMoveTime(self.pos, self.nextPos) * 0.9
@@ -199,16 +199,33 @@ class MCSimulator(MCInterface):
         self.pos = stoppedAt
     
     def getMoveStatus(self) -> MoveStatus:
-        timedOut = ((time() - self.startTime) > self.timeout) if self.timeout else False
+        timedOut = ((time.time() - self.startTime) > self.timeout) if self.timeout else False
         result = MoveStatus(
             stopSignal = self.stop,
             timedOut = timedOut
         )
         status = self.getMotorStatus()
         pos = self.getPosition()
-        self.logger.debug(f"{status.getText()} {pos.getText()}")
+        # self.logger.debug(f"{status.getText()} {pos.getText()}")
         if (not timedOut and not status.inMotion() and pos == self.nextPos):
             result.success = True
         elif status.powerFail():
             result.powerFail = True
         return result
+
+    def waitForMove(self, timeout: float = None) -> MoveStatus:
+        startTime = time.time()
+        elapsed = 0.0
+        moveStatus = self.getMoveStatus()
+        while not self.stop and not moveStatus.shouldStop():
+            elapsed = time.time() - startTime
+            if timeout and elapsed > timeout:
+                break
+            time.sleep(0.5)
+            moveStatus = self.getMoveStatus()
+            torque = self.getPolTorque()
+            if abs(torque) > 20:
+                self.logger.warning(f"waitForMove: pol torque:{torque} %")
+        
+        self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
+        return moveStatus

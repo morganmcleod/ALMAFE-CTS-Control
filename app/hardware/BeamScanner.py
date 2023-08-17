@@ -8,7 +8,7 @@ from Measure.BeamScanner.BeamScanner import BeamScanner
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
 from .WarmIFPlate import warmIFPlate
-from .DebugOptions import *
+from DebugOptions import *
 
 if SIMULATE:
     motorController = MCSimulator()

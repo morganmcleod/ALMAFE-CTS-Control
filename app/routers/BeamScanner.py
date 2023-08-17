@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
 import hardware.BeamScanner as BeamScanner
 from Response import KeyResponse, MessageResponse
@@ -51,25 +51,27 @@ async def websocket_scandata_request(websocket: WebSocket):
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /motorstatus_ws")
 
-# @router.websocket("/rasters_ws")
-# async def websocket_scandata_push(websocket: WebSocket):
-#     global logger
-#     await manager.connect(websocket)
-#     try:
-#         while True:
-#             rasters = BeamScanner.beamScanner.getRasters()
-#             if rasters:
-#                 await manager.send(rasters.dict(), websocket)
-#             await asyncio.sleep(0.5)
-#     except WebSocketDisconnect:
-#         manager.disconnect(websocket)
-#         logger.exception("WebSocketDisconnect: /rasters_ws")
-#     except Exception as e:
-#         logger.exception(e)
+@router.websocket("/rasters_ws")
+async def websocket_scandata_push(websocket: WebSocket):
+    global logger
+    await manager.connect(websocket)
+    latestIndex = -1
+    try:
+        while True:
+            rasters = BeamScanner.beamScanner.getRasters(latestOnly = True)
+            if rasters and rasters.startIndex > latestIndex or rasters.startIndex == 0:
+                latestIndex = rasters.startIndex
+                await manager.send(rasters.dict(), websocket)
+            await asyncio.sleep(2.0)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /rasters_ws")
+    except Exception as e:
+        logger.exception(e)
 
 @router.get("/rasters", response_model = Rasters)
-async def get_Rasters(startIndex: int):
-    return BeamScanner.beamScanner.getRasters(startIndex)
+async def get_Rasters(first: int, last: Optional[int] = -1):
+    return BeamScanner.beamScanner.getRasters(first, last)
 
 @router.get("/mc/query", response_model = MessageResponse)
 async def get_Query(query: str):

@@ -13,10 +13,13 @@ class AttenuatorSimulator():
 
 class InputSwitchSimulator():
     def __init__(self):
-        pass
+        self.position = InputSelect.POL0_USB
 
     def setValue(self, select: InputSelect) -> None:
-        pass
+        self.position = select
+
+    def getValue(self) -> InputSelect:
+        return self.position
 
 class NoiseSourceSimulator():
     def __init__(self):

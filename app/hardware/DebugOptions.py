@@ -1,2 +1,0 @@
-SIMULATE = False
-TESTING = False
