@@ -55,14 +55,12 @@ async def websocket_scandata_request(websocket: WebSocket):
 async def websocket_scandata_push(websocket: WebSocket):
     global logger
     await manager.connect(websocket)
-    latestIndex = -1
     try:
         while True:
             rasters = BeamScanner.beamScanner.getRasters(latestOnly = True)
-            if rasters and rasters.startIndex > latestIndex or rasters.startIndex == 0:
-                latestIndex = rasters.startIndex
-                await manager.send(rasters.dict(), websocket)
-            await asyncio.sleep(2.0)
+            if rasters and len(rasters.items):
+                await manager.send(rasters.items[0].dict(), websocket)
+            await asyncio.sleep(5.0)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /rasters_ws")

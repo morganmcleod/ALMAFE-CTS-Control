@@ -173,11 +173,25 @@ class ScanStatus(BaseModel):
                 + f" {'ERROR ' if self.error else ''}\'{self.message}\'"
 
 class Raster(BaseModel):
+    key: int = 0                    # keyBeamPattern
+    index: int = 0
     startPos:Position = Position()
-    xStep:float = 0
+    xStep: float = 0
     amplitude:List[float] = []
     phase:List[float] = []
 
 class Rasters(BaseModel):
-    startIndex:int = 0
-    rasters:List[Raster] = []
+    items: List[Raster] = []
+
+    def getStartIndex(self) -> int:
+        if len(self.items):
+            return self.items[0].index
+        else:
+            return 0
+    
+    def getLastIndex(self) -> int:
+        if len(self.items):
+            return self.items[-1].index
+        else:
+            return 0
+

@@ -78,23 +78,18 @@ class BeamScanner():
         available = len(self.rasters)
         if latestOnly:
             # return the last raster if available
-            if available > 0:
-                index = available - 1
-                return Rasters(startIndex = index, rasters = [self.rasters[index]])
+            if available:
+                return Rasters(items = [self.rasters[-1]])
             else:
                 # nothing to return:
                 return Rasters()
-        
-        # if first > len(self.rasters):
-        #     # if requesting past the last, reset to the first:
-        #     first = 0
         
         if last < first or last >= available:
             last = available - 1
 
         # return what's requested, if available:
         if 0 <= first < available:
-            return Rasters(first = first, rasters = self.rasters[first:last])            
+            return Rasters(items = self.rasters[first:last])
         else:
             return Rasters()
         
@@ -296,8 +291,9 @@ class BeamScanner():
                 # go to start of this raster:
                 nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.scanAngle)
                 self.raster = Raster(
-                    rasterIndex = rasterIndex, 
-                    startPos = nextPos, 
+                    key = self.scanStatus.fkBeamPatterns,
+                    index = rasterIndex,
+                    startPos = nextPos,
                     xStep = self.measurementSpec.resolution
                 )
                 success, msg = self.__moveScanner(nextPos, withTrigger = False)
@@ -354,6 +350,8 @@ class BeamScanner():
 
                 # Write to database:
                 success, msg = self.__writeRasterToDatabase(scan, subScan, y = yPos)
+
+                rasterIndex += 1
 
             # record the beam center power a final time:
             success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
