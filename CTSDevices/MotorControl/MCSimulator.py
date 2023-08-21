@@ -163,7 +163,7 @@ class MCSimulator(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime, 0.2) * 1.25
+        return max(xyTime, polTime) * 1.5 + 1.0
     
     def setNextPos(self, nextPos: Position):
         if not self.positionInBounds(nextPos):

@@ -64,6 +64,12 @@ class BeamScanner():
         self.scanAngle = 0
         self.levelAngle = 0
 
+    def getLatestRasterInfo(self) -> (int, int):
+        if len(self.rasters):
+            return self.rasters[-1].key, self.rasters[-1].index
+        else:
+            return 0, 0
+
     def getRasters(self, 
                    first: int = 0, 
                    last: int = -1,

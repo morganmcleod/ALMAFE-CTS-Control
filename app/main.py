@@ -14,6 +14,7 @@ from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
 from routers.Database import router as databaseRouter
+from routers.MeasControl import router as measControlRouter
 
 # logging:
 import logging
@@ -53,6 +54,10 @@ tags_metadata = [
     {
         "name": "Database",
         "description": "the band 6 cartridge database"
+    },
+    {
+        "name": "Measure",
+        "description": "start and stop measurements"
     }
 ]
 
@@ -65,6 +70,7 @@ app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(beamScanRouter, tags=["BeamScan"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
 app.include_router(databaseRouter, tags=["Database"])
+app.include_router(measControlRouter, tags=["Measure"])
 
 API_VERSION = "0.0.1"
 

@@ -180,6 +180,9 @@ class Raster(BaseModel):
     amplitude:List[float] = []
     phase:List[float] = []
 
+    def __eq__(self, other):
+        return self.index == other.index and self.key == other.key
+
 class Rasters(BaseModel):
     items: List[Raster] = []
 

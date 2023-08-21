@@ -55,12 +55,17 @@ async def websocket_scandata_request(websocket: WebSocket):
 async def websocket_scandata_push(websocket: WebSocket):
     global logger
     await manager.connect(websocket)
+    prevKey = 0
+    prevIndex = 0
     try:
         while True:
-            rasters = BeamScanner.beamScanner.getRasters(latestOnly = True)
-            if rasters and len(rasters.items):
-                await manager.send(rasters.items[0].dict(), websocket)
-            await asyncio.sleep(5.0)
+            key, index = BeamScanner.beamScanner.getLatestRasterInfo()
+            if key > 0 and (index != prevIndex or key != prevKey):
+                rasters = BeamScanner.beamScanner.getRasters(latestOnly = True)
+                if rasters and len(rasters.items):
+                    await manager.send(rasters.items[0].dict(), websocket)
+            await asyncio.sleep(0.5)
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /rasters_ws")
@@ -194,23 +199,6 @@ async def put_StopMove():
 @router.get("/mc/move_status", response_model = MoveStatus)
 async def get_MoveStatus():
     return BeamScanner.motorController.getMoveStatus()
-
-@router.put("/start", response_model = KeyResponse)
-async def put_Start(cartTest:CartTest):
-    cartTestsDb = CartTests(driver = CTSDB())
-    cartTest.fkTestType = TestTypeIds.BEAM_PATTERN.value
-    cartTest.testSysName = getfqdn()
-    BeamScanner.beamScanner.keyCartTest = cartTestsDb.create(cartTest)
-    if (BeamScanner.beamScanner.keyCartTest):
-        BeamScanner.beamScanner.start()
-        return KeyResponse(key = BeamScanner.beamScanner.keyCartTest, message = "Beam scans started", success = True)
-    else:
-        return KeyResponse(key = 0, message = "Failed creating CartTest record", success = False)
-
-@router.put("/stop", response_model = MessageResponse)
-async def put_Stop():
-    BeamScanner.beamScanner.stop()
-    return MessageResponse(message = "Beam scans stopped", success = True)
 
 @router.get("/meas_spec", response_model = MeasurementSpec)
 async def get_MeasurementSpec():
