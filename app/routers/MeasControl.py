@@ -7,6 +7,7 @@ from socket import getfqdn
 
 import hardware.BeamScanner as BeamScanner
 import hardware.Measuring as Measuring
+from DebugOptions import *
 
 import logging
 logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -17,7 +18,10 @@ router = APIRouter(prefix="/measure")
 async def put_Start(cartTest:CartTest):
     cartTestsDb = CartTests(driver = CTSDB())
     cartTest.testSysName = getfqdn()
-    cartTestId = cartTestsDb.create(cartTest)
+    if not SIMULATE:
+        cartTestId = cartTestsDb.create(cartTest)
+    else:
+        cartTestId = 1
     if cartTestId:
         if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN.value:
             BeamScanner.beamScanner.keyCartTest = cartTestId
@@ -29,9 +33,9 @@ async def put_Start(cartTest:CartTest):
 
 @router.put("/stop", response_model = MessageResponse)
 async def put_Stop():
-    cartTest = Measuring.getMeasuring()
+    cartTest = Measuring.measuring.getMeasuring()
     if cartTest:
-        if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN:
+        if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN.value:
             BeamScanner.beamScanner.stop()
             Measuring.measuring.stopMeasuring()
             return MessageResponse(message = "Beam scans stopped", success = True)
