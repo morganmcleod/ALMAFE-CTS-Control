@@ -55,12 +55,13 @@ async def websocket_scandata_request(websocket: WebSocket):
 async def websocket_scandata_push(websocket: WebSocket):
     global logger
     await manager.connect(websocket)
-    prevKey = 0
-    prevIndex = 0
+    lastKey = None
+    lastIndex = 0
     try:
         while True:
             key, index = BeamScanner.beamScanner.getLatestRasterInfo()
-            if key > 0 and (index != prevIndex or key != prevKey):
+            if key > 0 and (index != lastIndex or key != lastKey):
+                lastKey, lastIndex = key, index
                 rasters = BeamScanner.beamScanner.getRasters(latestOnly = True)
                 if rasters and len(rasters.items):
                     await manager.send(rasters.items[0].dict(), websocket)

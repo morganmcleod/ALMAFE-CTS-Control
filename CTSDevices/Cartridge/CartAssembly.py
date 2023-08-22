@@ -53,6 +53,9 @@ class CartAssembly():
         self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
         return True
 
+    def getConfig(self) -> int:
+        return self.configId if self.configId else 0
+
     def setRecevierBias(self, FreqLO:float) -> bool:
         if not self.configId:
             return False

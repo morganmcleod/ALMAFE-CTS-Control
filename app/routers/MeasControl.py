@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from typing import Optional
 from Response import KeyResponse, MessageResponse
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
@@ -40,6 +41,6 @@ async def put_Stop():
             Measuring.measuring.stopMeasuring()
             return MessageResponse(message = "Beam scans stopped", success = True)
         
-@router.get("/status", response_model = CartTest)
+@router.get("/status", response_model = Optional[CartTest])
 async def get_Status():
     return Measuring.measuring.getMeasuring()

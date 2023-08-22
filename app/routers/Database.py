@@ -4,14 +4,14 @@ router = APIRouter(prefix="/database")
 
 from app.database.CTSDB import CTSDB
 
-from DBBand6Cart.CartConfigs import CartConfigs
+from DBBand6Cart.CartConfigs import CartConfig, CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
-
+from typing import Optional
 from hardware.FEMC import cartAssembly
 
-@router.get("/config/", response_model = ListResponse)
+@router.get("/config", response_model = ListResponse)
 async def getConfigs(serialNum:int = None, configId:int = None, callback:str = None):
     '''
     Get the latest configuration for one or all cartridge serial nums
@@ -28,18 +28,27 @@ async def getConfigs(serialNum:int = None, configId:int = None, callback:str = N
     return prepareListResponse(items, callback)
 
 @router.put("/config/{configId}", response_model = MessageResponse)
-async def putCartConfig(configId:int):
+async def putCartConfig(configId: int):
     if cartAssembly.setConfig(configId):
         return MessageResponse(message = f"Selected cartridge config {configId}", success = True)
     else:
         return MessageResponse(message = f"ERROR selecting cartridge config {configId}", success = False)
 
-@router.get("/config/keys/", response_model = CartKeys)
+@router.get("/config/current", response_model = Optional[CartConfig])
+async def getCartConfig():
+    configId = cartAssembly.getConfig()
+    if not configId:
+        return None
+
+    DB = CartConfigs(driver = CTSDB())
+    return DB.read(configId)[0]
+
+@router.get("/config/keys", response_model = CartKeys)
 async def getConfigKeys(configId:int, pol:int, callback:str = None):
     DB = CartConfigs(driver = CTSDB())
     return DB.readKeys(configId, pol)
 
-@router.get("/config/mixer_params/", response_model = ListResponse)
+@router.get("/config/mixer_params", response_model = ListResponse)
 async def getMixerParams(keyChip:int, callback:str = None):
     DB = MixerParams(driver = CTSDB())
     items = DB.read(keyMixerChips = keyChip)
@@ -47,7 +56,7 @@ async def getMixerParams(keyChip:int, callback:str = None):
     # prepare and return result:
     return prepareListResponse(items, callback)
 
-@router.get("/config/preamp_params/", response_model = ListResponse)
+@router.get("/config/preamp_params", response_model = ListResponse)
 async def getPreampParams(keyPreamp:int, callback:str = None):
     DB = PreampParams(driver = CTSDB())
     items = DB.read(keyPreamp = keyPreamp)
