@@ -15,6 +15,7 @@ from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
 from routers.Database import router as databaseRouter
 from routers.MeasControl import router as measControlRouter
+from routers.FEMC import router as femcRouter
 
 # logging:
 import logging
@@ -58,6 +59,10 @@ tags_metadata = [
     {
         "name": "Measure",
         "description": "start and stop measurements"
+    },
+    {
+        "name": "FEMC",
+        "description": "front end monitor and control module"
     }
 ]
 
@@ -71,6 +76,7 @@ app.include_router(beamScanRouter, tags=["BeamScan"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
 app.include_router(databaseRouter, tags=["Database"])
 app.include_router(measControlRouter, tags=["Measure"])
+app.include_router(femcRouter, tags=["FEMC"])
 
 API_VERSION = "0.0.1"
 
