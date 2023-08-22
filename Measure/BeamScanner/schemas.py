@@ -120,7 +120,8 @@ class MeasurementSpec(BaseModel):
     scanAngles: List[float] = [-103.5, -13.5]
     targetLevel: float = -5.0
     centersInterval: float = 300 # 5 minutes
-        
+    scanBidirectional: bool = True
+
     def makeYAxisList(self) -> List[float]:
         y = float(self.scanStart.y)
         result = []

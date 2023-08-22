@@ -225,7 +225,7 @@ class BeamScanner():
             self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
 
             lastCenterPwrTime = None
-            rasterIndex = 0;
+            rasterIndex = 0
             # loop on y axis:
             for yPos in self.yAxisList:
 
@@ -295,14 +295,30 @@ class BeamScanner():
                     return (False, "User Stop")
 
                 # go to start of this raster:
-                nextPos = Position(x = self.measurementSpec.scanStart.x, y = yPos, pol = self.scanAngle)
+                startPos = nextPos = Position(
+                    x = self.measurementSpec.scanStart.x, 
+                    y = yPos, 
+                    pol = self.scanAngle
+                )
+                endPos = Position(
+                    x = self.measurementSpec.scanEnd.x, 
+                    y = yPos, 
+                    pol = self.scanAngle
+                )
+                xStep = self.measurementSpec.resolution
+
+                if self.measurementSpec.scanBidirectional and rasterIndex % 2:
+                    startPos, endPos = endPos, startPos
+                    xStep = -xStep
+
                 self.raster = Raster(
                     key = self.scanStatus.fkBeamPatterns,
                     index = rasterIndex,
-                    startPos = nextPos,
-                    xStep = self.measurementSpec.resolution
+                    startPos = startPos,
+                    xStep = xStep
                 )
-                success, msg = self.__moveScanner(nextPos, withTrigger = False)
+ 
+                success, msg = self.__moveScanner(startPos, withTrigger = False)
                 if not success:
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -313,12 +329,9 @@ class BeamScanner():
                     self.__abortScan(msg)
                     return (success, msg)
 
-                # calculate next position and move timeout:
-                nextPos = Position(x = self.measurementSpec.scanEnd.x, y = yPos, pol = self.scanAngle)
+                # configure external triggering:
                 self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
                 moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
-
-                # configure external triggering:
                 success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
                 if not success:
                     self.__logBPError(
@@ -331,7 +344,7 @@ class BeamScanner():
                     return (success, msg)
 
                 # start the move:
-                success, msg = self.__moveScanner(nextPos, withTrigger = True, moveTimeout = moveTimeout)
+                success, msg = self.__moveScanner(endPos, withTrigger = True)
                 if not success:
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -376,11 +389,10 @@ class BeamScanner():
             self.logger.exception(e)
             return (False, "__runOneScan Exception: " + str(e))
 
-    def __moveScanner(self, nextPos:Position, withTrigger:bool, moveTimeout = None) -> Tuple[bool, str]:
+    def __moveScanner(self, nextPos:Position, withTrigger:bool) -> Tuple[bool, str]:
         self.mc.setXYSpeed(self.XY_SPEED_SCANNING if withTrigger else self.XY_SPEED_POSITIONING)
         self.mc.setPolSpeed(self.POL_SPEED)
-        if not moveTimeout:
-            moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
+        moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
         self.logger.debug(f"move to {nextPos.getText()} trigger={withTrigger} moveTimeout={moveTimeout:.1f}")
         self.mc.setNextPos(nextPos)
         self.mc.startMove(withTrigger, moveTimeout)
@@ -479,20 +491,21 @@ class BeamScanner():
     def __lockLO(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.cartAssembly.loDevice.selectLockSideband(self.cartAssembly.loDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
-        if wcaFreq == 0 and not SIMULATE:
-            return (False, "FAILED LO LOCK")
-
         pllConfig = self.cartAssembly.loDevice.getPLLConfig()
         self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
         self.loReference.setAmplitude(12.0)
         self.loReference.setRFOutput(True)
-        wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()            
+        if not SIMULATE:
+            wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()
         return (True, f"__lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if self.cartAssembly.setRecevierBias(scan.LO):
-            ret0 = self.cartAssembly.setAutoLOPower(0)
-            ret1 = self.cartAssembly.setAutoLOPower(1)
+            if not SIMULATE:
+                ret0 = self.cartAssembly.setAutoLOPower(0)
+                ret1 = self.cartAssembly.setAutoLOPower(1)
+            else:
+                ret0 = ret1 = False
             if (ret0 and ret1) or SIMULATE:
                 return (True, "")
             else:
@@ -503,16 +516,14 @@ class BeamScanner():
     def __lockRF(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(scan.RF)
-        if wcaFreq == 0 and not SIMULATE:
-            return (False, "FAILED RF SOURCE LOCK")
-
         if self.rfReference:
             # for debug only.  Normally the RF ref synth is not used for beam patterns:
             pllConfig = self.rfSrcDevice.getPLLConfig()
             self.rfReference.setFrequency((scan.RF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
             self.rfReference.setAmplitude(16.0)
             self.rfReference.setRFOutput(True)
-        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
+        if not SIMULATE:
+            wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
         return (True, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
@@ -521,6 +532,9 @@ class BeamScanner():
         return (success, "__moveToBeamCenter: " + msg)
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+        if SIMULATE:
+            return (True, "")
+        
         self.pna.setMeasConfig(FAST_CONFIG)
 
         setValue = 15 # percent
@@ -562,8 +576,6 @@ class BeamScanner():
                 self.logger.info(f"__rfSourceAutoLevel: iter={iter} amp={amp:.1f} dB")
 
         self.pna.setMeasConfig(DEFAULT_CONFIG)
-        if SIMULATE:
-            error = False
         if error:
             self.__logBPError(
                 source = self.__rfSourceAutoLevel.__name__,

@@ -15,6 +15,9 @@ class MCSimulator(MCInterface):
     POL_MAX = 180
     XY_SPEED = 20
     POL_SPEED = 10
+    X_INIT = 145
+    Y_INIT = 145
+    POL_INIT = -100
     
     def __init__(self):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -23,9 +26,9 @@ class MCSimulator(MCInterface):
         self.xySpeed = self.XY_SPEED
         self.polSpeed = self.POL_SPEED
         self.pos = Position(
-            x = round(random() * self.X_MAX, 1),
-            y = round(random() * self.Y_MAX, 1),
-            pol = 0
+            x = self.X_INIT,
+            y = self.Y_INIT,
+            pol = self.POL_INIT
         )
         self.nextPos = deepcopy(self.pos)
     
@@ -163,7 +166,7 @@ class MCSimulator(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.5 + 1.0
+        return max(xyTime, polTime) * 2.0 + 1
     
     def setNextPos(self, nextPos: Position):
         if not self.positionInBounds(nextPos):
@@ -217,9 +220,11 @@ class MCSimulator(MCInterface):
         startTime = time.time()
         elapsed = 0.0
         moveStatus = self.getMoveStatus()
+        if timeout:
+            self.timeout = timeout
         while not self.stop and not moveStatus.shouldStop():
             elapsed = time.time() - startTime
-            if timeout and elapsed > timeout:
+            if self.timeout and elapsed > self.timeout:
                 break
             time.sleep(0.5)
             moveStatus = self.getMoveStatus()
