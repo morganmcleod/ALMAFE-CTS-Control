@@ -16,7 +16,7 @@ class SignalGenSimulator():
         return True
 
     def reset(self):
-        self.frequency = 20E9
+        self.frequency = 20
         self.amplitude = -20
         self.enabled = False
         return True
