@@ -16,6 +16,7 @@ from routers.WarmIFPlate import router as warmIfRouter
 from routers.Database import router as databaseRouter
 from routers.MeasControl import router as measControlRouter
 from routers.FEMC import router as femcRouter
+from routers.Cryostat import router as cryostatRouter
 
 # logging:
 import logging
@@ -63,6 +64,10 @@ tags_metadata = [
     {
         "name": "FEMC",
         "description": "front end monitor and control module"
+    }, 
+    {
+        "name": "Cryostat",
+        "description": "cryostat temperatures"
     }
 ]
 
@@ -77,6 +82,7 @@ app.include_router(warmIfRouter, tags=["Warm IF plate"])
 app.include_router(databaseRouter, tags=["Database"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(femcRouter, tags=["FEMC"])
+app.include_router(cryostatRouter, tags=["Cryostat"])
 
 API_VERSION = "0.0.1"
 
