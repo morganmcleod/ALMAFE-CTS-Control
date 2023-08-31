@@ -50,6 +50,7 @@ class PowerSupply():
             else:
                 self.model = response.split(',')[1:4]
             self.logger.debug(self.mfr + " " + self.model)
+            return True
         return False
     
     def reset(self):

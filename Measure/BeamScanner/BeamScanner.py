@@ -6,6 +6,7 @@ from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
 from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from CTSDevices.Common.BinarySearchController import BinarySearchController
@@ -21,7 +22,7 @@ import os
 import time
 from datetime import datetime
 import concurrent.futures
-from typing import Any, Tuple
+from typing import Tuple
 import copy
 import logging
 
@@ -32,12 +33,12 @@ class BeamScanner():
     POL_SPEED = 2.5                 # deg/sec
 
     def __init__(self, 
-        motorController:MCInterface, 
-        pna:PNAInterface, 
-        loReference:SignalGenerator, 
-        cartAssembly:CartAssembly,
-        rfSrcDevice:LODevice,
-        warmIFPlate:object):
+        motorController: MCInterface,
+        pna: PNAInterface, 
+        loReference: SignalGenerator, 
+        cartAssembly: CartAssembly,
+        rfSrcDevice: LODevice,
+        warmIFPlate: WarmIFPlate):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.mc = motorController
@@ -63,6 +64,7 @@ class BeamScanner():
         self.__resetRasters()
         self.scanAngle = 0
         self.levelAngle = 0
+        self.stopNow = False
 
     def getLatestRasterInfo(self) -> (int, int):
         if len(self.rasters):

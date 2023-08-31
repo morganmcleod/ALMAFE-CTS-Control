@@ -7,6 +7,7 @@ from .Database import CTSDB
 from socket import getfqdn
 
 import hardware.BeamScanner as BeamScanner
+import hardware.NoiseTemperature as NoiseTemperature
 import hardware.Measuring as Measuring
 from DebugOptions import *
 
@@ -28,7 +29,12 @@ async def put_Start(cartTest:CartTest):
             BeamScanner.beamScanner.keyCartTest = cartTestId
             BeamScanner.beamScanner.start()
             Measuring.measuring.setMeasuring(cartTest)
-            return KeyResponse(key = cartTestId, message = "Beam scans started", success = True)        
+            return KeyResponse(key = cartTestId, message = "Beam scans started", success = True)
+        if cartTest.fkTestType == TestTypeIds.IF_PLATE_NOISE.value:
+            NoiseTemperature.warmIFNoise.keyCartTest = cartTestId
+            NoiseTemperature.warmIFNoise.start()
+            Measuring.measuring.setMeasuring(cartTest)
+            return KeyResponse(key = cartTestId, message = "Warm IF noise started", success = True)
     else:
         return KeyResponse(key = 0, message = "Failed creating CartTest record", success = False)
 
@@ -40,6 +46,10 @@ async def put_Stop():
             BeamScanner.beamScanner.stop()
             Measuring.measuring.stopMeasuring()
             return MessageResponse(message = "Beam scans stopped", success = True)
+        elif cartTest.fkTestType == TestTypeIds.IF_PLATE_NOISE.value:
+            NoiseTemperature.warmIFNoise.stop()
+            Measuring.measuring.stopMeasuring()
+            return MessageResponse(message = "Warm IF noise stopped", success = True)
         
 @router.get("/status", response_model = Optional[CartTest])
 async def get_Status():

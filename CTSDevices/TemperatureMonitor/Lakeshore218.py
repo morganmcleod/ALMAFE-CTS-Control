@@ -69,7 +69,7 @@ class TemperatureMonitor():
         self.inst.write("DFLT 99")
         return True
 
-    def readSingle(self, input: int = 1):
+    def readSingle(self, input: int):
         if not 1 <= input <= 8:
             return -1.0, 1
         temp = self.inst.querg(f"KRDG ? {input}\r\n")
