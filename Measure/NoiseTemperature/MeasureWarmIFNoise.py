@@ -8,31 +8,20 @@ from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
 from app.database.CTSDB import CTSDB
 from DebugOptions import *
 
+from .schemas import WarmIFSettings
+
 import logging
 import time
 from typing import Tuple
 
 class MeasureWarmIfNoise():
 
-    ATTEN_START = 0
-    ATTEN_STOP = 10
-    ATTEN_STEP = 1
-    FREQ_START = 4.0
-    FREQ_STOP = 12.0
-    FREQ_STEP = 0.1
-    SENSOR_AMBIENT = 7
-    SENSOR_IFHOT = 1
-    SENSOR_IFCOLD = 3
-    DIODE_VOLTAGE = 28.0
-    DIODE_CURRENT_LIMIT = 0.04
-    DIODE_ENR = 15.4
-
     def __init__(self, 
             warmIFPlate: WarmIFPlate, 
             powerMeter: PowerMeter,
             powerSupply: PowerSupply,
             temperatureMonitor: TemperatureMonitor,
-            settings: dict):
+            settings: WarmIFSettings):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.warmIFPlate = warmIFPlate
@@ -59,19 +48,19 @@ class MeasureWarmIfNoise():
 
     def __run(self):
         self.powerSupply.setOutputEnable(False)
-        self.powerSupply.setVoltage(self.DIODE_VOLTAGE)
-        self.powerSupply.setCurrentLimit(self.DIODE_CURRENT_LIMIT)
+        self.powerSupply.setVoltage(self.settings.diodeVoltage)
+        self.powerSupply.setCurrentLimit(self.settings.diodeCurrentLimit)
         self.powerMeter.setUnits(Unit.W)
         self.warmIFPlate.inputSwitch.setValue(InputSelect.NOISE_DIODE)
         if self.stopNow:
             self.logger.info("User stop")
             return
         
-        freqs = [self.FREQ_START + i * self.FREQ_STEP for i in range(int((self.FREQ_STOP - self.FREQ_START) / self.FREQ_STEP + 1))]
-        attens = [self.ATTEN_START + i * self.ATTEN_STEP for i in range(int((self.ATTEN_STOP - self.ATTEN_START) / self.ATTEN_STEP + 1))]
-        for freq in freqs:
+        ifSteps = [self.settings.ifStart + i * self.settings.ifStep for i in range(int((self.settings.ifStop - self.settings.ifStart) / self.settings.ifStep + 1))]
+        attenSteps = [self.settings.attenStart + i * self.settings.attenStep for i in range(int((self.settings.attenStop - self.settings.attenStart) / self.settings.attenStep + 1))]
+        for freq in ifSteps:
             self.warmIFPlate.yigFilter.setFrequency(freq)
-            for atten in attens:
+            for atten in attenSteps:
                 self.warmIFPlate.attenuator.setValue(atten)
 
                 if self.stopNow:
@@ -85,9 +74,9 @@ class MeasureWarmIfNoise():
                 time.sleep(0.25)
                 pCold = self.powerMeter.autoRead()
                 temps, errors = self.temperatureMonitor.readAll()
-                ambient = temps[self.SENSOR_AMBIENT - 1]
-                tIFHot = temps[self.SENSOR_IFHOT - 1]
-                tIFCold = temps[self.SENSOR_IFCOLD - 1]
+                ambient = temps[self.settings.sensorAmbient - 1]
+                tIFHot = temps[self.settings.sensorIfHot - 1]
+                tIFCold = temps[self.settings.sensorIfCold - 1]
                 if not SIMULATE:
                     self.warmIFNoiseData.create(WarmIFNoise(
                         fkCartTest = self.keyCartTest,
@@ -99,5 +88,5 @@ class MeasureWarmIfNoise():
                         tAmbient = ambient,
                         tIFHot = tIFHot,
                         tIFCold = tIFCold,
-                        noiseDiodeENR = self.DIODE_ENR
+                        noiseDiodeENR = self.settings.diodeEnr
                     ))

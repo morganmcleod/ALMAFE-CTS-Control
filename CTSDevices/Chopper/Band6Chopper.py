@@ -106,6 +106,12 @@ class Chopper():
         if not self.__waitForStop():
             self.logger.debug("Chopper close: timeout")
 
+    def gotoHot(self):
+        self.open()
+
+    def gotoCold(self):
+        self.close()
+
     def gotoPosition(self, pos:int):
         """Go to the specified index position
 

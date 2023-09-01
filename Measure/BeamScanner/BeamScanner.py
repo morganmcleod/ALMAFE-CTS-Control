@@ -48,7 +48,7 @@ class BeamScanner():
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
         self.warmIFPlate = warmIFPlate
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 3)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.measurementSpec = MeasurementSpec()
         self.scanList = ScanList()
         self.futures = None

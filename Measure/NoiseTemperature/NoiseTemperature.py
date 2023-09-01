@@ -3,8 +3,14 @@ from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.Chopper.Band6Chopper import Chopper
+from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from AMB.LODevice import LODevice
 
 from MeasureWarmIFNoise import MeasureWarmIfNoise
+from MeasureNoiseTemperature import MeasureNoiseTemperature
+
+from .schemas import WarmIFSettings, NoiseTempSettings, ImageRejectSettings, LoWgIntegritySettings
 
 import concurrent.futures
 import logging
@@ -13,6 +19,10 @@ import time
 class NoiseTemperature():
 
     def __init__(self,
+            loReference: SignalGenerator, 
+            rfReference: SignalGenerator,
+            cartAssembly: CartAssembly,
+            rfSrcDevice: LODevice,
             warmIfPlate: WarmIFPlate, 
             powerMeter: PowerMeter,
             powerSupply: PowerSupply,
@@ -20,23 +30,29 @@ class NoiseTemperature():
             chopper: Chopper):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
+        self.loReference = loReference
+        self.rfReference = rfReference
+        self.cartAssembly = cartAssembly
+        self.rfSrcDevice = rfSrcDevice
         self.warmIFPlate = warmIfPlate
         self.powerMeter = powerMeter
         self.powerSupply = powerSupply
         self.tempMonitor = tempMonitor
         self.chopper = chopper
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.stopNow = False
         self.measInProgress = None
         
     def start(self,
-            warmIFSettings: dict = None,
-            noiseTempSetings: dict = None,
-            imageRejectSettings: dict = None,
-            loWgIntegritySettings: dict = None):
-        self.warmIFSettings = warmIFSettings if warmIFSettings is not None else {}
-        self.noiseTempSetings = noiseTempSetings if noiseTempSetings is not None else {}
-        self.imageRejectSettings = imageRejectSettings if imageRejectSettings is not None else {}
-        self.loWgIntegritySettings = loWgIntegritySettings if loWgIntegritySettings is not None else {}
+            warmIFSettings: WarmIFSettings = None,
+            noiseTempSetings: NoiseTempSettings = None,
+            imageRejectSettings: ImageRejectSettings = None,
+            loWgIntegritySettings: LoWgIntegritySettings = None):
+        
+        self.warmIFSettings = warmIFSettings
+        self.noiseTempSetings = noiseTempSetings
+        self.imageRejectSettings = imageRejectSettings
+        self.loWgIntegritySettings = loWgIntegritySettings
         self.stopNow = False
         self.futures = []
         self.futures.append(self.executor.submit(self.__run))
@@ -66,12 +82,16 @@ class NoiseTemperature():
             return
         
         if self.noiseTempSetings and self.noiseTempSetings.get('enable', False):
-            self.measInProgress = MeasureNoiseTemp(
+            self.measInProgress = MeasureNoiseTemperature(
+                self.loReference,
+                self.rfReference,
+                self.cartAssembly,
+                self.rfSrcDevice,
                 self.warmIFPlate,
                 self.powerMeter,
                 self.tempMonitor,
                 self.chopper,
-                self.noiseTempSettings,
+                self.noiseTempSetings,
                 self.imageRejectSettings
             )
             self.measInProgress.start()
@@ -86,12 +106,18 @@ class NoiseTemperature():
             return
         
         if self.loWgIntegritySettings and self.loWgIntegritySettings.get('enable', False):
-            self.measInProgress = MeasureLoWgIntegrity(
+            self.measInProgress = MeasureNoiseTemperature(
+                self.loReference,
+                self.rfReference,
+                self.cartAssembly,
+                self.rfSrcDevice,
                 self.warmIFPlate,
                 self.powerMeter,
+                self.powerSupply,
                 self.tempMonitor,
                 self.chopper,
-                self.loWgIntegritySettings
+                self.loWgIntegritySettings,
+                None
             )
             self.measInProgress.start()
             while not self.measInProgress.finished():
