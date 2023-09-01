@@ -1,5 +1,4 @@
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect, InputSwitch
-from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
@@ -9,12 +8,11 @@ from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
 from app.database.CTSDB import CTSDB
 from DebugOptions import *
 
-import concurrent.futures
 import logging
 import time
 from typing import Tuple
 
-class MeasureWarmIFNoise():
+class MeasureWarmIfNoise():
 
     ATTEN_START = 0
     ATTEN_STOP = 10
@@ -33,28 +31,31 @@ class MeasureWarmIFNoise():
             warmIFPlate: WarmIFPlate, 
             powerMeter: PowerMeter,
             powerSupply: PowerSupply,
-            temperatureMonitor: TemperatureMonitor):
+            temperatureMonitor: TemperatureMonitor,
+            settings: dict):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.warmIFPlate = warmIFPlate
         self.powerMeter = powerMeter
         self.powerSupply = powerSupply
         self.temperatureMonitor = temperatureMonitor
+        self.settings = settings
         self.warmIFNoiseData = WarmIFNoiseData(driver = CTSDB())
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.keyCartTest = 0
-        self.__reset()
-
-    def __reset(self):
         self.stopNow = False
+        self.finished = False
 
     def start(self):
         self.stopNow = False
-        self.futures = []
-        self.futures.append(self.executor.submit(self.__run))
+        self.finished = False
+        self.__run()
+        self.finished = True
 
     def stop(self):
         self.stopNow = True
+
+    def finished(self):
+        return self.finished
 
     def __run(self):
         self.powerSupply.setOutputEnable(False)
@@ -63,7 +64,7 @@ class MeasureWarmIFNoise():
         self.powerMeter.setUnits(Unit.W)
         self.warmIFPlate.inputSwitch.setValue(InputSelect.NOISE_DIODE)
         if self.stopNow:
-            self.__abort("User Stop")
+            self.logger.info("User stop")
             return
         
         freqs = [self.FREQ_START + i * self.FREQ_STEP for i in range(int((self.FREQ_STOP - self.FREQ_START) / self.FREQ_STEP + 1))]
@@ -74,7 +75,7 @@ class MeasureWarmIFNoise():
                 self.warmIFPlate.attenuator.setValue(atten)
 
                 if self.stopNow:
-                    self.__abort("User Stop")
+                    self.logger.info("User stop")
                     return
 
                 self.powerSupply.setOutputEnable(True)
@@ -100,7 +101,3 @@ class MeasureWarmIFNoise():
                         tIFCold = tIFCold,
                         noiseDiodeENR = self.DIODE_ENR
                     ))
-        
-    def __abort(self, msg) -> Tuple[bool, str]:
-        self.logger.info(msg)
-        return (False, msg)

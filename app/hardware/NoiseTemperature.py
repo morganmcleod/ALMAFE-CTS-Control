@@ -8,7 +8,7 @@ from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.TemperatureMonitor.Simulator import TemperatureMonitorSimulator
 from .WarmIFPlate import warmIFPlate
 from DebugOptions import *
-from Measure.NoiseTemperature.WarmIFNoise import MeasureWarmIFNoise
+from Measure.NoiseTemperature.MeasureWarmIFNoise import MeasureWarmIFNoise
 
 if SIMULATE:
     temperatureMonitor = TemperatureMonitorSimulator()
