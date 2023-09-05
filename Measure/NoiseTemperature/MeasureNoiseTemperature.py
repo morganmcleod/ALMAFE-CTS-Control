@@ -63,8 +63,6 @@ class MeasureNoiseTemperature():
         return self.finished
 
     def __run(self):
-        
-        
         self.chopper.stop()
         loSteps = [self.settings.loStart + i * self.settings.loStep for i in range(int((self.settings.loStop - self.settings.loStart) / self.settings.loStep + 1))]
         ifSteps = [self.settings.ifStart + i * self.settings.ifStep for i in range(int((self.settings.ifStop - self.settings.ifStart) / self.settings.ifStep + 1))]

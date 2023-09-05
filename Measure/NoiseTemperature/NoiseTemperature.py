@@ -6,11 +6,15 @@ from CTSDevices.Chopper.Band6Chopper import Chopper
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from AMB.LODevice import LODevice
+from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.TestTypes import TestTypeIds
+from app.database.CTSDB import CTSDB
 
-from MeasureWarmIFNoise import MeasureWarmIfNoise
-from MeasureNoiseTemperature import MeasureNoiseTemperature
+from .MeasureWarmIFNoise import MeasureWarmIfNoise
+from .MeasureNoiseTemperature import MeasureNoiseTemperature
+from DebugOptions import *
 
-from .schemas import WarmIFSettings, NoiseTempSettings, ImageRejectSettings, LoWgIntegritySettings
+from .schemas import WarmIFSettings, NoiseTempSettings, ImageRejectSettings, LoWGIntegritySettings
 
 import concurrent.futures
 import logging
@@ -44,18 +48,41 @@ class NoiseTemperature():
         self.measInProgress = None
         
     def start(self,
+            cartTest: CartTest,
             warmIFSettings: WarmIFSettings = None,
             noiseTempSetings: NoiseTempSettings = None,
             imageRejectSettings: ImageRejectSettings = None,
-            loWgIntegritySettings: LoWgIntegritySettings = None):
-        
+            loWgIntegritySettings: LoWGIntegritySettings = None) -> int:
+                
         self.warmIFSettings = warmIFSettings
         self.noiseTempSetings = noiseTempSetings
         self.imageRejectSettings = imageRejectSettings
         self.loWgIntegritySettings = loWgIntegritySettings
+        
+        cartTestsDb = CartTests(driver = CTSDB())
+
+        if SIMULATE:
+            self.keyCartTest = 1
+        else:
+            # if we are measuring noise temperature then make that the master CartTests record
+            if noiseTempSetings.enable:
+                cartTest.fkTestType = TestTypeIds.NOISE_TEMP
+                self.keyCartTest = cartTestsDb.create(cartTest)
+            
+            # if not noise temp but LO WG integrity, make that the master record:
+            elif loWgIntegritySettings.enable:
+                cartTest.fkTestType = TestTypeIds.LO_WG_INTEGRITY
+                self.keyCartTest = cartTestsDb.create(cartTest)
+
+            # if only measuring warm IF noise:
+            elif warmIFSettings.enable:
+                cartTest.fkTestType = TestTypeIds.IF_PLATE_NOISE
+                self.keyCartTest = cartTestsDb.create(cartTest)
+
         self.stopNow = False
         self.futures = []
         self.futures.append(self.executor.submit(self.__run))
+        return self.keyCartTest
 
     def __run(self):
         if self.stopNow:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from typing import Optional
 from Response import KeyResponse, MessageResponse
-from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.CartTests import CartTest
 from DBBand6Cart.TestTypes import TestTypeIds
 from .Database import CTSDB
 from socket import getfqdn
@@ -18,25 +18,17 @@ router = APIRouter(prefix="/measure")
 
 @router.put("/start", response_model = KeyResponse)
 async def put_Start(cartTest:CartTest):
-    cartTestsDb = CartTests(driver = CTSDB())
     cartTest.testSysName = getfqdn()
-    if not SIMULATE:
-        cartTestId = cartTestsDb.create(cartTest)
+    if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN.value:
+        cartTestId = BeamScanner.beamScanner.start(cartTest)
+        Measuring.measuring.setMeasuring(cartTest)
+        return KeyResponse(key = cartTestId, message = "Beam scans started", success = True)
+    if cartTest.fkTestType in (TestTypeIds.NOISE_TEMP.value, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE):
+        cartTestId = NoiseTemperature.noiseTemperature.start(cartTest)
+        Measuring.measuring.setMeasuring(cartTest)
+        return KeyResponse(key = cartTestId, message = "Noise temp / LOWG integrity / Warm IF noise started", success = True)
     else:
-        cartTestId = 1
-    if cartTestId:
-        if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN.value:
-            BeamScanner.beamScanner.keyCartTest = cartTestId
-            BeamScanner.beamScanner.start()
-            Measuring.measuring.setMeasuring(cartTest)
-            return KeyResponse(key = cartTestId, message = "Beam scans started", success = True)
-        if cartTest.fkTestType == TestTypeIds.IF_PLATE_NOISE.value:
-            NoiseTemperature.warmIFNoise.keyCartTest = cartTestId
-            NoiseTemperature.warmIFNoise.start()
-            Measuring.measuring.setMeasuring(cartTest)
-            return KeyResponse(key = cartTestId, message = "Warm IF noise started", success = True)
-    else:
-        return KeyResponse(key = 0, message = "Failed creating CartTest record", success = False)
+        return KeyResponse(key = 0, message = f"Nothing to do for test type {cartTest.fkTestType}", success = False)
 
 @router.put("/stop", response_model = MessageResponse)
 async def put_Stop():

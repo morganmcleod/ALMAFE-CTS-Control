@@ -1,6 +1,6 @@
-from CTSDevices.MotorControl.schemas import MoveStatus, Position
+from CTSDevices.MotorControl.schemas import Position
 from CTSDevices.MotorControl.MCInterface import MCInterface
-from CTSDevices.PNA.schemas import MeasConfig, PowerConfig, MeasType, SweepType, Format, SweepGenType, TriggerSource
+from CTSDevices.PNA.schemas import TriggerSource
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
@@ -11,6 +11,7 @@ from AMB.LODevice import LODevice
 from CTSDevices.Cartridge.CartAssembly import CartAssembly
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
+from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
 from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
@@ -101,13 +102,20 @@ class BeamScanner():
         else:
             return Rasters()
         
-    def start(self):
+    def start(self, cartTest: CartTest) -> int:
+        cartTestsDb = CartTests(driver = CTSDB())
+        if not SIMULATE:
+            self.keyCartTest = cartTestsDb.create(cartTest)
+        else:
+            self.keyCartTest = 1
+
         self.stopNow = False
         self.scanStatus = ScanStatus()
         # make this not None for now, so client will display that measurement has started:
         self.scanStatus.activeScan = 0
         self.futures = []
         self.futures.append(self.executor.submit(self.__runAllScans))
+        return self.keyCartTest
 
     def stop(self):
         self.stopNow = True
