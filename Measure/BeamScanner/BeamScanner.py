@@ -238,6 +238,8 @@ class BeamScanner():
             rasterIndex = 0
             # loop on y axis:
             for yPos in self.yAxisList:
+                # are we scanning right-to-left at this yPos?
+                reverseX = self.measurementSpec.scanBidirectional and rasterIndex % 2
 
                 # check for User Stop signal
                 if self.stopNow:
@@ -317,7 +319,7 @@ class BeamScanner():
                 )
                 xStep = self.measurementSpec.resolution
 
-                if self.measurementSpec.scanBidirectional and rasterIndex % 2:
+                if reverseX:
                     startPos, endPos = endPos, startPos
                     xStep = -xStep
 
@@ -378,8 +380,8 @@ class BeamScanner():
                     return (success, msg)
 
                 # Write to database:
-                success, msg = self.__writeRasterToDatabase(scan, subScan, y = yPos)
-
+                success, msg = self.__writeRasterToDatabase(scan, subScan, reverseX, yPos)
+                
                 rasterIndex += 1
 
             # record the beam center power a final time:
@@ -614,9 +616,13 @@ class BeamScanner():
         else:
             return (False, "pna.getTrace returned no data")
 
-    def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, y:float) -> Tuple[bool, str]:
+    def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, reverseX: bool, y:float) -> Tuple[bool, str]:
         if SIMULATE:
             return (True, "Simulate write to database")
+        if reverseX:
+            xAxisList = reversed(self.xAxisList)
+        else:
+            xAxisList = self.xAxisList
         count = self.bpRawDataTable.create([BPRawDatum(
             fkBeamPattern = self.scanStatus.fkBeamPatterns,
             Pol = subScan.pol,
@@ -625,7 +631,7 @@ class BeamScanner():
             SourceAngle = self.scanAngle,
             Power = amp,
             Phase = phase
-        ) for x, amp, phase in zip(self.xAxisList, self.raster.amplitude, self.raster.phase)])
+        ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)])
         if count == len(self.xAxisList):
             return (True, "")
         else:
