@@ -406,9 +406,9 @@ class MotorController(MCInterface):
         data = removeDelims(data, self.DELIMS)
         # negate because motors are opposite what we want to call (0,0)
         self.position = Position(
-            x = round(-(int(data[0]) / self.STEPS_PER_MM), 1),
-            y = round(-(int(data[1]) / self.STEPS_PER_MM), 1),
-            pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 1)
+            x = round(-(int(data[0]) / self.STEPS_PER_MM), 2),
+            y = round(-(int(data[1]) / self.STEPS_PER_MM), 2),
+            pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 2)
         )
         return self.position
 
@@ -425,7 +425,7 @@ class MotorController(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.5 + 1.0
+        return max(xyTime, polTime) * 1.5 + 2.0
 
     def setNextPos(self, nextPos: Position):
         if nextPos.x < 0:

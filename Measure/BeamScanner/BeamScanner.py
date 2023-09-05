@@ -31,7 +31,7 @@ class BeamScanner():
 
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
-    POL_SPEED = 2.5                 # deg/sec
+    POL_SPEED = 10                  # deg/sec
 
     def __init__(self, 
         motorController: MCInterface,
