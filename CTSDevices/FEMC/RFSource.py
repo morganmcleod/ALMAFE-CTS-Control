@@ -1,8 +1,10 @@
 from AMB.LODevice import LODevice
 from AMB.AMBConnectionItf import AMBConnectionItf
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
+from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
+from CTSDevices.PNA.AgilentPNA import FAST_CONFIG
 
 from typing import Optional
 import time
@@ -20,7 +22,14 @@ class RFSource(LODevice):
         super(RFSource, self).__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
 
-    def autoRFPowerMeter(self, powerMeter: PowerMeter, target: float = -5.0, onThread: bool = False) -> bool:
+    def autoRFPowerMeter(self, 
+                powerMeter: PowerMeter, 
+                yigFilter: YIGFilter, 
+                freqIFGHz: float, 
+                target: float = -5.0, 
+                onThread: bool = False) -> bool:
+        
+        yigFilter.setFrequency(freqIFGHz)        
         if onThread:
             threading.Thread(target = self.__autoRFPowerMeter, args = (powerMeter, target), daemon = True).start()
             return True
@@ -67,7 +76,14 @@ class RFSource(LODevice):
         self.logger.info(f"RFSource.__autoRFPowerMeter: setVD={setVD:.3f} mV, power={power:.2f} dBM, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
 
-    def autoRFPNA(self, pna: PNAInterface, target: float = -5.0, onThread: bool = False) -> bool:
+    def autoRFPNA(self, 
+            pna: PNAInterface, 
+            yigFilter: YIGFilter, 
+            freqIFGHz: float, 
+            target: float = -5.0, 
+            onThread: bool = False) -> bool:
+        
+        yigFilter.setFrequency(freqIFGHz)
         if onThread:
             threading.Thread(target = self.__autoRFPNA, args = (pna, target), daemon = True).start()
             return True
@@ -76,20 +92,20 @@ class RFSource(LODevice):
 
     def __autoRFPNA(self, pna: PNAInterface, target: float) -> bool:
         self.logger.info(f"target on PNA = {target} dB")
-        setVD = 0.7
-
+        setValue = 15 # percent
+        pna.setMeasConfig(FAST_CONFIG)
+        
         controller = BinarySearchController(
-            outputRange = [0, 2.5], 
+            outputRange = [15, 100], 
             initialStep = 0.1, 
-            initialOutput = setVD, 
+            initialOutput = setValue, 
             setPoint = target,
-            tolerance = 0.5,
+            tolerance = 1,
             maxIter = 30)
-
-        self.setPABias(self.paPol, setVD)
+        
+        self.setPAOutput(self.paPol, setValue) 
 
         power, _ = pna.getAmpPhase()
-
         if not power:
             return False
 

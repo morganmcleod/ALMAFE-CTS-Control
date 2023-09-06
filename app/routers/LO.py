@@ -6,6 +6,7 @@ import hardware.FEMC as FEMC
 
 router = APIRouter()
 router.hardwareDevice = FEMC.loDevice
+router.name = "LO"
 
 @router.get("/connected", response_model = SingleBool)
 async def get_isConnected(request: Request):
@@ -14,46 +15,46 @@ async def get_isConnected(request: Request):
 @router.put("/yto/limits", response_model = MessageResponse)
 async def set_YTO_Limits(request: Request, payload: ConfigYTO):
     router.hardwareDevice.setYTOLimits(payload.lowGHz, payload.highGHz)
-    return MessageResponse(message = f"{name} YTO: " + payload.getText(), success = True)
+    return MessageResponse(message = f"{router.name} YTO: " + payload.getText(), success = True)
 
 @router.put("/yto/coursetune", response_model = MessageResponse)
 async def set_YTO_CourseTune(request: Request, payload: SetYTO):
     result = router.hardwareDevice.setYTOCourseTune(payload.courseTune)
     if result:
-        return MessageResponse(message = f"{name} YTO courseTune " + payload.getText(), success = True)
+        return MessageResponse(message = f"{router.name} YTO courseTune " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = f"{name} YTO courseTune FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{router.name} YTO courseTune FAILED: " + payload.getText(), success = False)
 
 @router.put("/frequency", response_model = MessageResponse)
 async def set_Frequency(request: Request, payload: SetLOFrequency):
     (wcaFreq, ytoFreq, ytoCourse) = router.hardwareDevice.setLOFrequency(payload.freqGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
-        return MessageResponse(message = f"{name} frequency " + payload.getText() + wcaText, success = True)
+        return MessageResponse(message = f"{router.name} frequency " + payload.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = f"{name} frequency FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{router.name} frequency FAILED: " + payload.getText(), success = False)
 
 @router.put("/pll/lock", response_model = MessageResponse)
 async def lock_PLL(request: Request, payload: LockPLL):
     (wcaFreq, ytoFreq, ytoCourse) = router.hardwareDevice.lockPLL(payload.freqLOGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
-        return MessageResponse(message = f"{name} PLL LOCKED " + payload.getText() + wcaText, success = True)
+        return MessageResponse(message = f"{router.name} PLL LOCKED " + payload.getText() + wcaText, success = True)
     else:
-        return MessageResponse(message = f"{name} PLL lock FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{router.name} PLL lock FAILED " + payload.getText(), success = False)
 
 @router.put("/pll/adjust", response_model = MessageResponse)
 async def adjust_PLL(request: Request, payload: AdjustPLL):
     CV = router.hardwareDevice.adjustPLL(payload.router.hardwareDeviceCV)
     if CV is not None:
-        return MessageResponse(message = f"{name} PLL adjusted CV:{CV} router.hardwareDevice: {payload.getText()}", success = True)
+        return MessageResponse(message = f"{router.name} PLL adjusted CV:{CV} router.hardwareDevice: {payload.getText()}", success = True)
     else:
-        return MessageResponse(message = f"{name} PLL adjust FAILED: router.hardwareDevice: {payload.getText()}", success = False)
+        return MessageResponse(message = f"{router.name} PLL adjust FAILED: router.hardwareDevice: {payload.getText()}", success = False)
 
 @router.put("/pll/clearunlock", response_model = MessageResponse)
 async def clear_Unlock_Detect(request: Request):
     router.hardwareDevice.clearUnlockDetect()
-    return MessageResponse(message = f"{name} PLL cleared unlock detect.", success = True)
+    return MessageResponse(message = f"{router.name} PLL cleared unlock detect.", success = True)
 
 @router.put("/pll/config", response_model = MessageResponse)
 async def set_PLL_Config(request: Request, payload: PLLConfig):
@@ -74,33 +75,33 @@ async def set_PLL_Config(request: Request, payload: PLLConfig):
         router.hardwareDevice.selectLoopBW(payload.loopBW)
     if payload.lockSB is not None:
         router.hardwareDevice.selectLockSideband(payload.lockSB)
-    return MessageResponse(message = f"{name} PLL config " + payload.getText(), success = True)
+    return MessageResponse(message = f"{router.name} PLL config " + payload.getText(), success = True)
     
 @router.put("/pll/nullintegrator", response_model = MessageResponse)
 async def setNullLoopIntegrator(request: Request, payload:SingleBool):
     router.hardwareDevice.setNullLoopIntegrator(payload.value)
-    return MessageResponse(message = f"{name} PLL null integrator " + payload.getText(), success = True)
+    return MessageResponse(message = f"{router.name} PLL null integrator " + payload.getText(), success = True)
 
 @router.put("/photomixer/enable", response_model = MessageResponse)
 async def set_Photmixer_Enable(request: Request, payload:SingleBool):
     router.hardwareDevice.setPhotmixerEnable(payload.value)
-    return MessageResponse(message = f"{name} Photomixer " + payload.getText(), success = True)
+    return MessageResponse(message = f"{router.name} Photomixer " + payload.getText(), success = True)
 
 @router.put("/pa/bias", response_model = MessageResponse)
 async def set_PA_Bias(request: Request, payload: SetPA):
     result = router.hardwareDevice.setPABias(payload.pol, payload.VDControl, payload.VG)
     if result:
-        return MessageResponse(message = f"{name} PA bias " + payload.getText(), success = True)
+        return MessageResponse(message = f"{router.name} PA bias " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = f"{name} PA bias FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{router.name} PA bias FAILED " + payload.getText(), success = False)
     
 @router.put("/pa/teledyne", response_model = MessageResponse)
 def set_Teledyne_PA_Config(request: Request, payload: TeledynePA):
     result = router.hardwareDevice.setTeledynePAConfig(payload.hasTeledyne, payload.collectorP0, payload.collectorP1)
     if result:
-        return MessageResponse(message = f"{name} Teledyne PA config " + payload.getText(), success = True)
+        return MessageResponse(message = f"{router.name} Teledyne PA config " + payload.getText(), success = True)
     else:
-        return MessageResponse(message = f"{name} Teledyne PA config FAILED " + payload.getText(), success = False)
+        return MessageResponse(message = f"{router.name} Teledyne PA config FAILED " + payload.getText(), success = False)
 
 @router.get("/yto", response_model = YTO)
 async def get_YTO(request: Request):
