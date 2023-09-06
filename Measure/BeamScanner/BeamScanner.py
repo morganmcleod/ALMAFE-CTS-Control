@@ -239,7 +239,7 @@ class BeamScanner():
             # loop on y axis:
             for yPos in self.yAxisList:
                 # are we scanning right-to-left at this yPos?
-                reverseX = self.measurementSpec.scanBidirectional and rasterIndex % 2
+                reverseX = self.measurementSpec.scanBidirectional and (rasterIndex % 2 != 0)
 
                 # check for User Stop signal
                 if self.stopNow:
@@ -381,7 +381,7 @@ class BeamScanner():
 
                 # Write to database:
                 success, msg = self.__writeRasterToDatabase(scan, subScan, reverseX, yPos)
-                
+
                 rasterIndex += 1
 
             # record the beam center power a final time:
@@ -619,19 +619,18 @@ class BeamScanner():
     def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, reverseX: bool, y:float) -> Tuple[bool, str]:
         if SIMULATE:
             return (True, "Simulate write to database")
-        if reverseX:
-            xAxisList = reversed(self.xAxisList)
-        else:
-            xAxisList = self.xAxisList
+        xAxisList = reversed(self.xAxisList) if reverseX else self.xAxisList
+        
         count = self.bpRawDataTable.create([BPRawDatum(
-            fkBeamPattern = self.scanStatus.fkBeamPatterns,
-            Pol = subScan.pol,
-            Position_X = x,
-            Position_Y = y,
-            SourceAngle = self.scanAngle,
-            Power = amp,
-            Phase = phase
-        ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)])
+                fkBeamPattern = self.scanStatus.fkBeamPatterns,
+                Pol = subScan.pol,
+                Position_X = x,
+                Position_Y = y,
+                SourceAngle = self.scanAngle,
+                Power = amp,
+                Phase = phase
+            ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)])
+        
         if count == len(self.xAxisList):
             return (True, "")
         else:
