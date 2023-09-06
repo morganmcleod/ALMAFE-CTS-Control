@@ -315,7 +315,7 @@ class MotorController(MCInterface):
         '''
         data = self.query(b'TTC;', replySize = 10)
         data = removeDelims(data, self.DELIMS)
-        torque = float(data[0])
+        torque = float(data[0]) if data else 0
         assert(self.MIN_POL_TORQUE <= torque <= self.MAX_POL_TORQUE)
         torque = round(copysign(abs(torque) / self.MAX_POL_TORQUE, torque) * 100, 1)
         return torque
