@@ -6,11 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 # Imports for this app:
 from Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion
+from routers.CartAssembly import router as cartAssyRouter
 from routers.CCA import router as ccaRouter
 from routers.Database import router as databaseRouter
 from routers.FEMC import router as femcRouter
 from routers.LO import router as loRouter
-from routers.LO import router as rfRouter
+from routers.RFSource import router as rfRouter
 from routers.MeasControl import router as measControlRouter
 from routers.NoiseTemperature import router as noiseTempRouter
 from routers.ReferenceSource import router as loRefRouter
@@ -32,6 +33,10 @@ tags_metadata = [
     {
         "name": "BeamScan",
         "description": "beam scanner and motor controller"
+    },
+    {
+        "name": "CartAssembly",
+        "description": "coordinate action of CCA and LO"
     },
     {
         "name": "CCA",
@@ -73,6 +78,7 @@ tags_metadata = [
 
 app = FastAPI(openapi_tags=tags_metadata)
 app.include_router(beamScanRouter, tags=["BeamScan"])
+app.include_router(cartAssyRouter, tags=["CartAssembly"])
 app.include_router(ccaRouter, tags=["CCA"])
 app.include_router(databaseRouter, tags=["Database"])
 app.include_router(femcRouter, tags=["FEMC"])

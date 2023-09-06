@@ -15,8 +15,12 @@ from DBBand6Cart.schemas.PreampParam import PreampParam
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 import time
 import logging
+import threading
 
 class CartAssembly():
+
+    DEFAULT_LO = 241
+
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.ccaDevice = ccaDevice
@@ -82,10 +86,20 @@ class CartAssembly():
         self.ccaDevice.setLNAEnable(True)
         return True
 
-    def setAutoLOPower(self, pol: int) -> bool:
+    def setAutoLOPower(self, pol: int, onThread: bool = False) -> bool:
         if pol < 0 or pol > 1:
             raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
 
+        if not self.mixerParam01 or not self.mixerParam11:
+            self.setRecevierBias(self.DEFAULT_LO)
+
+        if onThread:
+            threading.Thread(target = self.__autoLOPower, args = (pol,), daemon = True).start()
+            return True
+        else:
+            return self.__autoLOPower(pol)
+
+    def __autoLOPower(self, pol) -> bool:
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
         self.logger.info(f"target Ij = {targetIJ}")
         setVD = 1.2
@@ -104,7 +118,7 @@ class CartAssembly():
 
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
-            raise ValueError("CartAssembly.setAutoLOPower: ccaDevice.getSIS() returned None")
+            return False
         Ij = abs(sis['Ij'])
 
         tprev = time.time()
@@ -126,7 +140,7 @@ class CartAssembly():
             tprev = time.time()
 
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"CartAssembly.setAutoLOPower: setVD={setVD:.3f} mV, IJ={Ij:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
+        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} setVD={setVD:.3f} mV, IJ={Ij:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
     
     def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:

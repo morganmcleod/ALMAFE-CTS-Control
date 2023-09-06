@@ -8,7 +8,7 @@ from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
 from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from CTSDevices.FEMC.CartAssembly import CartAssembly
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from DBBand6Cart.CartTests import CartTest, CartTests
