@@ -36,12 +36,6 @@ class MotorController(MCInterface):
     DEFAULT_HOST = "169.254.1.1"
     DEFAULT_PORT = 2055
     DELIMS = b'[:,\s\r\n]'
-    XY_SPEED = 10
-    POL_SPEED = 20
-    XY_ACCEL = 15
-    POL_ACCEL = 10
-    XY_DECEL = 15
-    POL_DECEL = 10
     # constants from DMC-2103 Firmware Command Reference:
     MIN_XYSPEED_STEPS = 2           
     MAX_XYSPEED_STEPS = 12000000

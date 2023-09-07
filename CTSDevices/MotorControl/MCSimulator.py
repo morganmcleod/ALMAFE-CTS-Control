@@ -166,7 +166,7 @@ class MCSimulator(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 2.0 + 1
+        return max(xyTime, polTime) * 3.0 + 2
     
     def setNextPos(self, nextPos: Position):
         if not self.positionInBounds(nextPos):
@@ -231,6 +231,5 @@ class MCSimulator(MCInterface):
             torque = self.getPolTorque()
             if abs(torque) > 20:
                 self.logger.warning(f"waitForMove: pol torque:{torque} %")
-        
-        self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
+
         return moveStatus
