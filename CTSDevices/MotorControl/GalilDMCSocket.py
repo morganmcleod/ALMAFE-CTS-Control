@@ -375,6 +375,14 @@ class MotorController(MCInterface):
             raise MCError("Cannot servo here while scanner is in motion.")
         hs = self.query(b'SH;')
         self.__checkHandshake("MotorController.servoHere", b':', hs)
+        # Execute the setup routine that should be previously saved to the motion controller card.        
+        time.sleep(1.0)
+        hs = self.query(b'XQ#SETUP;')
+        self.__checkHandshake("MotorController.reset", b':', hs)
+
+    def getErrorCode(self) -> str:
+        data = self.query(b'TC1;' replySize=100)
+        return str(data)
 
     def getMotorStatus(self) -> MotorStatus:
         replySize = 22
