@@ -44,7 +44,7 @@ class Position(BaseModel):
             return False
         return self.x == other.x and \
             self.y == other.y and \
-            abs(self.pol - other.pol) < 0.05
+            abs(self.pol - other.pol) < 0.2
 
     def calcMove(self, dest):
         return Position(x = self.x - dest.x,

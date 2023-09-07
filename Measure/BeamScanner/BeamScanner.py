@@ -405,7 +405,6 @@ class BeamScanner():
         self.mc.setXYSpeed(self.XY_SPEED_SCANNING if withTrigger else self.XY_SPEED_POSITIONING)
         self.mc.setPolSpeed(self.POL_SPEED)
         moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
-        self.logger.debug(f"move to {nextPos.getText()} trigger={withTrigger} moveTimeout={moveTimeout:.1f}")
         self.mc.setNextPos(nextPos)
         self.mc.startMove(withTrigger, moveTimeout)
         moveStatus = self.mc.waitForMove()
@@ -536,7 +535,7 @@ class BeamScanner():
             self.rfReference.setRFOutput(True)
         if not SIMULATE:
             wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
-        return (True, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
+        return (wcaFreq != 0, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __moveToBeamCenter(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.measurementSpec.beamCenter.pol = self.levelAngle

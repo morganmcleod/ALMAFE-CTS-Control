@@ -419,13 +419,13 @@ class MotorController(MCInterface):
 
     def estimateMoveTime(self, fromPos: Position, toPos: Position) -> float:
         '''
-        estmate how long it will take to move fromPos toPos.
-        Add 25% to account for accel and decel.
+        Estmate how long it will take to move fromPos toPos.
+        This is a significant over-estimate because we only want to time out if something is really wrong.
         '''
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 1.5 + 2.0
+        return max(xyTime, polTime) * 3 + 2.0
 
     def setNextPos(self, nextPos: Position):
         if nextPos.x < 0:
@@ -510,5 +510,6 @@ class MotorController(MCInterface):
             if abs(torque) > 20:
                 self.logger.warning(f"waitForMove: pol torque:{torque} %")
         
-        self.logger.debug(f"waitForMove took {elapsed:.2f} sec")
+        if moveStatus.isError():
+            self.logger.error(moveStatus.getText())
         return moveStatus
