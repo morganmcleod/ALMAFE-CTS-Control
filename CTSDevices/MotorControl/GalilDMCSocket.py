@@ -467,6 +467,10 @@ class MotorController(MCInterface):
         if self.getMotorStatus().inMotion():
             raise MCError("Cannot start move while scanner is already in motion.")
         
+        # set our speeds.  They can get reset by some operations e.g. homing an axis.
+        self.setXYSpeed(self.xySpeed)
+        self.setPolSpeed(self.polSpeed)
+
         self.start = True
         self.stop = False
         self.timeout = timeout
