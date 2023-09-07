@@ -24,7 +24,8 @@ class QueueItem(BaseModel):
 
 
 class MotorController(MCInterface):
-    SOCKET_TIMEOUT = 5    # sec
+    SOCKET_TIMEOUT = 2    # sec
+    RECV_BYTE_TIMEOUT = 0.5
     STEPS_PER_DEGREE = 225
     STEPS_PER_MM = 5000
     X_MIN = 0
@@ -72,9 +73,9 @@ class MotorController(MCInterface):
         self.socket.settimeout(self.SOCKET_TIMEOUT)
         self.socket.connect((self.host, self.port))
 
-    def __checkHandshake(self, context, expected, recv):
-        if  recv != expected:
-            self.logger.warning(f"{context}: expected:{expected}, recv:{recv}")
+    def __checkHandshake(self, context, expected, receieved):
+        if  receieved != expected:
+            self.logger.warning(f"{context}: expected:{expected}, receieved:{receieved}")
     
     def reset(self):
         self.start = False
@@ -126,19 +127,23 @@ class MotorController(MCInterface):
             self.logger.error(f"MotorController.sendall exception:{e}")
         return False
 
-    def recv(self, replySize: int = 1) -> bytes:
+    def recv(self, replySize: int = 0) -> bytes:
         prevTimeout = self.socket.gettimeout()
         self.socket.settimeout(0.001)
         data = newData = b''
-        endTime = time.time() + self.SOCKET_TIMEOUT
-        while len(data) < replySize:
-            try:
-                newData = self.socket.recv(1)
-                data += newData
-            except:
-                pass
-            if not newData and time.time() > endTime:
-                break
+        endTime = time.time() + self.SOCKET_TIMEOUT if replySize else self.RECV_BYTE_TIMEOUT
+        done = False
+        while not done:
+            if replySize and len(data) >= replySize:
+                done = True
+            else:        
+                try:
+                    newData = self.socket.recv(1)
+                    data += newData
+                except:
+                    pass
+                if not newData and time.time() > endTime:
+                    break
         # self.logger.debug(f"MotorController.recv:{data}")
         self.socket.settimeout(prevTimeout)
         return data
@@ -375,8 +380,8 @@ class MotorController(MCInterface):
         self.__checkHandshake("MotorController.reset", b':', hs)
 
     def getErrorCode(self) -> str:
-        data = self.query(b'TC1;', replySize=100)
-        return str(data)
+        data = self.query(b'TC1;', replySize=0)
+        return data.decode('utf-8')
 
     def getMotorStatus(self) -> MotorStatus:
         replySize = 22
