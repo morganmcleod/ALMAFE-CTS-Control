@@ -381,7 +381,7 @@ class MotorController(MCInterface):
         self.__checkHandshake("MotorController.reset", b':', hs)
 
     def getErrorCode(self) -> str:
-        data = self.query(b'TC1;' replySize=100)
+        data = self.query(b'TC1;', replySize=100)
         return str(data)
 
     def getMotorStatus(self) -> MotorStatus:
