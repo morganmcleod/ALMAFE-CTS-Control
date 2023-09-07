@@ -4,7 +4,7 @@ from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.Chopper.Band6Chopper import Chopper, State
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from CTSDevices.FEMC.CartAssembly import CartAssembly
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from DBBand6Cart.schemas.WarmIFNoise import DUT_Types
 from DBBand6Cart.NoiseTempRawData import NoiseTempRawData

@@ -4,7 +4,7 @@ from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.Chopper.Band6Chopper import Chopper
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from CTSDevices.FEMC.CartAssembly import CartAssembly
 from AMB.LODevice import LODevice
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds

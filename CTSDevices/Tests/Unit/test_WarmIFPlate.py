@@ -2,7 +2,7 @@ import unittest
 from AMB.AMBConnectionDLL import AMBConnectionDLL
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from CTSDevices.FEMC.CartAssembly import CartAssembly
 from CTSDevices.WarmIFPlate.Attenuator import Attenuator
 from CTSDevices.WarmIFPlate.InputSwitch import InputSwitch, InputSelect
 from CTSDevices.WarmIFPlate.NoiseSource import NoiseSource

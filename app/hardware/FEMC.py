@@ -3,7 +3,8 @@ from AMB.FEMCDevice import FEMCDevice
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 from AMB.FEMCDevice import FEMCDevice
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
+from CTSDevices.FEMC.CartAssembly import CartAssembly
+from CTSDevices.FEMC.RFSource import RFSource
 import configparser
 from DebugOptions import *
 
@@ -31,10 +32,9 @@ loDevice.setYTOLimits(12.22, 14.77)
 
 cartAssembly = CartAssembly(ccaDevice, loDevice)
 
-rfSrcDevice = LODevice(conn, nodeAddr = 0x13, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT)
+rfSrcDevice = RFSource(conn, nodeAddr = NODE_ADDR, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT, paPol = RF_SOURCE_PA_POL)
 ccaDevice.setFeMode(feMode)
 rfSrcDevice.setBandPower(RF_SOURCE_PORT, True)
 rfSrcDevice.setYTOLimits(11.6, 15.43)
-rfSrcDevice.paPol = RF_SOURCE_PA_POL
 
 femcDevice = FEMCDevice(conn, NODE_ADDR)

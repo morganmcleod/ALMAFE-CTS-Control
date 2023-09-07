@@ -8,8 +8,7 @@ from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
 from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
-from CTSDevices.Cartridge.CartAssembly import CartAssembly
-from CTSDevices.Common.BinarySearchController import BinarySearchController
+from CTSDevices.FEMC.CartAssembly import CartAssembly
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
@@ -543,60 +542,8 @@ class BeamScanner():
         return (success, "__moveToBeamCenter: " + msg)
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        if SIMULATE:
-            return (True, "")
-        
-        self.pna.setMeasConfig(FAST_CONFIG)
-
-        setValue = 15 # percent
-        maxIter = 25
-        
-        controller = BinarySearchController(
-            outputRange = [15, 100], 
-            initialStep = 0.1, 
-            initialOutput = setValue, 
-            setPoint = self.measurementSpec.targetLevel,
-            tolerance = 1,
-            maxIter = maxIter)
-        
-        self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue) 
-        amp, _ = self.pna.getAmpPhase()
-        done = error = False
-        msg = ""
-        iter = 0
-
-        if not amp:
-            error = True
-        while not done and not error: 
-            iter += 1
-            if iter >= maxIter or setValue >= 100:
-                error = True
-                msg = f"__rfSourceAutoLevel: iter={iter} maxIter={maxIter} setValue={setValue}%"
-            elif (self.measurementSpec.targetLevel - 1) < amp < (self.measurementSpec.targetLevel + 1):
-                done = True
-                msg = f"__rfSourceAutoLevel: success iter={iter} amp={amp:.1f} dB"
-            else:
-                controller.process(amp)
-                setValue = controller.output
-                self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
-                time.sleep(0.2)
-                amp, _ = self.pna.getAmpPhase()
-                if amp is None:
-                    error = True
-                    msg = f"__rfSourceAutoLevel: getAmpPhase error at iter={iter}."
-                self.logger.info(f"__rfSourceAutoLevel: iter={iter} amp={amp:.1f} dB")
-
-        self.pna.setMeasConfig(DEFAULT_CONFIG)
-        if error:
-            self.__logBPError(
-                source = self.__rfSourceAutoLevel.__name__,
-                msg = msg,
-                freqSrc = scan.RF,
-                freqRcvr = scan.LO
-            )
-        else:
-            self.logger.info(msg)
-        return (not error, msg)
+        success = self.rfSrcDevice.autoRFPNA(self.pna, self.warmIFPlate.yigFilter, freqIFGHz = 10.0, target = self.measurementSpec.targetLevel)
+        return (success, "__rfSourceAutoLevel")
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
         # add 10sec to timeout to account for accel/decel
