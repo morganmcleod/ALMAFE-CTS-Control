@@ -18,6 +18,7 @@ from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
+import hardware.FEMC as FEMC
 
 # logging:
 import logging

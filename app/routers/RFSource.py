@@ -1,21 +1,23 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from Response import MessageResponse
-from .LO import router as loRouter
+from .LO import router as loRouter, getTarget
 import hardware.FEMC as FEMC
 import hardware.NoiseTemperature as NT
 import hardware.BeamScanner as BeamScanner
 import hardware.WarmIFPlate as WarmIFPlate
 
+async def getRFInfo():
+    return {"device": FEMC.rfSrcDevice, "name": "RF Source"}
+
 router = APIRouter()
 router.include_router(loRouter)
-router.hardwareDevice = FEMC.rfSrcDevice
-router.name = "RF Source"
 
 @router.put("/auto_rf/meter", response_model = MessageResponse)
 async def set_AutoRFMeter(request: Request, freqIF: float, target: float):
-    if not router.hardwareDevice.autoRFPowerMeter(
+    device, name = getTarget(request)
+    if not device.autoRFPowerMeter(
             NT.powerMeter,
-            WarmIFPlate.warmIFPlate.yigFilter,
+            WarmIFPlate.warmIFPlate,
             freqIF,
             target,
             onThread = True):
@@ -25,9 +27,10 @@ async def set_AutoRFMeter(request: Request, freqIF: float, target: float):
     
 @router.put("/auto_rf/pna", response_model = MessageResponse)
 async def set_AutoRFPNA(request: Request, freqIF: float, target: float):
-    if not router.hardwareDevice.autoRFPNA(
+    device, name = getTarget(request)
+    if not device.autoRFPNA(
             BeamScanner.pna,            
-            WarmIFPlate.warmIFPlate.yigFilter,
+            WarmIFPlate.warmIFPlate,
             freqIF,
             target,
             onThread = True):

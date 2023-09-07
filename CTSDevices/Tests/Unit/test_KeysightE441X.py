@@ -73,13 +73,6 @@ class test_PowerMeter(unittest.TestCase):
             val = self.pm.read(Channel.B)
             self.assertTrue(val != 0.0)
 
-    def test_simpleRead(self):
-        val = self.pm.simpleRead(Channel.A)
-        self.assertTrue(val != 0.0)
-        if self.pm.twoChannel:
-            val = self.pm.simpleRead(Channel.B)
-            self.assertTrue(val != 0.0)
-
     def test_autoRead(self):
         val = self.pm.autoRead(Channel.A)
         self.assertTrue(val != 0.0)

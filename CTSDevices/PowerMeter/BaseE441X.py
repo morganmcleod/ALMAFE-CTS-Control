@@ -150,16 +150,6 @@ class BaseE441X():
         return True if ret else False
 
     def read(self, channel = Channel.A):
-        """Read the instrument once, taking into account the configured Measurement
-
-        :param Channel channel: which channel to measure, defaults to Channel.A
-        :return float: measured power level
-        """
-        if channel == Channel.B and not self.twoChannel:
-            return False
-        return float(self.inst.query(f"READ{channel.value + 1}?"))
-
-    def simpleRead(self, channel = Channel.A):
         """Read the instrument when it is running in continuous mode
 
         :param Channel channel: which channel to measure, defaults to Channel.A

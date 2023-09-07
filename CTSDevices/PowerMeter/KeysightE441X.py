@@ -131,7 +131,7 @@ class PowerMeter(BaseE441X):
         N = 0
         start = time()
         while not done:
-            S.append(self.simpleRead(channel))
+            S.append(self.read(channel))
             N += 1
             if useCase == StdErrConfig.UseCase.MIN_SAMPLES:
                 if N >= config.minS:
