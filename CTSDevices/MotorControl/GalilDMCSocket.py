@@ -96,7 +96,7 @@ class MotorController(MCInterface):
         self.__checkHandshake("MotorController.reset", b':', hs)
         # Execute the setup routine that should be previously saved to the motion controller card.        
         time.sleep(1.0)
-        hs = self.query(b'XQ#SETUP;')
+        hs = self.query(b'XQ #SETUP;')
         self.__checkHandshake("MotorController.reset", b':', hs)
         
 
@@ -376,7 +376,7 @@ class MotorController(MCInterface):
         self.__checkHandshake("MotorController.servoHere", b':', hs)
         # Execute the setup routine that should be previously saved to the motion controller card.        
         time.sleep(1.0)
-        hs = self.query(b'XQ#SETUP;')
+        hs = self.query(b'XQ #SETUP;')
         self.__checkHandshake("MotorController.reset", b':', hs)
 
     def getErrorCode(self) -> str:
