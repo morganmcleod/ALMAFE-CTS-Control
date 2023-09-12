@@ -4,6 +4,7 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
+from app.routers.ActionPublisher import setItem
 
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
@@ -13,9 +14,14 @@ from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
 from CTSDevices.Common.BinarySearchController import BinarySearchController
+from pydantic import BaseModel
 import time
 import logging
 import threading
+
+class SISCurrent(BaseModel):
+    paOutput: float = 0
+    sisCurrent: float = 0
 
 class CartAssembly():
 
@@ -90,6 +96,9 @@ class CartAssembly():
         if pol < 0 or pol > 1:
             raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
 
+        if not self.configId:
+            return False
+
         if not self.mixerParam01 or not self.mixerParam11:
             self.setRecevierBias(self.DEFAULT_LO)
 
@@ -102,45 +111,46 @@ class CartAssembly():
     def __autoLOPower(self, pol) -> bool:
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
         self.logger.info(f"target Ij = {targetIJ}")
-        setVD = 1.2
+        paOutput = 15
         averaging = 2
-        maxIter = 30
 
         controller = BinarySearchController(
-            outputRange = [0, 2.5], 
+            outputRange = [0, 100], 
             initialStep = 0.1, 
-            initialOutput = setVD, 
+            initialOutput = paOutput, 
             setPoint = targetIJ,
             tolerance = 0.5,
-            maxIter = maxIter)
+            maxIter = 20)
 
-        self.loDevice.setPABias(pol, setVD)
+        self.loDevice.setPAOutput(pol, paOutput)
 
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
             return False
-        Ij = abs(sis['Ij'])
+        sisCurrent = abs(sis['Ij'])
+        setItem(SISCurrent(paOutput = paOutput, sisCurrent = sisCurrent))
 
         tprev = time.time()
         tsum = 0
         done = False
         while not done:
-            controller.process(Ij)
+            controller.process(sisCurrent)
             if controller.isComplete():
                 done = True
             else:
-                setVD = controller.output
-                self.loDevice.setPABias(pol, setVD)
+                paOutput = controller.output
+                self.loDevice.setPAOutput(pol, paOutput)
                 sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-                Ij = abs(sis['Ij'])
+                sisCurrent = abs(sis['Ij'])
+                setItem(SISCurrent(paOutput = paOutput, sisCurrent = sisCurrent))
 
-            self.logger.info(f"iter={controller.iter} VD={setVD:.3f} Ij={Ij:.3f}")
+            self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
 
             tsum += (time.time() - tprev)
             tprev = time.time()
 
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} setVD={setVD:.3f} mV, IJ={Ij:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
+        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
     
     def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:

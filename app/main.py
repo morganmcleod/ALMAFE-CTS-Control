@@ -18,6 +18,7 @@ from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
+from routers.ActionPublisher import router as actionRouter
 import hardware.FEMC as FEMC
 
 # logging:
@@ -90,6 +91,7 @@ app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(noiseTempRouter, tags=["Noise Temp"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
+app.include_router(actionRouter)
 
 API_VERSION = "0.0.1"
 
