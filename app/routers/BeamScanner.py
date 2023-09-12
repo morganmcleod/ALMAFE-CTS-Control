@@ -21,7 +21,6 @@ manager = ConnectionManager()
 
 @router.websocket("/position_ws")
 async def websocket_scandata_request(websocket: WebSocket):
-    global logger
     await manager.connect(websocket)
     lastPosition = None            
     try:
@@ -37,7 +36,6 @@ async def websocket_scandata_request(websocket: WebSocket):
 
 @router.websocket("/motorstatus_ws")
 async def websocket_scandata_request(websocket: WebSocket):
-    global logger
     await manager.connect(websocket)
     lastMotorStatus = None            
     try:
@@ -53,7 +51,6 @@ async def websocket_scandata_request(websocket: WebSocket):
 
 @router.websocket("/rasters_ws")
 async def websocket_scandata_push(websocket: WebSocket):
-    global logger
     await manager.connect(websocket)
     lastKey = None
     lastIndex = 0

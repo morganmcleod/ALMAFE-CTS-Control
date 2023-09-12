@@ -109,7 +109,6 @@ async def get_Root(callback:str = None):
     Hello world
     :return MessageResponse 
     '''
-    global API_VERSION
     result = MessageResponse(message = 'ALMAFE-CTS-Control API version ' + API_VERSION + '. See /docs', success = True)
     return prepareResponse(result, callback)
 
@@ -120,7 +119,6 @@ async def get_API_Version(callback:str = None):
     :param callback: optional name of Javascript function to wrap JSONP results in.
     :return VersionResponse
     '''
-    global API_VERSION
     result = VersionResponse(name = "ALMAFE-CTS-Control API",
                              apiVersion = API_VERSION,
                              gitCommit = gitVersion(branch = 'master'),
