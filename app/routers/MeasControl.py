@@ -3,7 +3,6 @@ from typing import Optional
 from Response import KeyResponse, MessageResponse
 from DBBand6Cart.CartTests import CartTest
 from DBBand6Cart.TestTypes import TestTypeIds
-from .Database import CTSDB
 from socket import getfqdn
 
 import hardware.BeamScanner as BeamScanner
