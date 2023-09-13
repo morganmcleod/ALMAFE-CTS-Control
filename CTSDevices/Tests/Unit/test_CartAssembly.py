@@ -93,8 +93,7 @@ class test_CartAssembly(unittest.TestCase):
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)
         self.cartAssembly.loDevice.lockPLL(221)
         self.cartAssembly.setRecevierBias(221)
-        self.cartAssembly.setAutoLOPower(0)
-        self.cartAssembly.setAutoLOPower(1)
+        self.cartAssembly.setAutoLOPower()
     
     def test_getSISCurrentTargets(self) -> None:
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)

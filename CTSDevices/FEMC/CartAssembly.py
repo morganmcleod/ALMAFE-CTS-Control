@@ -4,7 +4,7 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
-from app.routers.ActionPublisher import setItem
+from app.routers.ActionPublisher import addPlotPoint
 
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
@@ -20,6 +20,7 @@ import logging
 import threading
 
 class SISCurrent(BaseModel):
+    index: int = 0
     paOutput: float = 0
     sisCurrent: float = 0
 
@@ -92,9 +93,9 @@ class CartAssembly():
         self.ccaDevice.setLNAEnable(True)
         return True
 
-    def setAutoLOPower(self, pol: int, onThread: bool = False) -> bool:
-        if pol < 0 or pol > 1:
-            raise ValueError("CartAssembly.setAutoLOPower: pol must be 0 or 1")
+    def setAutoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False) -> bool:
+        if not pol0 and not pol1:
+            return False           
 
         if not self.configId:
             return False
@@ -103,10 +104,14 @@ class CartAssembly():
             self.setRecevierBias(self.DEFAULT_LO)
 
         if onThread:
-            threading.Thread(target = self.__autoLOPower, args = (pol,), daemon = True).start()
+            threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1), daemon = True).start()
             return True
         else:
-            return self.__autoLOPower(pol)
+            return self.__autoLOPowerSequence(pol0, pol1)
+
+    def __autoLOPowerSequence(self, pol0: bool, pol1: bool):
+        success = self.__autoLOPower(0)
+        return self.__autoLOPower(1) and success
 
     def __autoLOPower(self, pol) -> bool:
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
@@ -128,7 +133,7 @@ class CartAssembly():
         if sis is None:
             return False
         sisCurrent = abs(sis['Ij'])
-        setItem(SISCurrent(paOutput = paOutput, sisCurrent = sisCurrent))
+        addPlotPoint(SISCurrent(index = 0, paOutput = paOutput, sisCurrent = sisCurrent))
 
         tprev = time.time()
         tsum = 0
@@ -142,7 +147,7 @@ class CartAssembly():
                 self.loDevice.setPAOutput(pol, paOutput)
                 sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
                 sisCurrent = abs(sis['Ij'])
-                setItem(SISCurrent(paOutput = paOutput, sisCurrent = sisCurrent))
+                addPlotPoint(SISCurrent(index = controller.iter, paOutput = paOutput, sisCurrent = sisCurrent))
 
             self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
 

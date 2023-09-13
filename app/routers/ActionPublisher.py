@@ -5,23 +5,39 @@ import logging
 logger = logging.getLogger("ALMAFE-CTS-Control")
 import app.routers.ActionQueue as ActionQueue
 
-def setItem(item):
-    ActionQueue.actionQueue.put(item)
-    pass
+async def __addPlotPoint(item):
+    await ActionQueue.actionQueue.put(item)
+    await asyncio.sleep(0.1)
+
+def addPlotPoint(item):
+    try:
+        loop = addPlotPoint.loop
+    except:
+        try:
+            loop = addPlotPoint.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+    if loop and loop.is_running():
+        loop.create_task(__addPlotPoint(item))
+    else:
+        asyncio.run(__addPlotPoint(item))
 
 router = APIRouter(prefix="/action")
 manager = ConnectionManager()
 
 @router.websocket("/action_ws")
 async def websocket_actionPublisher(websocket: WebSocket):
-    global actionQueue
     await manager.connect(websocket)
     try:
         while True:
-            if not ActionQueue.actionQueue.empty():
-                item = ActionQueue.actionQueue.get()
+            try:
+                item = ActionQueue.actionQueue.get_nowait()
+            except asyncio.QueueEmpty:
+                item = None
+            if item:
                 await manager.send(item.dict(), websocket)
-            await asyncio.sleep(0.2)            
+            else:
+                await asyncio.sleep(0.1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /action_ws")

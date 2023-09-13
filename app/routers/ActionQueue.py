@@ -1,5 +1,2 @@
-import queue
-
-actionQueue = queue.Queue()
-
-
+import asyncio
+actionQueue = asyncio.Queue()

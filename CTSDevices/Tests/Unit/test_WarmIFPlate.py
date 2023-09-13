@@ -37,7 +37,7 @@ class test_WarmIFPlate(unittest.TestCase):
         cls.cartAssembly = CartAssembly(cls.ccaDevice, cls.loDevice, CARTRIDGE_CONFIG)
         cls.ccaDevice.setFeMode(cls.ccaDevice.MODE_TROUBLESHOOTING)
         cls.cartAssembly.setRecevierBias(241)
-        cls.cartAssembly.setAutoLOPower(0)
+        cls.cartAssembly.setAutoLOPower()
 
     @classmethod
     def tearDownClass(cls):

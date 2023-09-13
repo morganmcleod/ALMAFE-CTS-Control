@@ -512,14 +512,13 @@ class BeamScanner():
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if self.cartAssembly.setRecevierBias(scan.LO):
             if not SIMULATE:
-                ret0 = self.cartAssembly.setAutoLOPower(0)
-                ret1 = self.cartAssembly.setAutoLOPower(1)
+                ret = self.cartAssembly.setAutoLOPower()
             else:
-                ret0 = ret1 = False
-            if (ret0 and ret1) or SIMULATE:
+                ret = False
+            if ret or SIMULATE:
                 return (True, "")
             else:
-                return (False, f"cartAssembly.setAutoLOPower failed: pol0:{ret0} pol1:{ret1}")
+                return (False, "cartAssembly.setAutoLOPower failed")
         else:
             return (False, "cartAssembly.setRecevierBias failed.  Provide config ID?")
 
