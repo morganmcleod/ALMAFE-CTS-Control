@@ -35,14 +35,14 @@ class RFSource(LODevice):
 
     def __autoRFPowerMeter(self, powerMeter: PowerMeter, target: float) -> bool:
         self.logger.info(f"target on power meter = {target} dBm")
-        setValue = 15
+        setValue = 20
 
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStep = 0.1, 
+            initialStepPercent = 20, 
             initialOutput = setValue, 
             setPoint = target,
-            tolerance = 0.5,
+            tolerance = 1.5,
             maxIter = 20)
 
         self.setPAOutput(self.paPol, setValue)
@@ -85,15 +85,15 @@ class RFSource(LODevice):
 
     def __autoRFPNA(self, pna: PNAInterface, target: float) -> bool:
         self.logger.info(f"target on PNA = {target} dB")
-        setValue = 15 # percent
+        setValue = 20 # percent
         pna.setMeasConfig(FAST_CONFIG)
         
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStep = 0.1, 
+            initialStepPercent = 20, 
             initialOutput = setValue, 
             setPoint = target,
-            tolerance = 2,
+            tolerance = 1.5,
             maxIter = 20)
         
         self.setPAOutput(self.paPol, setValue) 

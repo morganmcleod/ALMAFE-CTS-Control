@@ -15,7 +15,7 @@ router.include_router(loRouter)
 
 @router.put("/auto_rf/meter", response_model = MessageResponse)
 async def set_AutoRFMeter(request: Request, freqIF: float = 10, target: float = -5, atten: int = 22):
-    WarmIFPlate.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
+    WarmIFPlate.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
     WarmIFPlate.warmIFPlate.attenuator.setValue(atten)
     WarmIFPlate.warmIFPlate.yigFilter.setFrequency(freqIF)
     device, name = getTarget(request)
