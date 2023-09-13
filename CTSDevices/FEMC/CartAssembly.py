@@ -116,12 +116,12 @@ class CartAssembly():
     def __autoLOPower(self, pol) -> bool:
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
         self.logger.info(f"target Ij = {targetIJ}")
-        paOutput = 15
+        paOutput = 20
         averaging = 2
 
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStep = 0.1, 
+            initialStepPercent = 20, 
             initialOutput = paOutput, 
             setPoint = targetIJ,
             tolerance = 0.5,

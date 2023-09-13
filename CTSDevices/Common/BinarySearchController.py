@@ -3,13 +3,13 @@ import math
 class BinarySearchController():
 
     def __init__(self, outputRange = [0, 1], 
-                       initialStep: float = 0.1, 
+                       initialStepPercent: float = 10, 
                        initialOutput: float = 0.0, 
                        setPoint: float = 0.5,
                        tolerance: float = 0.01,
                        maxIter: int = 30) -> None:
         self.outputRange = outputRange
-        self.initialStep = initialStep
+        self.initialStepPercent = initialStepPercent
         self.initialOutput = initialOutput
         self.setPoint = setPoint
         self.tolerance = tolerance
@@ -24,7 +24,7 @@ class BinarySearchController():
         self.fail = False
         self.outputRange.sort()
         self.output = self.initialOutput
-        self.step = self.initialStep * abs(self.outputRange[1] - self.outputRange[0])
+        self.step = (self.initialStepPercent / 100) * abs(self.outputRange[1] - self.outputRange[0])
         self.setPointMin = self.setPoint - self.tolerance
         self.setPointMax = self.setPoint + self.tolerance
 
@@ -40,7 +40,7 @@ class BinarySearchController():
         error = self.setPoint - input
         self.sign = math.copysign(1, error)
 
-        if abs(error) < self.step or (self.lastSign != 0 and self.sign != self.lastSign):
+        if self.lastSign != 0 and self.sign != self.lastSign:
             self.step /= 2
         self.lastSign = self.sign
 
