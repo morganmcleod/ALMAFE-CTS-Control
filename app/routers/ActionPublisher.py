@@ -41,7 +41,7 @@ async def websocket_actionPublisher(websocket: WebSocket):
                     pass
                 await manager.send(item, websocket)
             else:
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /action_ws")

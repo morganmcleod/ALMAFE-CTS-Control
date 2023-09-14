@@ -17,7 +17,6 @@ from CTSDevices.Common.BinarySearchController import BinarySearchController
 from pydantic import BaseModel
 import time
 import logging
-import threading
 import asyncio
 
 class SISCurrent(BaseModel):
@@ -113,7 +112,10 @@ class CartAssembly():
             except RuntimeError:
                 self.loop = None
         if self.loop and self.loop.is_running():
-            self.loop.create_task(self.__autoLOPowerSequence(pol0, pol1))
+            tasks = set()
+            task = self.loop.create_task(self.__autoLOPowerSequence(pol0, pol1))
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)            
         else:
             asyncio.run(self.__autoLOPowerSequence(pol0, pol1))
         return True

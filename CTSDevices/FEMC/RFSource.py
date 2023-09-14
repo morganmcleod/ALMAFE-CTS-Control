@@ -5,10 +5,19 @@ from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import FAST_CONFIG
+from app.routers.ActionPublisher import asyncAddItem
 
+from pydantic import BaseModel
 from typing import Optional
 import time
-import threading
+import asyncio
+
+class RFPower(BaseModel):
+    index: int = 0
+    complete: bool = False
+    paOutput: float = 0
+    power: float = 0
+
 
 class RFSource(LODevice):
     def __init__(
@@ -22,18 +31,24 @@ class RFSource(LODevice):
         super(RFSource, self).__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
 
-    def autoRFPowerMeter(self, 
-                powerMeter: PowerMeter, 
-                target: float = -5.0, 
-                onThread: bool = False) -> bool:
-
-        if onThread:
-            threading.Thread(target = self.__autoRFPowerMeter, args = (powerMeter, target), daemon = True).start()
-            return True
+    def autoRFPowerMeter(self, powerMeter: PowerMeter, target: float = -5.0) -> bool:
+        try:
+            loop = self.loop
+        except:
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.loop = None
+        if self.loop and self.loop.is_running():
+            tasks = set()
+            task = self.loop.create_task(self.__autoRFPowerMeter(powerMeter, target))
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)            
         else:
-            return self.__autoRFPowerMeter(powerMeter, target)
+            asyncio.run(self.__autoRFPowerMeter(powerMeter, target))
+        return True
 
-    def __autoRFPowerMeter(self, powerMeter: PowerMeter, target: float) -> bool:
+    async def __autoRFPowerMeter(self, powerMeter: PowerMeter, target: float) -> bool:
         self.logger.info(f"target on power meter = {target} dBm")
         setValue = 20
 
@@ -46,11 +61,10 @@ class RFSource(LODevice):
             maxIter = 20)
 
         self.setPAOutput(self.paPol, setValue)
-
         power = powerMeter.read()
-
         if not power:
             return False
+        await asyncAddItem(RFPower(index = 0, paOutput = setValue, power = power))
 
         tprev = time.time()
         tsum = 0
@@ -58,11 +72,13 @@ class RFSource(LODevice):
         while not done:
             controller.process(power)
             if controller.isComplete():
+                await asyncAddItem(RFPower(index = controller.iter, complete = True))
                 done = True
             else:
                 setValue = controller.output
                 self.setPAOutput(self.paPol, setValue)
                 power = powerMeter.read()
+                await asyncAddItem(RFPower(index = controller.iter, paOutput = setValue, power = power))
                 self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} dBm")
 
             tsum += (time.time() - tprev)
@@ -72,18 +88,24 @@ class RFSource(LODevice):
         self.logger.info(f"RFSource.__autoRFPowerMeter: setValue={setValue:.1f}%, power={power:.2f} dBm, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
         return controller.success
 
-    def autoRFPNA(self, 
-            pna: PNAInterface, 
-            target: float = -5.0, 
-            onThread: bool = False) -> bool:
-
-        if onThread:
-            threading.Thread(target = self.__autoRFPNA, args = (pna, target), daemon = True).start()
-            return True
+    def autoRFPNA(self, pna: PNAInterface, target: float = -5.0) -> bool:
+        try:
+            loop = self.loop
+        except:
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.loop = None
+        if self.loop and self.loop.is_running():
+            tasks = set()
+            task = self.loop.create_task(self.__autoRFPNA(pna, target))
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)            
         else:
-            return self.__autoRFPNA(pna, target)
+            asyncio.run(self.__autoRFPNA(pna, target))
+        return True
 
-    def __autoRFPNA(self, pna: PNAInterface, target: float) -> bool:
+    async def __autoRFPNA(self, pna: PNAInterface, target: float) -> bool:
         self.logger.info(f"target on PNA = {target} dB")
         setValue = 20 # percent
         pna.setMeasConfig(FAST_CONFIG)
@@ -96,11 +118,11 @@ class RFSource(LODevice):
             tolerance = 1.5,
             maxIter = 20)
         
-        self.setPAOutput(self.paPol, setValue) 
-
+        self.setPAOutput(self.paPol, setValue)
         power, _ = pna.getAmpPhase()
         if not power:
             return False
+        await asyncAddItem(RFPower(index = 0, paOutput = setValue, power = power))
 
         tprev = time.time()
         tsum = 0
@@ -108,11 +130,13 @@ class RFSource(LODevice):
         while not done:
             controller.process(power)
             if controller.isComplete():
+                await asyncAddItem(RFPower(index = controller.iter, complete = True))
                 done = True
             else:
                 setValue = controller.output
                 self.setPABias(self.paPol, setValue)
                 power, _ = pna.getAmpPhase()
+                await asyncAddItem(RFPower(index = controller.iter, paOutput = setValue, power = power))
                 self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f}")
 
             tsum += (time.time() - tprev)
