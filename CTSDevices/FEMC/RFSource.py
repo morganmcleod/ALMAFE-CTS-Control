@@ -5,7 +5,6 @@ from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import FAST_CONFIG
-from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 
 from typing import Optional
 import time
@@ -25,14 +24,9 @@ class RFSource(LODevice):
 
     def autoRFPowerMeter(self, 
                 powerMeter: PowerMeter, 
-                warmIFPlate: WarmIFPlate, 
-                freqIFGHz: float, 
                 target: float = -5.0, 
                 onThread: bool = False) -> bool:
-        
-        warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
-        warmIFPlate.attenuator.setValue(22)
-        warmIFPlate.yigFilter.setFrequency(freqIFGHz)
+
         if onThread:
             threading.Thread(target = self.__autoRFPowerMeter, args = (powerMeter, target), daemon = True).start()
             return True
@@ -41,14 +35,14 @@ class RFSource(LODevice):
 
     def __autoRFPowerMeter(self, powerMeter: PowerMeter, target: float) -> bool:
         self.logger.info(f"target on power meter = {target} dBm")
-        setValue = 15
+        setValue = 20
 
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStep = 0.1, 
+            initialStepPercent = 20, 
             initialOutput = setValue, 
             setPoint = target,
-            tolerance = 0.5,
+            tolerance = 1.5,
             maxIter = 20)
 
         self.setPAOutput(self.paPol, setValue)
@@ -69,8 +63,7 @@ class RFSource(LODevice):
                 setValue = controller.output
                 self.setPAOutput(self.paPol, setValue)
                 power = powerMeter.read()
-
-            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} dBm")
+                self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} dBm")
 
             tsum += (time.time() - tprev)
             tprev = time.time()
@@ -81,14 +74,9 @@ class RFSource(LODevice):
 
     def autoRFPNA(self, 
             pna: PNAInterface, 
-            warmIFPlate: WarmIFPlate, 
-            freqIFGHz: float, 
             target: float = -5.0, 
             onThread: bool = False) -> bool:
-        
-        # warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
-        # warmIFPlate.attenuator.setValue(22)
-        # warmIFPlate.yigFilter.setFrequency(freqIFGHz)
+
         if onThread:
             threading.Thread(target = self.__autoRFPNA, args = (pna, target), daemon = True).start()
             return True
@@ -97,15 +85,15 @@ class RFSource(LODevice):
 
     def __autoRFPNA(self, pna: PNAInterface, target: float) -> bool:
         self.logger.info(f"target on PNA = {target} dB")
-        setValue = 15 # percent
+        setValue = 20 # percent
         pna.setMeasConfig(FAST_CONFIG)
         
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStep = 0.1, 
+            initialStepPercent = 20, 
             initialOutput = setValue, 
             setPoint = target,
-            tolerance = 1,
+            tolerance = 1.5,
             maxIter = 20)
         
         self.setPAOutput(self.paPol, setValue) 
@@ -125,8 +113,7 @@ class RFSource(LODevice):
                 setValue = controller.output
                 self.setPABias(self.paPol, setValue)
                 power, _ = pna.getAmpPhase()
-
-            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f}")
+                self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f}")
 
             tsum += (time.time() - tprev)
             tprev = time.time()

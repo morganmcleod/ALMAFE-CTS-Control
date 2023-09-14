@@ -541,7 +541,7 @@ class BeamScanner():
         return (success, "__moveToBeamCenter: " + msg)
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        success = self.rfSrcDevice.autoRFPNA(self.pna, self.warmIFPlate, freqIFGHz = 10.0, target = self.measurementSpec.targetLevel)
+        success = self.rfSrcDevice.autoRFPNA(self.pna, target = self.measurementSpec.targetLevel)
         return (success, "__rfSourceAutoLevel")
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
