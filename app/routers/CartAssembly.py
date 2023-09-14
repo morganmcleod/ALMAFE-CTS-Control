@@ -5,8 +5,11 @@ from Response import MessageResponse
 router = APIRouter(prefix="/cartassy")
 
 @router.put("/auto_lo", response_model = MessageResponse)
-async def set_AutoLOPower():
-    if not FEMC.cartAssembly.setAutoLOPower(onThread = False):
-        return MessageResponse(message = "Auto LO Power failed", success = False)
+async def set_AutoLOPower(pol: int):
+    pol0 = True if pol == 0 else False
+    pol1 = True if pol == 1 else False
+
+    if not FEMC.cartAssembly.setAutoLOPower(pol0, pol1):
+        return MessageResponse(message = f"Auto LO Power failed pol={pol}", success = False)
     else:
-        return MessageResponse(message = "Auto LO Power done", success = True)
+        return MessageResponse(message = f"Auto LO Power done pol={pol}", success = True)

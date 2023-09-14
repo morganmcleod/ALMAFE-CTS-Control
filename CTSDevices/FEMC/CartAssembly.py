@@ -4,7 +4,7 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
-from app.routers.ActionPublisher import addPlotPoint
+from app.routers.ActionPublisher import asyncAddItem
 
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
@@ -18,9 +18,11 @@ from pydantic import BaseModel
 import time
 import logging
 import threading
+import asyncio
 
 class SISCurrent(BaseModel):
     index: int = 0
+    complete: bool = False
     paOutput: float = 0
     sisCurrent: float = 0
 
@@ -103,17 +105,28 @@ class CartAssembly():
         if not self.mixerParam01 or not self.mixerParam11:
             self.setRecevierBias(self.DEFAULT_LO)
 
-        if onThread:
-            threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1), daemon = True).start()
-            return True
+        try:
+            loop = self.loop
+        except:
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.loop = None
+        if self.loop and self.loop.is_running():
+            self.loop.create_task(self.__autoLOPowerSequence(pol0, pol1))
         else:
-            return self.__autoLOPowerSequence(pol0, pol1)
+            asyncio.run(self.__autoLOPowerSequence(pol0, pol1))
+        return True
 
-    def __autoLOPowerSequence(self, pol0: bool, pol1: bool):
-        success = self.__autoLOPower(0)
-        return self.__autoLOPower(1) and success
+    async def __autoLOPowerSequence(self, pol0: bool, pol1: bool):
+        success = True
+        if pol0:
+            success = await self.__autoLOPower(0) and success
+        if pol1:
+            success = await self.__autoLOPower(1) and success
+        return success
 
-    def __autoLOPower(self, pol) -> bool:
+    async def __autoLOPower(self, pol) -> bool:
         targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
         self.logger.info(f"target Ij = {targetIJ}")
         paOutput = 15
@@ -133,7 +146,7 @@ class CartAssembly():
         if sis is None:
             return False
         sisCurrent = abs(sis['Ij'])
-        addPlotPoint(SISCurrent(index = 0, paOutput = paOutput, sisCurrent = sisCurrent))
+        await asyncAddItem(SISCurrent(index = 0, paOutput = paOutput, sisCurrent = sisCurrent))
 
         tprev = time.time()
         tsum = 0
@@ -141,13 +154,14 @@ class CartAssembly():
         while not done:
             controller.process(sisCurrent)
             if controller.isComplete():
+                await asyncAddItem(SISCurrent(index = controller.iter, complete = True))
                 done = True
             else:
                 paOutput = controller.output
                 self.loDevice.setPAOutput(pol, paOutput)
                 sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
                 sisCurrent = abs(sis['Ij'])
-                addPlotPoint(SISCurrent(index = controller.iter, paOutput = paOutput, sisCurrent = sisCurrent))
+                await asyncAddItem(SISCurrent(index = controller.iter, paOutput = paOutput, sisCurrent = sisCurrent))
 
             self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
 

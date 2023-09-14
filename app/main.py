@@ -19,12 +19,16 @@ from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
 from routers.ActionPublisher import router as actionRouter
+from routers.ActionPublisher import addItem as actionAddItem
 import hardware.FEMC as FEMC
 
 # logging:
 import logging
 LOG_TO_FILE = True
 LOG_FILE = 'ALMAFE-CTS-Control.log'
+
+# add an event when this python app reloads
+actionAddItem({'type': 'app', 'action': 'reload'})
 
 # globals:
 tags_metadata = [
