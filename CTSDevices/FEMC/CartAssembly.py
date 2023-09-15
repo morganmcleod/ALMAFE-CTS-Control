@@ -4,7 +4,7 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
-from app.routers.ActionPublisher import asyncAddItem
+from app.routers.AppEvents import Event, asyncAddEvent
 
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
@@ -14,16 +14,9 @@ from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
 from CTSDevices.Common.BinarySearchController import BinarySearchController
-from pydantic import BaseModel
 import time
 import logging
 import asyncio
-
-class SISCurrent(BaseModel):
-    index: int = 0
-    complete: bool = False
-    paOutput: float = 0
-    sisCurrent: float = 0
 
 class CartAssembly():
 
@@ -148,30 +141,26 @@ class CartAssembly():
         if sis is None:
             return False
         sisCurrent = abs(sis['Ij'])
-        await asyncAddItem(SISCurrent(index = 0, paOutput = paOutput, sisCurrent = sisCurrent))
+        await asyncAddEvent(Event(type = "sisCurrent", iter = 0, x = paOutput, y = sisCurrent))
 
         tprev = time.time()
         tsum = 0
         done = False
-        while not done:
+        while not controller.isComplete():
             controller.process(sisCurrent)
-            if controller.isComplete():
-                await asyncAddItem(SISCurrent(index = controller.iter, complete = True))
-                done = True
-            else:
-                paOutput = controller.output
-                self.loDevice.setPAOutput(pol, paOutput)
-                sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-                sisCurrent = abs(sis['Ij'])
-                await asyncAddItem(SISCurrent(index = controller.iter, paOutput = paOutput, sisCurrent = sisCurrent))
-
+            paOutput = controller.output
+            self.loDevice.setPAOutput(pol, paOutput)
+            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
+            sisCurrent = abs(sis['Ij'])
+            await asyncAddEvent(Event(type = "sisCurrent", iter = controller.iter, x = paOutput, y = sisCurrent))
             self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
-
             tsum += (time.time() - tprev)
             tprev = time.time()
-
+        
+        await asyncAddEvent(Event(type = "sisCurrent", iter = "complete"))
+        
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success} fail={controller.fail}")
+        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
         return controller.success
     
     def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:

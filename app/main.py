@@ -18,9 +18,8 @@ from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
-from routers.ActionPublisher import router as actionRouter
-from routers.ActionPublisher import addItem as actionAddItem
-import hardware.FEMC as FEMC
+from routers.AppEvents import router as eventRouter
+from routers.AppEvents import Event, addEvent
 
 # logging:
 import logging
@@ -28,7 +27,7 @@ LOG_TO_FILE = True
 LOG_FILE = 'ALMAFE-CTS-Control.log'
 
 # add an event when this python app reloads
-actionAddItem({'type': 'app', 'action': 'reload'})
+addEvent(Event(type = 'app', iter = 'reload'))
 
 # globals:
 tags_metadata = [
@@ -95,7 +94,7 @@ app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(noiseTempRouter, tags=["Noise Temp"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
-app.include_router(actionRouter)
+app.include_router(eventRouter)
 
 API_VERSION = "0.0.1"
 
