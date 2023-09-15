@@ -5,6 +5,8 @@ import logging
 from pydantic import BaseModel
 from typing import Optional, Union
 import app.routers.AppEventsQueue as AppEventsQueue
+import queue
+import time
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix = "/event")
@@ -16,35 +18,29 @@ class Event(BaseModel):
     x: Optional[float] = None
     y: Optional[float] = None
 
-async def asyncAddEvent(item):
-    await AppEventsQueue.eventQueue.put(item)
-    await asyncio.sleep(0.01)
+    def getText(self):
+        return f"Event {self.type}: {self.iter}, {self.x}, {self.y}"
+
+def addEvent(item: Event):
+    AppEventsQueue.eventQueue.put(item)
     
-def addEvent(item):
+def getEvent() -> Event:
     try:
-        loop = addEvent.loop
-    except:
-        try:
-            loop = addEvent.loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-    if loop and loop.is_running():
-        loop.create_task(asyncAddEvent(item))
-    else:
-        asyncio.run(asyncAddEvent(item))
+        item = AppEventsQueue.eventQueue.get_nowait()
+    except queue.Empty:
+        item = None
+    return item
 
 @router.websocket("/event_ws")
 async def websocket_actionPublisher(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            try:
-                item = AppEventsQueue.eventQueue.get_nowait()
-            except asyncio.QueueEmpty:
-                item = None
-            if item:                
+            item = getEvent()
+            if item:
+                # logger.debug(item.getText())
                 await manager.send(item.dict(), websocket)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.25)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /action_ws")
+        logger.exception("WebSocketDisconnect: /event_ws")

@@ -19,7 +19,7 @@ async def set_AutoRFMeter(request: Request, freqIF: float = 10, target: float = 
     WarmIFPlate.warmIFPlate.attenuator.setValue(atten)
     WarmIFPlate.warmIFPlate.yigFilter.setFrequency(freqIF)
     device, name = getTarget(request)
-    if not device.autoRFPowerMeter(NT.powerMeter, target):
+    if not device.autoRFPower(NT.powerMeter, target, onThread = True):
         return MessageResponse(message = "Auto RF Power Meter failed", success = False)
     else:
         return MessageResponse(message = "Auto RF Power Meter done", success = True)
@@ -30,7 +30,7 @@ async def set_AutoRFPNA(request: Request, freqIF: float = 10, target: float = -5
     WarmIFPlate.warmIFPlate.attenuator.setValue(atten)
     WarmIFPlate.warmIFPlate.yigFilter.setFrequency(freqIF)
     device, name = getTarget(request)
-    if not device.autoRFPNA(BeamScanner.pna, target):
+    if not device.autoRFPower(BeamScanner.pna, target):
         return MessageResponse(message = "Auto RF PNA failed", success = False)
     else:
         return MessageResponse(message = "Auto RF PNA done", success = True)
