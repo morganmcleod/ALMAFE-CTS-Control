@@ -134,11 +134,11 @@ class CartAssembly():
 
         tprev = time.time()
         tsum = 0
-        done = False
         while not controller.isComplete():
             controller.process(sisCurrent)
             paOutput = controller.output
             self.loDevice.setPAOutput(pol, paOutput)
+            time.sleep(0.1)
             sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
             sisCurrent = abs(sis['Ij'])
             addEvent(Event(type = "sisCurrent", iter = controller.iter, x = paOutput, y = sisCurrent))

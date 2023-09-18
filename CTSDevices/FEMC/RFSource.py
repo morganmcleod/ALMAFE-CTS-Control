@@ -5,7 +5,7 @@ from CTSDevices.PowerMeter.Simulator import PowerMeterSimulator
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
-from CTSDevices.PNA.AgilentPNA import FAST_CONFIG
+from CTSDevices.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
 from app.routers.AppEvents import Event, addEvent
 
 from typing import Optional, Union
@@ -34,10 +34,14 @@ class RFSource(LODevice):
     def __autoRFPower(self, meter: Union[PowerMeter, PNAInterface], target: float) -> bool:
         if isinstance(meter, PowerMeter) or isinstance(meter, PowerMeterSimulator):
             isPowerMeter = True
+            units = "dBm"
         else:
             isPowerMeter = False
+            meter.setPowerConfig(DEFAULT_POWER_CONFIG)
+            meter.setMeasConfig(FAST_CONFIG)
+            units = "dB"
 
-        self.logger.info(f"target receive on {'Power Meter' if isPowerMeter else 'PNA'}: {target} dBm")
+        self.logger.info(f"target receive on {'Power Meter' if isPowerMeter else 'PNA'}: {target} {units}")
         setValue = 20
 
         controller = BinarySearchController(
@@ -59,23 +63,23 @@ class RFSource(LODevice):
 
         tprev = time.time()
         tsum = 0
-        done = False
         while not controller.isComplete():
             controller.process(power)
             setValue = controller.output
             self.setPAOutput(self.paPol, setValue)
+            time.sleep(0.1)
             if isPowerMeter:
                 power = meter.read()
             else:
                 power, _ = meter.getAmpPhase()
             addEvent(Event(type = "rfPower", iter = controller.iter, x = setValue, y = power))
-            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} dBm")
+            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} {units}")
             tsum += (time.time() - tprev)
             tprev = time.time()
 
         addEvent(Event(type = "rfPower", iter = "complete"))
 
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"RFSource.__autoRFPower: setValue={setValue:.1f}%, power={power:.2f} dBm, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
+        self.logger.info(f"RFSource.__autoRFPower: setValue={setValue:.1f}%, power={power:.2f} {units}, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
         return controller.success
   
