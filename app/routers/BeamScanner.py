@@ -212,48 +212,16 @@ async def get_MeasurementSpec():
 @router.post("/meas_spec", response_model = MessageResponse)
 async def put_MeasurementSpec(measurementSpec:MeasurementSpec):
     BeamScanner.beamScanner.measurementSpec = measurementSpec
-    return MessageResponse(message = "Updated MeasurementSpec", success = True)
+    return MessageResponse(message = "Updated Measurement Spec", success = True)
 
 @router.get("/scan_list", response_model = ScanList)
-async def get_ScanList():
-    return BeamScanner.beamScanner.scanList
+async def get_ScanList(defaults: bool = False):
+    return BeamScanner.defaultScanList if defaults else BeamScanner.beamScanner.scanList
 
-@router.post("/scan_list/enable/all", response_model = MessageResponse)
-async def put_ScanListItemEnableAll(enable: bool):
-    for item in BeamScanner.beamScanner.scanList.items:
-        item.enable = enable
-    return MessageResponse(message = f"Updated ScanList all={enable}", success = True)
-
-@router.post("/scan_list/enable/{index}", response_model = MessageResponse)
-async def put_ScanListItemEnable(index: int, enable: bool):
-    try:
-        BeamScanner.beamScanner.scanList.items[index].enable = enable
-        return MessageResponse(message = f"Updated ScanList item {index}={enable}", success = True)
-    except Exception as e:
-        return MessageResponse(message = str(e), success = False)
-
-@router.post("/scan_list/subscans/all", response_model = MessageResponse)
-async def put_ScanListItemEnableAll(what: dict):
-    try:
-        subScan = list(what.keys())[0]
-        enable = list(what.values())[0]
-        if subScan in SubScansOption.__fields__.keys():
-            for item in BeamScanner.beamScanner.scanList.items:
-                setattr(item.subScansOption, subScan, enable)
-            return MessageResponse(message = f"Updated ScanList all={subScan}:{enable}", success = True)
-        else:
-            return MessageResponse(message = f"invalid input:{what}", success = False)
-    except Exception as e:
-        return MessageResponse(message = str(e), success = False)
-
-
-@router.post("/scan_list/subscans/{index}", response_model = MessageResponse)
-async def put_ScanListSubScansOption(index: int, subScansOption: SubScansOption):
-    try:
-        BeamScanner.beamScanner.scanList.items[index].subScansOption = subScansOption
-        return MessageResponse(message = f"Updated ScanList item {index}:{subScansOption.getText()}", success = True)
-    except Exception as e:
-        return MessageResponse(message = str(e), success = False)
+@router.put("/scan_list", response_model = MessageResponse)
+async def put_ScanList(scanList: ScanList):
+    BeamScanner.beamScanner.scanList = scanList
+    return MessageResponse(message = "Updated Scan List", success = True)
 
 @router.get("/scan_status", response_model = ScanStatus)
 async def get_ScanStatus():

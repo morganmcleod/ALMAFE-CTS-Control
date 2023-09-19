@@ -9,6 +9,7 @@ from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
 from .WarmIFPlate import warmIFPlate
 from DebugOptions import *
+import copy
 
 if SIMULATE:
     motorController = MCSimulator()
@@ -33,13 +34,13 @@ if TESTING:
 beamScanner.measurementSpec = MeasurementSpec()
 
 if TESTING:
-    beamScanner.scanList = ScanList(
+    defaultScanList = ScanList(
         items = [
             ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1 = True, copol180 = True))
         ]
     )
 else:
-    beamScanner.scanList = ScanList(
+    defaultScanList = ScanList(
         items = [
             ScanListItem(RF = 211, LO=221, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
             ScanListItem(RF = 215, LO=225, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True)),
@@ -54,4 +55,6 @@ else:
             ScanListItem(RF = 275, LO=265, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1=True, copol180=True))
         ]
     )
+
+beamScanner.scanList = copy.copy(defaultScanList)
 beamScanner.scanList.updateIndex()
