@@ -391,15 +391,18 @@ class MotorController(MCInterface):
         data = removeDelims(data, self.DELIMS)
         if len(data) < 3:
             return self.motorStatus
-        self.motorStatus = MotorStatus(
-            xPower = bool(1 - (int(data[0]) >> 5) & 1),   # !bit 5
-            yPower = bool(1 - (int(data[1]) >> 5) & 1),
-            polPower = bool(1 - (int(data[2]) >> 5) & 1),
-            xMotion = bool((int(data[0]) >> 7) & 1),      # bit 7
-            yMotion = bool((int(data[1]) >> 7) & 1),
-            polMotion = bool((int(data[2]) >> 7) & 1),
-            polTorque = self.getPolTorque()
-        )
+        try:
+            self.motorStatus = MotorStatus(
+                xPower = bool(1 - (int(data[0]) >> 5) & 1),   # !bit 5
+                yPower = bool(1 - (int(data[1]) >> 5) & 1),
+                polPower = bool(1 - (int(data[2]) >> 5) & 1),
+                xMotion = bool((int(data[0]) >> 7) & 1),      # bit 7
+                yMotion = bool((int(data[1]) >> 7) & 1),
+                polMotion = bool((int(data[2]) >> 7) & 1),
+                polTorque = self.getPolTorque()
+            )
+        except:
+            pass
         return self.motorStatus
     
     def getPosition(self) -> Position:
@@ -411,12 +414,17 @@ class MotorController(MCInterface):
         if not data or len(data) < replySize:
             return self.position
         data = removeDelims(data, self.DELIMS)
+        if len(data) < 3:
+            return self.position
         # negate because motors are opposite what we want to call (0,0)
-        self.position = Position(
-            x = round(-(int(data[0]) / self.STEPS_PER_MM), 2),
-            y = round(-(int(data[1]) / self.STEPS_PER_MM), 2),
-            pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 2)
-        )
+        try:
+            self.position = Position(
+                x = round(-(int(data[0]) / self.STEPS_PER_MM), 2),
+                y = round(-(int(data[1]) / self.STEPS_PER_MM), 2),
+                pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 2)
+            )
+        except:
+            pass
         return self.position
 
     def positionInBounds(self, pos: Position) -> bool:
