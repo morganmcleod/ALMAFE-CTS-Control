@@ -2,8 +2,8 @@ import logging
 
 class TemperatureMonitorSimulator():
 
-    SIM_DATA = [3.5, 3.9, 4.1, 15, 110, -1, -1, -1]
-    SIM_ERRS = [0, 0, 0, 0, 0, 1, 1, 1]
+    SIM_DATA = [3.5, 3.9, 4.1, 15, 110, 273, 274, 275]
+    SIM_ERRS = [0, 0, 0, 0, 0, 0, 0, 0]
 
     def __init__(self):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")

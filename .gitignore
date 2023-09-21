@@ -2,3 +2,5 @@
 .vscode
 ALMAFE-CTS-Database.ini
 *.log
+AmpPhaseDataLib.ini
+AmpPhaseDataLib.sqlite

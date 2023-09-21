@@ -72,22 +72,23 @@ class TemperatureMonitor():
     def readSingle(self, input: int):
         if not 1 <= input <= 8:
             return -1.0, 1
-        temp = self.inst.querg(f"KRDG ? {input}\r\n")
-        temp = float(removeDelims(temp))
-        err = self.inst.query(f"RDGST? {input}\r\n")
+        temp = self.inst.query(f"KRDG ? {input}")
+        temp = float(removeDelims(temp)[0])
+        err = self.inst.query(f"RDGST? {input}")
+        err = int(removeDelims(err)[0])
         if err != 0:
             temp = -1
         return temp, err
 
     def readAll(self):
-        temps = self.inst.query("KRDG ? 0\r\n")
+        temps = self.inst.query("KRDG ? 0")
         temps = removeDelims(temps)
         temps = [float(t) for t in temps]
         # check for range errors for each sensor:
         errors = []
         for i in range(8):
-            err = self.inst.query(f"RDGST? {i + 1}\r\n")
-            err = int(err.strip())
+            err = self.inst.query(f"RDGST? {i + 1}")
+            err = int(removeDelims(err)[0])
             if err != 0:
                 temps[i] = -1
             errors.append(err)

@@ -1,5 +1,6 @@
+from .Interface import SignalGenInterface
 
-class SignalGenSimulator():
+class SignalGenSimulator(SignalGenInterface):
 
     def __init__(self, reset=True):
         """Constructor
@@ -19,7 +20,6 @@ class SignalGenSimulator():
         self.frequency = 20
         self.amplitude = -20
         self.enabled = False
-        return True
 
     def errorQuery(self):
         """Send an error query and return the results

@@ -1,9 +1,10 @@
+from .Interface import SignalGenInterface
 from ..Common.RemoveDelims import removeDelims
 import re
 import pyvisa
 import logging
 
-class SignalGenerator():
+class SignalGenerator(SignalGenInterface):
 
     DEFAULT_TIMEOUT = 10000
 

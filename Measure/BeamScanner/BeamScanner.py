@@ -10,6 +10,7 @@ from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
 from CTSDevices.FEMC.CartAssembly import CartAssembly
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
+from ..Shared.MeasurementStatus import MeasurementStatus
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
@@ -33,12 +34,13 @@ class BeamScanner():
     POL_SPEED = 10                  # deg/sec
 
     def __init__(self, 
-        motorController: MCInterface,
-        pna: PNAInterface, 
-        loReference: SignalGenerator, 
-        cartAssembly: CartAssembly,
-        rfSrcDevice: LODevice,
-        warmIFPlate: WarmIFPlate):
+            motorController: MCInterface,
+            pna: PNAInterface, 
+            loReference: SignalGenerator, 
+            cartAssembly: CartAssembly,
+            rfSrcDevice: LODevice,
+            warmIFPlate: WarmIFPlate,
+            measurementStatus: MeasurementStatus):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.mc = motorController
@@ -48,7 +50,8 @@ class BeamScanner():
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
         self.warmIFPlate = warmIFPlate
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
+        self.measurementStatus = measurementStatus
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 2)
         self.measurementSpec = MeasurementSpec()
         self.scanList = ScanList()
         self.futures = None
@@ -64,6 +67,9 @@ class BeamScanner():
         self.__resetRasters()
         self.scanAngle = 0
         self.levelAngle = 0
+        self.reverseX = False
+        self.rasterReady = False
+        self.yPos = 0
         self.stopNow = False
 
     def getLatestRasterInfo(self) -> (int, int):
@@ -114,6 +120,7 @@ class BeamScanner():
         self.scanStatus.activeScan = 0
         self.futures = []
         self.futures.append(self.executor.submit(self.__runAllScans))
+        # self.futures.append(self.executor.submit(self.__databaseWriterThread))
         return self.keyCartTest
 
     def stop(self):
@@ -122,6 +129,9 @@ class BeamScanner():
         if self.futures:
             concurrent.futures.wait(self.futures)
         self.logger.info("BeamScanner: stopped")
+
+    def isMeasuring(self):
+        return not self.scanStatus.scanComplete
 
     def __runAllScans(self) -> None:
         success, msg = self.__resetRasters();        
@@ -150,6 +160,7 @@ class BeamScanner():
                         return
                     self.logger.info(subScan.getText())
                     self.scanStatus.message = "Started: " + subScan.getText()
+                    self.scanStatus.activeSubScanIndex = subScan.index
                     self.scanStatus.activeSubScan = subScan.getText()
 
                     # compute angles for this scan:
@@ -186,6 +197,7 @@ class BeamScanner():
                         self.yAxisList = self.measurementSpec.makeYAxisList()
                         success, msg = self.__runOneScan(scan, subScan)
 
+                    self.scanStatus.activeSubScanIndex = None
                     self.scanStatus.activeSubScan = None
                     
                     if success:
@@ -213,9 +225,17 @@ class BeamScanner():
                 success, msg = self.__rfSourceOff()
             if success:
                 success, msg = self.__lockLO(scan, subScan)
+            if not success:
+                # retry lock
+                time.sleep(1)
+                success, msg = self.__lockLO(scan, subScan)
             if success:
                 success, msg = self.__setReceiverBias(scan, subScan)
             if success:
+                success, msg = self.__lockRF(scan, subScan)
+            if not success:
+                time.sleep(1)
+                # retry lock
                 success, msg = self.__lockRF(scan, subScan)
             if success:
                 success, msg = self.__moveToBeamCenter(scan, subScan)
@@ -236,9 +256,9 @@ class BeamScanner():
             lastCenterPwrTime = None
             rasterIndex = 0
             # loop on y axis:
-            for yPos in self.yAxisList:
+            for self.yPos in self.yAxisList:
                 # are we scanning right-to-left at this yPos?
-                reverseX = self.measurementSpec.scanBidirectional and (rasterIndex % 2 != 0)
+                self.reverseX = self.measurementSpec.scanBidirectional and (rasterIndex % 2 != 0)
 
                 # check for User Stop signal
                 if self.stopNow:
@@ -308,27 +328,27 @@ class BeamScanner():
                 # go to start of this raster:
                 startPos = nextPos = Position(
                     x = self.measurementSpec.scanStart.x, 
-                    y = yPos, 
+                    y = self.yPos, 
                     pol = self.scanAngle
                 )
                 endPos = Position(
                     x = self.measurementSpec.scanEnd.x, 
-                    y = yPos, 
+                    y = self.yPos, 
                     pol = self.scanAngle
                 )
                 xStep = self.measurementSpec.resolution
 
-                if reverseX:
+                if self.reverseX:
                     startPos, endPos = endPos, startPos
                     xStep = -xStep
-
+                
                 self.raster = Raster(
                     key = self.scanStatus.fkBeamPatterns,
                     index = rasterIndex,
                     startPos = startPos,
                     xStep = xStep
                 )
- 
+
                 success, msg = self.__moveScanner(startPos, withTrigger = False)
                 if not success:
                     self.__logBPError(
@@ -343,7 +363,7 @@ class BeamScanner():
                 # configure external triggering:
                 self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
                 moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
-                success, msg = self.__configurePNARaster(scan, subScan, yPos, moveTimeout)
+                success, msg = self.__configurePNARaster(scan, subScan, moveTimeout)
                 if not success:
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -367,7 +387,7 @@ class BeamScanner():
                     return (success, msg)
                 
                 # get the PNA trace data:
-                success, msg = self.__getPNARaster(scan, subScan, y = yPos)
+                success, msg = self.__getPNARaster(scan, subScan)
                 if not success:
                     self.__logBPError(
                         source = self.__runOneScan.__name__, 
@@ -379,10 +399,9 @@ class BeamScanner():
                     return (success, msg)
 
                 # Write to database:
-                success, msg = self.__writeRasterToDatabase(scan, subScan, reverseX, yPos)
-
-                rasterIndex += 1
-
+                success, msg = self.__writeRasterToDatabase(scan, subScan)      # removed worker thread
+                rasterIndex += 1                                          # removed worker thread
+                
             # record the beam center power a final time:
             success, msg = self.__measureCenterPower(scan, subScan, scanComplete = True)
             if not success:
@@ -452,6 +471,7 @@ class BeamScanner():
     def __abortScan(self, msg) -> Tuple[bool, str]:
         self.logger.info(msg)
         self.scanStatus.activeScan = None
+        self.scanStatus.activeSubScanIndex = None
         self.scanStatus.activeSubScan = None
         self.scanStatus.message = msg
         self.scanStatus.error = True
@@ -544,37 +564,50 @@ class BeamScanner():
         success = self.rfSrcDevice.autoRFPower(self.pna, target = self.measurementSpec.targetLevel)
         return (success, "__rfSourceAutoLevel")
 
-    def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, yPos:float, moveTimeout:float) -> Tuple[bool, str]:
+    def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, moveTimeout:float) -> Tuple[bool, str]:
         # add 10sec to timeout to account for accel/decel
         self.pnaConfig.timeout_sec = moveTimeout + 10
         self.pnaConfig.sweepPoints = self.measurementSpec.numScanPoints()
         self.pna.setMeasConfig(self.pnaConfig)
         return (True, "")
 
-    def __getPNARaster(self, scan:ScanListItem, subScan:SubScan, y:float = 0) -> Tuple[bool, str]:
-        amp, phase = self.pna.getTrace(y = y)
+    def __getPNARaster(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
+        amp, phase = self.pna.getTrace(y = self.yPos)
         if amp and phase:
             self.raster.amplitude = amp
             self.raster.phase = phase
+            self.raster.complete = True
             self.rasters.append(self.raster)
             return (True, "")
         else:
             return (False, "pna.getTrace returned no data")
 
-    def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan, reverseX: bool, y:float) -> Tuple[bool, str]:
+    # def __databaseWriterThread(self):
+    #     while not self.stopNow and not self.scanStatus.measurementComplete:
+    #         if self.raster.complete:
+    #             scan = self.scanList.items[self.scanStatus.activeScan]
+    #             subScan = scan.subScans[self.scanStatus.activeSubScanIndex]
+    #             self.__writeRasterToDatabase(scan, subScan)
+    #             self.raster.complete = False
+    #             self.raster.index += 1
+    #         time.sleep(2)
+
+    def __writeRasterToDatabase(self, scan: ScanListItem, subScan: SubScan) -> Tuple[bool, str]:
         if SIMULATE:
             return (True, "Simulate write to database")
-        xAxisList = reversed(self.xAxisList) if reverseX else self.xAxisList
+        xAxisList = reversed(self.xAxisList) if self.reverseX else self.xAxisList
         
-        count = self.bpRawDataTable.create([BPRawDatum(
-                fkBeamPattern = self.scanStatus.fkBeamPatterns,
-                Pol = subScan.pol,
-                Position_X = x,
-                Position_Y = y,
-                SourceAngle = self.scanAngle,
-                Power = amp,
-                Phase = phase
-            ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)])
+        records = [BPRawDatum(
+            fkBeamPattern = self.scanStatus.fkBeamPatterns,
+            Pol = subScan.pol,
+            Position_X = x,
+            Position_Y = self.yPos,
+            SourceAngle = self.scanAngle,
+            Power = amp,
+            Phase = phase
+        ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)]
+
+        count = self.bpRawDataTable.create(records)
         
         if count == len(self.xAxisList):
             return (True, "")

@@ -119,7 +119,7 @@ class test_GalilDMCSocket(unittest.TestCase):
         self.assertFalse(self.mc.getMotorStatus().inMotion())
 
         XY_TIMEOUT = 20
-        prevPos = self.mc.getPosition()
+        prevPos = self.mc.getPosition(cached = False)
         self.logger.info(f"test_homeAxis: prevPos = {prevPos.getText()}")
 
         self.logger.info("test_homeAxis: X")
@@ -128,7 +128,7 @@ class test_GalilDMCSocket(unittest.TestCase):
             toPos.x = 0
             self.mc.homeAxis('x')
             motorStatus = self.mc.waitForMove(XY_TIMEOUT)
-            pos = self.mc.getPosition()
+            pos = self.mc.getPosition(cached = False)
             self.assertEqual(pos.x, 0)
         
         self.mc.setNextPos(prevPos)
@@ -141,7 +141,7 @@ class test_GalilDMCSocket(unittest.TestCase):
             toPos.y = 0
             self.mc.homeAxis('y')
             motorStatus = self.mc.waitForMove(XY_TIMEOUT)
-            pos = self.mc.getPosition()
+            pos = self.mc.getPosition(cached = False)
             self.assertEqual(pos.y, 0)
         
         self.mc.setNextPos(prevPos)
@@ -156,38 +156,14 @@ class test_GalilDMCSocket(unittest.TestCase):
             self.mc.homeAxis('xy')
             motorStatus = self.mc.waitForMove(XY_TIMEOUT)
             self.assertTrue(not motorStatus.inMotion() and not motorStatus.powerFail())
-            pos = self.mc.getPosition()
+            pos = self.mc.getPosition(cached = False)
             self.assertEqual(pos.x, 0)
             self.assertEqual(pos.y, 0)
-
-    def Xtest_setZeroAxis(self):
-        pass
-
-    def Xtest_getMotorStatus(self):
-        pass
-    
-    def Xtest_getPosition(self):
-        pass
-
-    def Xtest_positionInBounds(self):
-        pass
-
-    def Xtest_estimateMoveTime(self):
-        pass
-
-    def Xtest_setNextPos(self):
-        pass
-
-    def Xtest_setTriggerInterval(self):
-        pass
-
-    def Xtest_startMove(self):
-        pass
 
     def test_stopMove(self):
         self.assertFalse(self.mc.getMotorStatus().inMotion())
         
-        prevPos = self.mc.getPosition()
+        prevPos = self.mc.getPosition(cached = False)
         toPos = Position(
             x = 50,
             y = 50,
@@ -211,7 +187,7 @@ class test_GalilDMCSocket(unittest.TestCase):
         self.mc.stopMove()
         time.sleep(0.5)
         self.assertFalse(self.mc.getMotorStatus().inMotion())
-        pos = self.mc.getPosition()
+        pos = self.mc.getPosition(cached = False)
         self.assertNotEqual(pos, prevPos)
         self.assertNotEqual(pos, toPos)
         

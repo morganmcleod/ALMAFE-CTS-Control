@@ -1,15 +1,19 @@
 from .InputSwitch import InputSelect
 from .OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from typing import Union
 
 class AttenuatorSimulator():
     def __init__(self):
         self.reset()
 
     def reset(self):
-        pass
+        self.value = 100
 
     def setValue(self, atten: int = 20):
-        pass
+        self.value = atten
+        
+    def getValue(self):
+        return self.value
 
 class InputSwitchSimulator():
     def __init__(self):
@@ -20,6 +24,28 @@ class InputSwitchSimulator():
 
     def getValue(self) -> InputSelect:
         return self.position
+    
+    def setPolAndSideband(self, pol: int, sideband: Union[int, str]) -> bool:
+        if pol not in (0, 1):
+            return False
+        if isinstance(sideband, str):
+            if sideband.upper() == 'USB':
+                sideband = 0
+            elif sideband.upper() == 'LSB':
+                sideband = 1
+            else:
+                return False
+        if pol == 0:
+            if sideband == 0:
+                self.setValue(InputSelect.POL0_USB)
+            elif sideband == 1:
+                self.setValue(InputSelect.POL0_LSB)
+        else:
+            if sideband == 0:
+                self.setValue(InputSelect.POL1_USB)
+            elif sideband == 1:
+                self.setValue(InputSelect.POL1_LSB)
+        return False
 
 class NoiseSourceSimulator():
     def __init__(self):

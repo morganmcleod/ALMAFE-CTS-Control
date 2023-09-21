@@ -36,11 +36,11 @@ async def websocket_actionPublisher(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
+            await asyncio.sleep(0.1)
             item = getEvent()
             if item:
                 # logger.debug(item.getText())
                 await manager.send(item.dict(), websocket)
-            await asyncio.sleep(0.25)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /event_ws")

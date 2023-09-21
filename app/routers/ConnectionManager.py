@@ -15,7 +15,7 @@ class ConnectionManager():
     async def send(self, message: Any, websocket: WebSocket):
         try:
             await websocket.send_json(message)
-        except:
+        except Exception as e:
             pass
 
     async def broadcast(self, message: Any):

@@ -79,14 +79,12 @@ class MCInterface(ABC):
     def setZeroAxis(self, axis:str):
         pass
 
-
-
     @abstractmethod
     def getMotorStatus(self) -> MotorStatus:
         pass
     
     @abstractmethod
-    def getPosition(self) -> Position:
+    def getPosition(self, cached: bool = True, retry: int = 2) -> Position:
         pass
 
     @abstractmethod

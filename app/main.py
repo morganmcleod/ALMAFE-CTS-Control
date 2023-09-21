@@ -5,15 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Imports for this app:
 from Response import MessageResponse, VersionResponse, prepareResponse
-from ALMAFE.common.GitVersion import gitVersion
+from ALMAFE.common.GitVersion import gitVersion, gitBranch
 from routers.CartAssembly import router as cartAssyRouter
 from routers.CCA import router as ccaRouter
 from routers.Database import router as databaseRouter
 from routers.FEMC import router as femcRouter
 from routers.LO import router as loRouter
 from routers.RFSource import router as rfRouter
+from routers.TemperatureMonitor import router as tempsRouter
 from routers.MeasControl import router as measControlRouter
 from routers.NoiseTemperature import router as noiseTempRouter
+from routers.AmplitudeStability import router as ampStabilityRouter
 from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
@@ -68,6 +70,10 @@ tags_metadata = [
         "description": "Noise Temperature measurement and hardware"
     },
     {
+        "name": "Stability",
+        "description": "Amplitude and phase stability"
+    },
+    {
         "name": "RF source",
         "description": "aka BEASTs"
     },
@@ -78,6 +84,10 @@ tags_metadata = [
     {
         "name": "Warm IF plate",
         "description": "Input switch, YIG filter, etc."
+    },
+    {
+        "name": "Temperatures",
+        "description": "Temperature Monitor"
     }
 ]
 
@@ -89,10 +99,12 @@ app.include_router(databaseRouter, tags=["Database"])
 app.include_router(femcRouter, tags=["FEMC"])
 app.include_router(loRouter, prefix = "/lo", tags=["LO"])
 app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
+app.include_router(tempsRouter, tags={"Temperatures"})
 app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
 app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(noiseTempRouter, tags=["Noise Temp"])
+app.include_router(ampStabilityRouter, tags=["Stability"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
 app.include_router(eventRouter)
 
@@ -124,9 +136,12 @@ async def get_API_Version(callback:str = None):
     :param callback: optional name of Javascript function to wrap JSONP results in.
     :return VersionResponse
     '''
+    branch = gitBranch()
+    commit = gitVersion(branch = branch)
     result = VersionResponse(name = "ALMAFE-CTS-Control API",
                              apiVersion = API_VERSION,
-                             gitCommit = gitVersion(branch = 'master'),
+                             gitBranch = branch,
+                             gitCommit = commit,
                              success = True)
     return prepareResponse(result, callback)
 

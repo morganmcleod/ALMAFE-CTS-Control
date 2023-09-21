@@ -6,9 +6,10 @@ from app.database.CTSDB import CTSDB
 
 from DBBand6Cart.CartConfigs import CartConfig, CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
-from DBBand6Cart.MixerParams import MixerParams
-from DBBand6Cart.PreampParams import PreampParams
-from typing import Optional
+from DBBand6Cart.MixerParams import MixerParam, MixerParams
+from DBBand6Cart.PreampParams import PreampParam, PreampParams
+from DBBand6Cart.WCAs import WCAs
+from typing import Optional, List
 from hardware.FEMC import cartAssembly
 
 @router.get("/config", response_model = ListResponse)
@@ -48,7 +49,7 @@ async def getConfigKeys(configId:int, pol:int, callback:str = None):
     DB = CartConfigs(driver = CTSDB())
     return DB.readKeys(configId, pol)
 
-@router.get("/config/mixer_params", response_model = ListResponse)
+@router.get("/config/mixer_params/{keyChip}", response_model = ListResponse)
 async def getMixerParams(keyChip:int, callback:str = None):
     DB = MixerParams(driver = CTSDB())
     items = DB.read(keyMixerChips = keyChip)
@@ -56,10 +57,32 @@ async def getMixerParams(keyChip:int, callback:str = None):
     # prepare and return result:
     return prepareListResponse(items, callback)
 
-@router.get("/config/preamp_params", response_model = ListResponse)
+@router.put("/config/mixer_params/{keyChip}", response_model = MessageResponse)
+async def putMixerParams(keyChip: int, values: List[MixerParam], callback:str = None):
+    DB = MixerParams(driver = CTSDB())
+    if DB.create(keyChip, values):
+        return MessageResponse(message = f"Wrote mixerparams for chip {keyChip}", success = True)
+    else:
+        return MessageResponse(message = f"Error writing mixerparams for chip {keyChip}", success = False)
+
+@router.get("/config/preamp_params/{keyPreamp}", response_model = ListResponse)
 async def getPreampParams(keyPreamp:int, callback:str = None):
     DB = PreampParams(driver = CTSDB())
     items = DB.read(keyPreamp = keyPreamp)
     
     # prepare and return result:
+    return prepareListResponse(items, callback)
+
+@router.put("/config/preamp_params/{keyPreamp}", response_model = MessageResponse)
+async def putPreampParams(keyPreamp:int, values: List[PreampParam], callback:str = None):
+    DB = PreampParams(driver = CTSDB())
+    if DB.create(keyPreamp, values):
+        return MessageResponse(message = f"Wrote preampparams for amplifier {keyPreamp}", success = True)
+    else:
+        return MessageResponse(message = f"Error writing preampparams for amplifier {keyPreamp}", success = False)    
+
+@router.get("/config/wcas", response_model = ListResponse)
+async def getWCAs(prefix: str = None, callback:str = None):
+    DB = WCAs(driver = CTSDB())
+    items = DB.read(serialNumLike = prefix + '%' if prefix else None)
     return prepareListResponse(items, callback)

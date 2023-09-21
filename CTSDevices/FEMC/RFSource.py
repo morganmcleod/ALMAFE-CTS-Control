@@ -6,9 +6,10 @@ from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
+from CTSDevices.SignalGenerator.Interface import SignalGenInterface
 from app.routers.AppEvents import Event, addEvent
 
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 import time
 import threading
 
@@ -23,6 +24,20 @@ class RFSource(LODevice):
         ):
         super(RFSource, self).__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
+
+    def lockRF(self, rfReference: SignalGenInterface, freqRF: float) -> Tuple[bool, str]:
+        self.selectLockSideband(self.LOCK_ABOVE_REF)
+        wcaFreq, ytoFreq, ytoCourse = self.setLOFrequency(freqRF)
+        pllConfig = self.getPLLConfig()
+        rfReference.setFrequency((freqRF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
+        rfReference.setAmplitude(16.0)
+        rfReference.setRFOutput(True)
+        if not SIMULATE:
+            wcaFreq, ytoFreq, ytoCourse = self.lockPLL()
+        else:
+            self.setNullLoopIntegrator(True)
+        return (True, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
+
 
     def autoRFPower(self, meter: Union[PowerMeter, PNAInterface], target: float = -5.0, onThread: bool = False) -> bool:
         if onThread:

@@ -22,10 +22,9 @@ class QueueItem(BaseModel):
     replySize: int = 1
     complete: bool = False
 
-
 class MotorController(MCInterface):
     SOCKET_TIMEOUT = 2    # sec
-    RECV_BYTE_TIMEOUT = 0.5
+    RECV_BYTE_TIMEOUT = 0.005
     STEPS_PER_DEGREE = 225
     STEPS_PER_MM = 5000
     X_MIN = 0
@@ -53,7 +52,7 @@ class MotorController(MCInterface):
         self.host = host
         self.port = port
         self.socket = None
-        self.queue = queue.Queue()
+        self.queue = queue.SimpleQueue()
         threading.Thread(target = self.queueWorker, daemon=True).start()
         self.reset()
 
@@ -80,10 +79,10 @@ class MotorController(MCInterface):
     def reset(self):
         self.start = False
         self.stop = False
-        self.nextPos = Position(x=0, y=0, z=0)
-        self.position = Position(x=0, y=0, z=0)
-        self.motorStatus = MotorStatus()
         self.__connectSocket()
+        self.nextPos = Position(x=0, y=0, z=0)
+        self.position = self.getPosition(cached = False)
+        self.motorStatus = MotorStatus()
         self.xySpeed = self.getXYSpeed()
         self.polSpeed = self.getPolSpeed()
         self.__setVectorSpeed(self.xySpeed)
@@ -103,7 +102,7 @@ class MotorController(MCInterface):
     def flush(self):
         flushed = b''
         prevTimeout = self.socket.gettimeout()
-        self.socket.settimeout(0.001)
+        self.socket.settimeout(self.RECV_BYTE_TIMEOUT)
         while True:
             try:
                 data = self.socket.recv(1)
@@ -129,7 +128,7 @@ class MotorController(MCInterface):
 
     def recv(self, replySize: int = 0) -> bytes:
         prevTimeout = self.socket.gettimeout()
-        self.socket.settimeout(0.001)
+        self.socket.settimeout(self.RECV_BYTE_TIMEOUT)
         data = newData = b''
         endTime = time.time() + self.SOCKET_TIMEOUT if replySize else self.RECV_BYTE_TIMEOUT
         done = False
@@ -315,7 +314,7 @@ class MotorController(MCInterface):
         data = self.query(b'TTC;', replySize = 10)
         data = removeDelims(data, self.DELIMS)
         torque = float(data[0]) if data else 0
-        assert(self.MIN_POL_TORQUE <= torque <= self.MAX_POL_TORQUE)
+        # assert(self.MIN_POL_TORQUE <= torque <= self.MAX_POL_TORQUE)
         torque = round(copysign(abs(torque) / self.MAX_POL_TORQUE, torque) * 100, 1)
         return torque
 
@@ -405,17 +404,26 @@ class MotorController(MCInterface):
             pass
         return self.motorStatus
     
-    def getPosition(self) -> Position:
+    def getPosition(self, cached: bool = True, retry: int = 2) -> Position:
+        if cached:
+            return self.position
+        while retry > 0:
+            retry -= 1
+            if self.__getPosition():
+                break
+        return self.position
+    
+    def __getPosition(self) -> Position:
         # Send the position format command to specifiy 10 digits before the 
         # decimal point and zero after.  Send the read position command.
         # RP is necessary because TP doesn't work for stepper motors.
         replySize = 44
         data = self.query(b'\nLZ 0; PF 10,0; RPX; RPY; TPZ;', replySize)
         if not data or len(data) < replySize:
-            return self.position
+            return None
         data = removeDelims(data, self.DELIMS)
         if len(data) < 3:
-            return self.position
+            return None
         # negate because motors are opposite what we want to call (0,0)
         try:
             self.position = Position(
@@ -424,7 +432,7 @@ class MotorController(MCInterface):
                 pol = round(int(data[2]) / self.STEPS_PER_DEGREE, 2)
             )
         except:
-            pass
+            return None
         return self.position
 
     def positionInBounds(self, pos: Position) -> bool:
@@ -508,7 +516,7 @@ class MotorController(MCInterface):
             timedOut = ((time.time() - self.startTime) > self.timeout) if self.timeout else False
         )
         status = self.getMotorStatus()
-        pos = self.getPosition()
+        pos = self.getPosition(cached = False)
         if (not status.inMotion() and pos == self.nextPos):
             result.success = True
         elif status.powerFail():

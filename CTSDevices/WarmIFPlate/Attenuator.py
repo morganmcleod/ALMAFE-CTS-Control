@@ -20,11 +20,14 @@ class Attenuator():
     def reset(self):
         # set attenuation to max:
         self.switchController.setSwitches(self.RESET_SWITCHES)
+        self.value = self.MAX_ATTENUATION
 
     def setValue(self, atten: int = MAX_ATTENUATION):
         if atten < 0 or atten > self.MAX_ATTENUATION:
             atten = self.MAX_ATTENUATION
         
+        self.value = atten
+
         remaining = copy.copy(atten)
         switches = []
 
@@ -39,9 +42,5 @@ class Attenuator():
         switches.append(False)        
         self.switchController.setSwitches(switches)
 
-
-
-            
-
-    
-
+    def getValue(self):
+        return self.value

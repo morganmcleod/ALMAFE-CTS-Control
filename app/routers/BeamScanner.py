@@ -1,8 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
-import hardware.BeamScanner as BeamScanner
-from Response import KeyResponse, MessageResponse
+import measProcedure.BeamScanner as BeamScanner
+import measProcedure.MeasurementStatus as MeasurementStatus
+measurementStatus = MeasurementStatus.measurementStatus
+from Response import MessageResponse
 import asyncio
 from .ConnectionManager import ConnectionManager
 from .Database import CTSDB
@@ -20,12 +22,12 @@ router = APIRouter(prefix="/beamscan")
 manager = ConnectionManager()
 
 @router.websocket("/position_ws")
-async def websocket_scandata_request(websocket: WebSocket):
+async def websocket_scandata_push(websocket: WebSocket):
     await manager.connect(websocket)
     lastPosition = None            
     try:
-        while True:        
-            position = BeamScanner.motorController.getPosition()
+        while True:
+            position = BeamScanner.motorController.getPosition(cached = measurementStatus.getMeasuring())
             if position != lastPosition:
                 lastPosition = position
                 await manager.send(position.dict(), websocket)
@@ -35,7 +37,7 @@ async def websocket_scandata_request(websocket: WebSocket):
         logger.exception("WebSocketDisconnect: /position_ws")
 
 @router.websocket("/motorstatus_ws")
-async def websocket_scandata_request(websocket: WebSocket):
+async def websocket_scandata_push(websocket: WebSocket):
     await manager.connect(websocket)
     lastMotorStatus = None            
     try:
@@ -155,6 +157,14 @@ async def put_ServoHere():
     try:
         BeamScanner.motorController.servoHere()
         return MessageResponse(message = "Servo Here done", success = True)
+    except Exception as e:
+        return MessageResponse(message = str(e), success = False)
+
+@router.put("/mc/setup", response_model = MessageResponse)
+async def put_Setup():
+    try:
+        BeamScanner.motorController.reset()
+        return MessageResponse(message = "Setup done", success = True)
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 

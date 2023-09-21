@@ -14,9 +14,11 @@ from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
 from CTSDevices.Common.BinarySearchController import BinarySearchController
+from CTSDevices.SignalGenerator.Interface import SignalGenInterface
 import time
 import logging
 import threading
+from DebugOptions import *
 
 class CartAssembly():
 
@@ -40,6 +42,9 @@ class CartAssembly():
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
+        self.reset()
+        if configId == 0:
+            return True
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
         if self.keysPol0 and self.keysPol1:
@@ -96,6 +101,9 @@ class CartAssembly():
 
         if not self.mixerParam01 or not self.mixerParam11:
             self.setRecevierBias(self.DEFAULT_LO)
+        
+        if SIMULATE:
+            return True
 
         if onThread:
             threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1), daemon = True).start()
@@ -176,3 +184,16 @@ class CartAssembly():
             IJ = before.IJ + ((after.IJ - before.IJ) * scale),
             IMAG = before.IMAG + ((after.IMAG - before.IMAG) * scale)
         )
+
+    def lockLO(self, loReference: SignalGenInterface, freqLO: float) -> Tuple[bool, str]:
+        self.loDevice.selectLockSideband(self.loDevice.LOCK_ABOVE_REF)
+        wcaFreq, ytoFreq, ytoCourse = self.loDevice.setLOFrequency(freqLO)
+        pllConfig = self.loDevice.getPLLConfig()
+        loReference.setFrequency((freqLO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
+        loReference.setAmplitude(12.0)
+        loReference.setRFOutput(True)
+        if not SIMULATE:
+            wcaFreq, ytoFreq, ytoCourse = self.loDevice.lockPLL()
+        else:
+            self.loDevice.setNullLoopIntegrator(True)
+        return True, f"lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"

@@ -8,4 +8,3 @@ websockets>=10.4
 simple-pid>=1.0.1
 pyserial>=3.5
 PyYAML>=6.0
-matplotlib>=3.7.2

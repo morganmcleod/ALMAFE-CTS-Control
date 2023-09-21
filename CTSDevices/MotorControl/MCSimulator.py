@@ -13,7 +13,7 @@ class MCSimulator(MCInterface):
     Y_MAX = 300
     POL_MIN = -200
     POL_MAX = 180
-    XY_SPEED = 20
+    XY_SPEED = 40
     POL_SPEED = 10
     X_INIT = 145
     Y_INIT = 145
@@ -25,12 +25,13 @@ class MCSimulator(MCInterface):
         self.stop = False
         self.xySpeed = self.XY_SPEED
         self.polSpeed = self.POL_SPEED
-        self.pos = Position(
+        self.position = Position(
             x = self.X_INIT,
             y = self.Y_INIT,
             pol = self.POL_INIT
         )
-        self.nextPos = deepcopy(self.pos)
+        self.lastPos = deepcopy(self.position)
+        self.nextPos = deepcopy(self.position)
     
     def isConnected(self) -> bool:
         return True
@@ -108,7 +109,7 @@ class MCSimulator(MCInterface):
         if self.getMotorStatus().inMotion():
             raise MCError("Cannot zero axis while scanner is in motion.")
 
-        pos = self.getPosition()
+        pos = self.getPosition(cached = False)
         axis = axis.lower()
         if axis == 'x':
             pos.x = 0
@@ -122,10 +123,10 @@ class MCSimulator(MCInterface):
         else:
             raise ValueError(f"Unsupported option for axis: '{axis}'")
 
-        self.pos = pos
+        self.position = pos
     
     def getMotorStatus(self) -> MotorStatus:
-        pos = self.getPosition()
+        pos = self.getPosition(cached = False)
         return MotorStatus(
             xPower = True,
             yPower = True,
@@ -135,24 +136,25 @@ class MCSimulator(MCInterface):
             polMotion = self.start and pos.pol != self.nextPos.pol
         )
     
-    def getPosition(self) -> Position:
-        if not self.start:
-            return self.pos
+    def getPosition(self, cached: bool = True, retry: int = 2) -> Position:
+        if not self.start or cached:
+            return self.position
+
+        elapsed = time.time() - self.startTime
+        if elapsed >= self.moveTime:
+            self.position = deepcopy(self.nextPos)
+            self.lastPos = deepcopy(self.nextPos)
+            self.start = False
+            self.stop = False
         else:
-            elapsed = time.time() - self.startTime
-            if elapsed >= self.moveTime:
-                self.pos = deepcopy(self.nextPos)
-                self.start = False
-                self.stop = False
-                return self.pos
-            else:
-                portion = elapsed / self.moveTime
-                vector = self.nextPos.calcMove(self.pos)
-                return Position(
-                    x = round(self.pos.x + vector.x * portion, 1),
-                    y = round(self.pos.y + vector.y * portion, 1),
-                    pol = round(self.pos.pol + vector.pol * portion, 1)
-                )
+            portion = elapsed / self.moveTime
+            vector = self.nextPos.calcMove(self.lastPos)
+            self.position = Position(
+                x = round(self.lastPos.x + vector.x * portion, 1),
+                y = round(self.lastPos.y + vector.y * portion, 1),
+                pol = round(self.lastPos.pol + vector.pol * portion, 1)
+            )
+        return self.position
 
     def positionInBounds(self, pos: Position) -> bool:
         return (self.X_MIN <= pos.x <= self.X_MAX) and \
@@ -190,16 +192,16 @@ class MCSimulator(MCInterface):
         self.startTime = time.time()
         # for simulation, this movetime is used in getPosition so it must be smaller than the estimate:
         # simulation has infitnite accel/decel!
-        self.moveTime = self.estimateMoveTime(self.pos, self.nextPos) * 0.9
+        self.moveTime = self.estimateMoveTime(self.position, self.nextPos) * 0.9
         self.start = True
         self.stop = False
     
     def stopMove(self):
         # if mid-move save where we were stopped:
-        stoppedAt = self.getPosition() if self.start else self.pos
+        stoppedAt = self.getPosition(cached = False) if self.start else self.position
         self.start = False
         self.stop = True
-        self.pos = stoppedAt
+        self.position = stoppedAt
     
     def getMoveStatus(self) -> MoveStatus:
         timedOut = ((time.time() - self.startTime) > self.timeout) if self.timeout else False
@@ -208,7 +210,7 @@ class MCSimulator(MCInterface):
             timedOut = timedOut
         )
         status = self.getMotorStatus()
-        pos = self.getPosition()
+        pos = self.getPosition(cached = False)
         # self.logger.debug(f"{status.getText()} {pos.getText()}")
         if (not timedOut and not status.inMotion() and pos == self.nextPos):
             result.success = True

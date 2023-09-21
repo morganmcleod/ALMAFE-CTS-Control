@@ -20,6 +20,7 @@ class ListResponse(BaseModel):
 class VersionResponse(BaseModel):
     name:str
     apiVersion:str
+    gitBranch:str
     gitCommit:str
     success:bool
     
@@ -47,6 +48,12 @@ def prepareListResponse(items:List[Any] = None, callback:str = None):
     :return FastAPI.Response or dict{items, success}
     '''
     # prepare result:
-    result = ListResponse(items = items if items else [],
-                          success = 'true' if items else 'false')
+    if items and items == []:
+        success = 'true'
+    elif items is None:
+        success = 'false'
+    else:
+        success = 'true' if items else 'false'
+
+    result = ListResponse(items = items if items else [], success = success)
     return prepareResponse(result, callback)

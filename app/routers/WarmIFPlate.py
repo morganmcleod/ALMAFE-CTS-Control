@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from hardware.WarmIFPlate import warmIFPlate
-from schemas.common import SingleFloat
+from schemas.common import SingleFloat, SingleInt
 from Response import MessageResponse
 
 import logging
@@ -17,3 +17,6 @@ async def getInputSwitch():
 async def getYigFilter():
     return SingleFloat(value = warmIFPlate.yigFilter.getFrequency())
 
+@router.get("/attenuation", response_model = SingleInt)
+async def getAtten():
+    return SingleInt(value = warmIFPlate.attenuator.getValue())

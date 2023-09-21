@@ -161,6 +161,7 @@ class ScanStatus(BaseModel):
     scanComplete: bool = False
     measurementComplete: bool = False
     activeScan: int = None
+    activeSubScanIndex: int = None
     activeSubScan: str = None
     message: str = None
     error: bool = False
@@ -176,10 +177,11 @@ class ScanStatus(BaseModel):
 class Raster(BaseModel):
     key: int = 0                    # keyBeamPattern
     index: int = 0
-    startPos:Position = Position()
+    startPos: Position = Position()
     xStep: float = 0
-    amplitude:List[float] = []
-    phase:List[float] = []
+    amplitude: List[float] = []
+    phase: List[float] = []
+    complete: bool = False
 
     def __eq__(self, other):
         return self.index == other.index and self.key == other.key

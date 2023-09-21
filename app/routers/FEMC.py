@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from Response import MessageResponse
 from schemas.common import SingleInt, SingleFloat
 import hardware.FEMC as FEMC
+from typing import List
 
 router = APIRouter(prefix="/femc")
 
@@ -11,11 +12,14 @@ def getFemcVersion() -> str:
 
 @router.get("/ambsiversion", response_model = MessageResponse)
 def getFemcVersion() -> str:
-    return MessageResponse(message = FEMC.femcDevice.getAmbsiSoftwareRev(), success = True)
+    return MessageResponse(message = FEMC.femcDevice.getAmbsiVersion(), success = True)
 
-@router.get("/esnstring", response_model = MessageResponse)
-async def getEsnString():
-    return MessageResponse(message = FEMC.femcDevice.getEsnString(), success = True)
+@router.get("/esnlist", response_model = List[str])
+async def getEsnList():
+    return [
+        f"{esn[0]:02X} {esn[1]:02X} {esn[2]:02X} {esn[3]:02X} {esn[4]:02X} {esn[5]:02X} {esn[6]:02X} {esn[7]:02X}"
+        for esn in FEMC.femcDevice.getEsnList()
+    ]
 
 @router.get("/numtransactions", response_model = SingleInt)
 async def getErrorCount():
