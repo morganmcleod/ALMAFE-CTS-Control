@@ -33,6 +33,7 @@ class CartAssembly():
             self.setConfig(configId)
         
     def reset(self):
+        self.serialNum = None
         self.configId = self.keysPol0 = self.keysPol1 = None
         self.mixerParam01 = None
         self.mixerParam02 = None
@@ -45,6 +46,11 @@ class CartAssembly():
         self.reset()
         if configId == 0:
             return True
+        configRecords = DB.read(keyColdCart = configId)
+        if not configRecords:
+            return False
+        self.serialNum = configRecords[0].serialNum
+
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
         if self.keysPol0 and self.keysPol1:
