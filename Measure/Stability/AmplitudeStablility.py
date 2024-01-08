@@ -64,6 +64,7 @@ class AmplitudeStability():
         self.dataSources = {}
         self.timeSeriesList = []
         self.plotIds = []
+        self.testResult = None
         self.timeSeries = TimeSeries(startTime = datetime.now(), dataUnits = Units.VOLTS)
 
     def setDataSources(self, sources: Dict[DataSource, Any]):
@@ -115,6 +116,11 @@ class AmplitudeStability():
         self.voltMeter.configureAveraging(Function.DC_VOLTAGE, 1)
         self.warmIFPlate.attenuator.setValue(3)
         self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+
+        success, msg = self.__updateTestResult()
+        if not success:
+            self.measurementStatus.setStatusMessage(msg)
+                
         loSteps = makeSteps(self.settings.loStart, self.settings.loStop, self.settings.loStep)
         for freqLO in loSteps:
             if self.stopNow:
@@ -128,7 +134,7 @@ class AmplitudeStability():
             self.measurementStatus.setComplete(step = False)
             success, msg = self.__runOneLO(freqLO)
             self.measurementStatus.setComplete(step = True)
-
+        
             if not success:
                 self.measurementStatus.setError(True)
                 self.measurementStatus.setStatusMessage(msg)
@@ -137,27 +143,16 @@ class AmplitudeStability():
                 self.logger.info(msg)
         
         # create ensemble plot:
-        self.__plotEnsemble()
-                
-        # create or update the record in TestResults table:
-        testResult = TestResult(
-            fkCartTests = self.cartTest.key,
-            dataStatus = DataStatus.PROCESSED,
-            whenProcessed = datetime.now(),
-            measurementSW = self.swVersion,
-            description = self.cartTest.description,
-            timeStamp = datetime.now(),
-            plots = self.plotIds)
-        
-        testResult = self.DB_TR.createOrUpdate(testResult)
-        
-        # check that testResult succeeded:
-        if not testResult:
-            msg = 'Error saving TestResult record.'
-            self.logger.error(msg)
+        success, msg = self.__plotEnsemble()
+        if not success:
             self.measurementStatus.setStatusMessage(msg)
         else:
-            self.measurementStatus.setStatusMessage("Finished")
+            success, msg = self.__updateTestResult(DataStatus.PROCESSED)
+            if not success:
+                self.measurementStatus.setStatusMessage(msg)
+            else:
+                self.measurementStatus.setStatusMessage("Finished")
+
         self.measurementStatus.setMeasuring(None)
         self.measurementStatus.setComplete(all = True)
         self.finished = True
@@ -204,7 +199,9 @@ class AmplitudeStability():
                 self.warmIFPlate.inputSwitch.setPolAndSideband(pol, sideband)
                 success, msg = self.__acquire(freqLO, pol, sideband)
                 if success:
-                    success, msg = self.__plotOneLO(freqLO, pol, sideband)    
+                    success, msg = self.__plotOneLO(freqLO, pol, sideband)
+                    if success:
+                        success, msg = self.__updateTestResult()    
 
         return success, msg
 
@@ -306,6 +303,8 @@ class AmplitudeStability():
         return success, msg
                             
     def __plotEnsemble(self):
+        success = True
+        msg = ""
         if len(self.timeSeriesList) > 1:            
             plotEls = {
                 PlotEl.TITLE : "Amplitude stability",
@@ -319,7 +318,27 @@ class AmplitudeStability():
                 plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = f"Ensemble plot for {self.cartTest.key}"))
                 if plotId:
                     self.plotIds.append(plotId)
+        return success, msg
 
+    def __updateTestResult(self, dataStatus = DataStatus.MEASURED) -> Tuple[bool, str]:
+        # create or update the record in TestResults table:
+        if not self.testResult:
+            self.testResult = TestResult(
+                fkCartTests = self.cartTest.key,
+                dataStatus = dataStatus,
+                measurementSW = self.swVersion,
+                description = self.cartTest.description
+            )
+        
+        self.testResult.plots = self.plotIds
+        self.testResult.timeStamp = datetime.now()
+        self.testResult = self.DB_TR.createOrUpdate(self.testResult)
+        if not self.testResult:
+            msg = 'Error saving TestResult record.'
+            self.logger.error(msg)
+            return False, msg
+        else:
+            return True, ""
 
     def __delayAfterLock(self):
         success = True
