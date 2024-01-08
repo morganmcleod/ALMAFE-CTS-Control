@@ -1,36 +1,52 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, WebSocket, WebSocketDisconnect
 from Response import MessageResponse
-from .LO import router as loRouter, getTarget
-import hardware.FEMC as FEMC
-import hardware.NoiseTemperature as NT
-import hardware.BeamScanner as BeamScanner
-import hardware.WarmIFPlate as WarmIFPlate
+from .LO import router as loRouter
+from hardware.FEMC import rfSrcDevice
+from hardware.NoiseTemperature import powerMeter
+from hardware.BeamScanner import pna
+from hardware.WarmIFPlate import warmIFPlate
 from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
-
-async def getRFInfo():
-    return {"device": FEMC.rfSrcDevice, "name": "RF Source"}
+from .ConnectionManager import ConnectionManager
+import asyncio
+import logging
 
 router = APIRouter()
 router.include_router(loRouter)
+manager = ConnectionManager()
+logger = logging.getLogger("ALMAFE-CTS-Control")
+
+@router.websocket("/auto_rf/power_ws")
+async def websocket_rf_power(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        lastValue = None
+        while True:
+            if rfSrcDevice.autoRfPowerValue is None:
+                lastValue = None
+            elif rfSrcDevice.autoRfPowerValue != lastValue:
+                lastValue = rfSrcDevice.autoRfPowerValue
+                await manager.send(rfSrcDevice.autoRfPowerValue, websocket)            
+            await asyncio.sleep(0.1)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /auto_rf/power_ws")
 
 @router.put("/auto_rf/meter", response_model = MessageResponse)
 async def set_AutoRFMeter(request: Request, freqIF: float = 10, target: float = -5, atten: int = 22):
-    WarmIFPlate.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
-    WarmIFPlate.warmIFPlate.attenuator.setValue(atten)
-    WarmIFPlate.warmIFPlate.yigFilter.setFrequency(freqIF)
-    device, name = getTarget(request)
-    if not device.autoRFPower(NT.powerMeter, target, onThread = True):
-        return MessageResponse(message = "Auto RF Power Meter failed", success = False)
+    warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
+    warmIFPlate.attenuator.setValue(atten)
+    warmIFPlate.yigFilter.setFrequency(freqIF)
+    if not rfSrcDevice.autoRFPower(powerMeter, target, onThread = True):
+        return MessageResponse(message = "Auto RF power with meter failed", success = False)
     else:
-        return MessageResponse(message = "Auto RF Power Meter done", success = True)
+        return MessageResponse(message = "Setting auto RF power with meter...", success = True)
     
 @router.put("/auto_rf/pna", response_model = MessageResponse)
 async def set_AutoRFPNA(request: Request, freqIF: float = 10, target: float = -5, atten: int = 22):
-    WarmIFPlate.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
-    WarmIFPlate.warmIFPlate.attenuator.setValue(atten)
-    WarmIFPlate.warmIFPlate.yigFilter.setFrequency(freqIF)
-    device, name = getTarget(request)
-    if not device.autoRFPower(BeamScanner.pna, target):
-        return MessageResponse(message = "Auto RF PNA failed", success = False)
+    warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)        
+    warmIFPlate.attenuator.setValue(atten)
+    warmIFPlate.yigFilter.setFrequency(freqIF)
+    if not rfSrcDevice.autoRFPower(pna, target, onThread = True):
+        return MessageResponse(message = "Auto RF power with PNA failed", success = False)
     else:
-        return MessageResponse(message = "Auto RF PNA done", success = True)
+        return MessageResponse(message = "Setting auto RF power with PNA...", success = True)

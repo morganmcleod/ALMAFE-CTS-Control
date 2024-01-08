@@ -3,55 +3,62 @@ from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.DMM.HP34401 import HP34401, Function, AutoZero
 from CTSDevices.FEMC.CartAssembly import CartAssembly
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots
-from DBBand6Cart.AmplitudeStability import AmplitudeStability as AmplitudeStability_DB
-from DBBand6Cart.schemas.AmplitudeStabilityRecord import AmplitudeStabilityRecord
+from DBBand6Cart.schemas.TestType import TestTypeIds
 from app.database.CTSDB import CTSDB
 from AmpPhaseDataLib.TimeSeriesAPI import TimeSeriesAPI
 from AmpPhaseDataLib.TimeSeries import TimeSeries
 from AmpPhaseDataLib.Constants import Units, DataSource, SpecLines, DataKind, PlotEl
 from AmpPhasePlotLib.PlotAPI import PlotAPI
+from AMB.LODevice import LODevice
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus
 from .schemas import TimeSeriesInfo
+from .SampleInterface import SampleInterface
+from .CalcDataInterface import CalcDataInterface, StabilityRecord
 
 from DebugOptions import *
 
 from typing import Any, Dict, Tuple
+from enum import Enum
 import concurrent.futures
 import logging
 import time
 from datetime import datetime
 from math import floor
 
-class AmplitudeStability():
+class MeasureStability():
 
     def __init__(self,
             loReference: SignalGenerator,
-            cartAssembly: CartAssembly,
+            cartAssembly: CartAssembly,            
             warmIFPlate: WarmIFPlate,
-            voltMeter: HP34401,
+            sampler: SampleInterface,
             tempMonitor: TemperatureMonitor,
-            measurementStatus: MeasurementStatus):
+            rfSrcDevice: LODevice,              # for phase stability only            
+            measurementStatus: MeasurementStatus,
+            calcDataInterface: CalcDataInterface
+        ):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.loReference = loReference
         self.cartAssembly = cartAssembly
         self.warmIFPlate = warmIFPlate
-        self.voltMeter = voltMeter
+        self.sampler = sampler
         self.tempMonitor = tempMonitor
+        self.rfSrcDevice = rfSrcDevice
         self.measurementStatus = measurementStatus
-        self.DB = AmplitudeStability_DB(driver = CTSDB())
+        self.DB = calcDataInterface
         self.DB_TR = TestResults(driver = CTSDB())
         self.DB_TRPlot = TestResultPlots(driver = CTSDB())
         self.timeSeriesAPI = None   # these must be created in the worker thread because SQLite
         self.plotAPI = None         #        
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.settings = None
+        self.signalIF = 10          # only used for phase stability
         branch = gitBranch()
         commit = gitVersion(branch = branch)
         self.swVersion = branch + ":" + commit[0:7]
@@ -63,12 +70,16 @@ class AmplitudeStability():
         self.finished = False
         self.dataSources = {}
         self.timeSeriesList = []
+        self.timeSeriesInfo = None
         self.plotIds = []
         self.testResult = None
-        self.timeSeries = TimeSeries(startTime = datetime.now(), dataUnits = Units.VOLTS)
-
-    def setDataSources(self, sources: Dict[DataSource, Any]):
-        self.dataSources = sources
+        self.units = self.sampler.getUnits()
+        startTime = datetime.now()
+        self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units[0])
+        if self.units[1]:
+            self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = self.units[1])
+        else:
+            self.timeSeries2 = None    
 
     def start(self, cartTest: CartTest) -> int:
         self.__reset()
@@ -79,11 +90,12 @@ class AmplitudeStability():
         else:
             self.cartTest.key = 1
 
+        self.dataSources[DataSource.DATA_SOURCE] = f"CTS2 test ID {self.cartTest.key}"
         self.dataSources[DataSource.CONFIG_ID] = cartTest.configId
         self.dataSources[DataSource.SERIALNUM] = self.cartAssembly.serialNum
-        self.dataSources[DataSource.DATA_KIND] = DataKind.AMPLITUDE.value
+        self.dataSources[DataSource.DATA_KIND] = self.sampler.getDataKind().value
         self.dataSources[DataSource.TEST_SYSTEM] = cartTest.testSysName
-        self.dataSources[DataSource.UNITS] = Units.VOLTS_SQ.value
+        self.dataSources[DataSource.UNITS] = self.units[0].value
         self.dataSources[DataSource.T_UNITS] = Units.KELVIN.value
         self.dataSources[DataSource.OPERATOR] = cartTest.operator
         self.dataSources[DataSource.NOTES] = cartTest.description
@@ -93,9 +105,9 @@ class AmplitudeStability():
         self.stopNow = False
         self.finished = False
         self.futures = []
+        self.futures.append(self.executor.submit(self.__run))
         self.measurementStatus.setStatusMessage("Started")
         self.measurementStatus.setError(False)
-        self.futures.append(self.executor.submit(self.__run))
         return self.cartTest.key
 
     def stop(self):
@@ -110,12 +122,14 @@ class AmplitudeStability():
         msg = ""
         self.timeSeriesAPI = TimeSeriesAPI()    # these must be created in the worker thread because SQLite
         self.plotAPI = PlotAPI()                #
-        self.measurementStatus.setComplete(all = False)
-        self.voltMeter.configureMeasurement(Function.DC_VOLTAGE)
-        self.voltMeter.configureAutoZero(AutoZero.OFF)
-        self.voltMeter.configureAveraging(Function.DC_VOLTAGE, 1)
-        self.warmIFPlate.attenuator.setValue(3)
-        self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.measurementStatus.setComplete(False)
+        self.sampler.configure()
+        self.warmIFPlate.attenuator.setValue(self.settings.attenuateIF)
+        if self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+            self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+            self.warmIFPlate.yigFilter.setFrequency(self.signalIF)
+        else:
+            self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
 
         success, msg = self.__updateTestResult()
         if not success:
@@ -127,14 +141,11 @@ class AmplitudeStability():
                 self.finished = True
                 self.measurementStatus.setStatusMessage("User stop")
                 self.measurementStatus.setMeasuring(None)
-                self.measurementStatus.setComplete(all = True)
+                self.measurementStatus.setComplete(True)
                 self.logger.info("User stop")
                 return
 
-            self.measurementStatus.setComplete(step = False)
-            success, msg = self.__runOneLO(freqLO)
-            self.measurementStatus.setComplete(step = True)
-        
+            success, msg = self.__runOneLO(freqLO)        
             if not success:
                 self.measurementStatus.setError(True)
                 self.measurementStatus.setStatusMessage(msg)
@@ -154,10 +165,13 @@ class AmplitudeStability():
                 self.measurementStatus.setStatusMessage("Finished")
 
         self.measurementStatus.setMeasuring(None)
-        self.measurementStatus.setComplete(all = True)
+        self.measurementStatus.setComplete(True)
         self.finished = True
 
     def __runOneLO(self, freqLO: float) -> Tuple[bool, str]:
+        success, msg = self.__rfSourceOff()
+
+        self.measurementStatus.setStatusMessage(f"Locking LO at {freqLO} GHz...")
         success, msg = self.cartAssembly.lockLO(self.loReference, freqLO)
         if not success:
             return success, msg
@@ -166,17 +180,14 @@ class AmplitudeStability():
         if not success:
             return False, "cartAssembly.setRecevierBias failed. Provide config ID?"
         
-        success = self.cartAssembly.setAutoLOPower()
-        if not success:
-            return False, "cartAssembly.setAutoLOPower failed"
+        if self.cartTest.fkTestType == TestTypeIds.AMP_STABILITY.value:
+            success, msg = self.__delayAfterLock()
+            if not success:
+                return success, msg
 
-        success, msg = self.__delayAfterLock()
-        if not success:
-            return success, msg
-
-        success = self.cartAssembly.setAutoLOPower()
-        if not success:
-            return False, "cartAssembly.setAutoLOPower failed"
+            success = self.cartAssembly.setAutoLOPower()
+            if not success:
+                return False, "cartAssembly.setAutoLOPower failed"
 
         pols = []
         if self.settings.measurePol0:
@@ -192,26 +203,45 @@ class AmplitudeStability():
 
         for pol in pols:
             for sideband in sidebands:
+                success = True
+                msg = ""
+                freqRF = 0
                 if self.stopNow:
                     self.finished = True
                     return True, "User stop"
 
+                success, msg = self.__rfSourceOff()                
                 self.warmIFPlate.inputSwitch.setPolAndSideband(pol, sideband)
-                success, msg = self.__acquire(freqLO, pol, sideband)
-                if success:
-                    success, msg = self.__plotOneLO(freqLO, pol, sideband)
+                    
+                if self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+                    success = self.cartAssembly.setAutoLOPower()
+                    freqRF = freqLO - self.signalIF if sideband.lower() == 'lsb' else freqLO + self.signalIF
+                    self.measurementStatus.setStatusMessage(f"Locking RF at {freqRF} GHz...")
+                    
+                    success, msg = self.__lockRF(freqRF)
                     if success:
-                        success, msg = self.__updateTestResult()    
+                        self.measurementStatus.setStatusMessage("Adjusting RF level...")
+                        
+                        success, msg = self.__rfSourceAutoLevel()
+                        if success:
+                            self.__delayAfterLock()
+                
+                if success:
+                    success, msg = self.__acquire(freqLO, freqRF, pol, sideband)
+                    if success:
+                        success, msg = self.__plotOneLO(freqLO, freqRF, pol, sideband)
+                        if success:
+                            success, msg = self.__updateTestResult()
 
         return success, msg
 
-    def __acquire(self, freqLO: float, pol: int, sideband: int) -> Tuple[bool, str]:        
+    def __acquire(self, freqLO: float, freqRF: float, pol: int, sideband: int) -> Tuple[bool, str]:        
         success = True
         msg = ""
         
-        self.timeSeries = self.timeSeriesAPI.startTimeSeries(startTime = datetime.now(), dataUnits = Units.VOLTS)
+        self.timeSeries = self.timeSeriesAPI.startTimeSeries(startTime = datetime.now(), dataUnits = self.units[0])
         if not self.timeSeries.tsId:
-            return False, "AmplitudeStability.__acquire: TimeSeriesAPI.startTimeSeries error"
+            return False, "MeasureStability.__acquire: TimeSeriesAPI.startTimeSeries error"
         
         self.measurementStatus.setStatusMessage("Measuring...")
         self.measurementStatus.setChildKey(self.timeSeries.tsId)
@@ -228,7 +258,11 @@ class AmplitudeStability():
             temp, err = self.tempMonitor.readSingle(self.settings.sensorAmbient)
             if err != 0 and not temperatureError:
                 temperatureError = err
-            self.timeSeries.appendData(self.voltMeter.readSinglePoint(), temp, timeStamps = datetime.now())
+            sample = self.sampler.getSample()
+            timeStamp = datetime.now()
+            self.timeSeries.appendData(sample[0], temp, timeStamps = timeStamp)
+            if sample[1]:
+                self.timeSeries2.appendData(sample[1], temp, timeStamps = timeStamp)                
             if self.stopNow:
                 done = self.finished = True
                 msg = "User stop"
@@ -239,81 +273,126 @@ class AmplitudeStability():
                 time.sleep(sampleEnd - now)
 
         if temperatureError:
-            self.logger.error(f"AmplitudeStability.__acquire: temperature monitor returned {temperatureError}")
+            self.logger.error(f"MeasureStability.__acquire: temperature monitor returned {temperatureError}")
 
         if not self.timeSeries.isDirty():
             success = False
-            msg = "AmplitudeStability.__acquire: No data"
+            msg = "MeasureStability.__acquire: No data"
         
         else:
             self.timeSeriesAPI.finishTimeSeries(self.timeSeries)
-            self.timeSeriesList.append(
-                TimeSeriesInfo(
-                    key = self.timeSeries.tsId,
-                    freqLO = freqLO,
-                    pol = pol,
-                    sideband = sideband,
-                    timeStamp = datetime.now(),
-                    dataStatus = DataStatus.PROCESSED.name
-                )
+            self.timeSeriesInfo = TimeSeriesInfo(
+                key = self.timeSeries.tsId,
+                freqLO = freqLO,
+                pol = pol,
+                sideband = sideband,
+                timeStamp = datetime.now(),
+                dataStatus = DataStatus.PROCESSED.name
             )
+            self.timeSeriesList.append(self.timeSeriesInfo)
         return success, msg
 
-    def __plotOneLO(self, freqLO: float, pol: int, sideband: str) -> Tuple[bool, str]:
+    def __plotOneLO(self, freqLO: float, freqRF: float, pol: int, sideband: str) -> Tuple[bool, str]:
         success = True
         msg = ""
+        self.measurementStatus.setStatusMessage("Plotting...")
 
-        self.timeSeriesAPI.setDataSource(self.timeSeries.tsId, DataSource.LO_GHZ, freqLO)   
+        self.timeSeriesAPI.setDataSource(self.timeSeries.tsId, DataSource.LO_GHZ, freqLO)
         self.timeSeriesAPI.setDataSource(self.timeSeries.tsId, DataSource.SUBSYSTEM, f"pol{pol} {sideband}")
         for key in self.dataSources.keys():
             self.timeSeriesAPI.setDataSource(self.timeSeries.tsId, key, self.dataSources[key])            
 
-        plotEls = {
-            PlotEl.TITLE : f"Amplitude stability",
-            PlotEl.SPEC_LINE1 : SpecLines.BAND6_AMP_STABILITY1, 
-            PlotEl.SPEC_LINE2 : SpecLines.BAND6_AMP_STABILITY2
-        }        
-        success = self.plotAPI.plotAmplitudeStability(self.timeSeries.tsId, plotEls)
+        plotEls = { PlotEl.TITLE : f"Time series" }
+        unwrapPhase = self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value
+        if self.plotAPI.plotTimeSeries(self.timeSeries.tsId, None, plotEls, unwrapPhase = unwrapPhase):
+            plotDescription = f"Time series LO={freqLO} Pol{pol} {sideband}"
+            plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
+            if plotId:
+                self.plotIds.append(plotId)
+                self.timeSeriesInfo.timeSeriesPlot = plotId
+            else:
+                self.logger.error("MeasureStability.__plotOneLO: Error plotting time series.")
+
+        if self.cartTest.fkTestType == TestTypeIds.AMP_STABILITY.value:
+            plotDescription = f"Amplitude stability LO={freqLO} Pol{pol} {sideband}"
+            plotEls = {
+                PlotEl.TITLE : "Amplitude stability",
+                PlotEl.SPEC_LINE1 : SpecLines.BAND6_AMP_STABILITY1, 
+                PlotEl.SPEC_LINE2 : SpecLines.BAND6_AMP_STABILITY2
+            }
+            success = self.plotAPI.plotAmplitudeStability(self.timeSeries.tsId, None, plotEls)
+        
+        elif self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+            plotDescription = f"Phase stability LO={freqLO} Pol{pol} {sideband}"
+            plotEls = {
+                PlotEl.TITLE : "Phase stability",
+                PlotEl.SPEC_LINE1 : SpecLines.BAND6_PHASE_STABILITY1, 
+                PlotEl.SPEC_LINE2 : SpecLines.BAND6_PHASE_STABILITY2,
+                PlotEl.SPEC2_NAME : "CTS test limit"
+            }
+            success = self.plotAPI.plotPhaseStability(self.timeSeries.tsId, None, plotEls)
+        
+        else:
+            raise ValueError(f"Unsupported fkTestType: {self.cartTest.fkTestType}")
+        
         if not success:
-            msg = "AmplitudeStability.__plotOneLO: Error plotting amplitude stability"
+            msg = "MeasureStability.__plotOneLO: Error plotting stability"
         else:
             result = self.plotAPI.getCalcTrace()            
-            records = [AmplitudeStabilityRecord(
+            records = [StabilityRecord(
                 fkCartTest = self.cartTest.key,
                 fkRawData = self.timeSeries.tsId,
+                timeStamp = datetime.now(),
                 freqLO = freqLO,
+                freqCarrier = freqRF,
                 pol = pol,
                 sideband = 0 if sideband.lower() == 'lsb' else 1,
                 time = x,
-                allanVar = y,
+                allan = y,
                 errorBar = e
             ) for x, y, e in zip(result['x'], result['y'], result['yError'])]
             self.DB.create(records)
-                
-            plotDescription = f"Amplitude stability CCA {self.cartAssembly.serialNum} LO={freqLO} pol{pol} {sideband}"
         
             plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
             if plotId:
                 self.plotIds.append(plotId)
+                self.timeSeriesInfo.allanPlot = plotId
             else:
                 success = False
-                msg = "AmplitudeStability.__plotOneLO: Error creating TestResultPlot record."
+                msg = "MeasureStability.__plotOneLO: Error creating TestResultPlot record."
 
         self.timeSeries.reset()
+        if self.timeSeries2:
+            self.timeSeries2.reset()
         return success, msg
                             
     def __plotEnsemble(self):
         success = True
         msg = ""
+        self.measurementStatus.setStatusMessage("Plotting...")
+                
         if len(self.timeSeriesList) > 1:            
-            plotEls = {
-                PlotEl.TITLE : "Amplitude stability",
-                PlotEl.SPEC_LINE1 : SpecLines.BAND6_AMP_STABILITY1, 
-                PlotEl.SPEC_LINE2 : SpecLines.BAND6_AMP_STABILITY2
-            }        
-            success = self.plotAPI.plotAmplitudeStability([ts.key for ts in self.timeSeriesList], plotEls)
+            if self.cartTest.fkTestType == TestTypeIds.AMP_STABILITY.value:
+                plotEls = {
+                    PlotEl.TITLE : "Amplitude stability",
+                    PlotEl.SPEC_LINE1 : SpecLines.BAND6_AMP_STABILITY1, 
+                    PlotEl.SPEC_LINE2 : SpecLines.BAND6_AMP_STABILITY2
+                }      
+                success = self.plotAPI.plotAmplitudeStability([ts.key for ts in self.timeSeriesList], None, plotEls)
+            elif self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+                plotEls = {
+                    PlotEl.TITLE : "Phase stability",
+                    PlotEl.SPEC_LINE1 : SpecLines.BAND6_PHASE_STABILITY1, 
+                    PlotEl.SPEC_LINE2 : SpecLines.BAND6_PHASE_STABILITY2,
+                    PlotEl.SPEC2_NAME : "CTS test limit"
+                }
+                success = self.plotAPI.plotPhaseStability([ts.key for ts in self.timeSeriesList], None, plotEls)
+        
+            else:
+                raise ValueError(f"Unsupported fkTestType: {self.cartTest.fkTestType}")
+
             if not success:
-                msg = "AmplitudeStability.__plotEnsemble: Error plotting amplitude stability ensemble"
+                msg = "MeasureStability.__plotEnsemble: Error plotting amplitude stability ensemble"
             else:
                 plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = f"Ensemble plot for {self.cartTest.key}"))
                 if plotId:
@@ -365,8 +444,28 @@ class AmplitudeStability():
         pll = self.cartAssembly.loDevice.getLockInfo()
         if not pll['isLocked'] and not SIMULATE:
             success = False
-            msg = "AmplitudeStability.__delayAfterLock LO unlocked"
+            msg = "MeasureStability.__delayAfterLock LO unlocked"
         return success, msg
+    
+    def __rfSourceOff(self) -> Tuple[bool, str]:
+        if self.rfSrcDevice:
+            self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
+        return (True, "")
+
+    def __lockRF(self, freqRF: float) -> Tuple[bool, str]:
+        if not self.rfSrcDevice:
+            raise ValueError("__lockRF: no rfSrcDevice")
+        self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
+        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(freqRF)
+        if not SIMULATE:
+            wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
+        return (wcaFreq != 0, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")        
+    
+    def __rfSourceAutoLevel(self) -> Tuple[bool, str]:    
+        if not self.rfSrcDevice:
+            raise ValueError("__rfSourceAutoLevel: no rfSrcDevice")    
+        success = self.rfSrcDevice.autoRFPower(self.sampler.pna, target = self.settings.targetLevel)
+        return (success, "__rfSourceAutoLevel")
 
     def getTimeSeries(self, 
             first: int = 0, 

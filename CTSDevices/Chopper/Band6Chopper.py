@@ -4,6 +4,8 @@ import time
 from CTSDevices.Common.RemoveDelims import removeDelims
 from typing import Tuple
 import logging
+import threading
+from DebugOptions import *
 
 class State(Enum):
     OPEN = 0
@@ -25,22 +27,34 @@ class Chopper():
         :raises Exception: If the serial port cannot be opened.
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.inst = serial.Serial(
-            resource, 
-            9600, 
-            timeout=0.2, 
-            write_timeout=0.1, 
-            parity=serial.PARITY_NONE)
-        if not self.inst.is_open:
+        try:
+            self.inst = serial.Serial(
+                resource, 
+                9600, 
+                timeout=0.2, 
+                write_timeout=0.1, 
+                parity=serial.PARITY_NONE)
+            if not self.inst.is_open:
+                if SIMULATE:
+                    return
+                raise Exception("Chopper cannot open serial port " + resource)
+        except:
+            if SIMULATE:
+                return
             raise Exception("Chopper cannot open serial port " + resource)
         self.inst.reset_input_buffer()
         self.inst.reset_output_buffer()
-        if findOpen:
-            self.reset()
+        self.reset(onThread = True)
 
-    def reset(self):
+    def reset(self, onThread: bool = False):
         """Reset the chopper to a known and indexed state, with default settings for open/close movement.
         """
+        if onThread:
+            threading.Thread(target = self._implReset, daemon = True).start()
+        else:
+            self._implReset()
+
+    def _implReset(self):
         self.inst.reset_input_buffer()
         self.inst.reset_output_buffer()
         self.__hardStop()
@@ -241,7 +255,7 @@ class Chopper():
         read = removeDelims(read)
         if len(read) >= 3:
             currPos = int(float(read[2]))
-            self.logger.debug("currPos", currPos)
+            self.logger.debug(f"Chopper: currPos={currPos}")
             return currPos
         else:
             return 0
@@ -266,10 +280,13 @@ class Chopper():
         :param str cmd: string to write
         :return str: string returned by the motor controller
         """
-        cmd = bytes(cmd, 'utf8')
-        num = self.inst.write(cmd)
-        time.sleep(0.1)
-        num = self.inst.in_waiting
-        read = self.inst.read(num)
-        self.logger.debug(read)
-        return read.decode()
+        try:
+            cmd = bytes(cmd, 'utf8')
+            num = self.inst.write(cmd)
+            time.sleep(0.1)
+            num = self.inst.in_waiting
+            read = self.inst.read(num)
+            self.logger.debug(read)
+            return read.decode()
+        except Exception as e:
+            self.logger.exception(e)

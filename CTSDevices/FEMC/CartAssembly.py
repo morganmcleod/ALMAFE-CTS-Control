@@ -4,8 +4,6 @@ from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
-from app.routers.AppEvents import Event, addEvent
-
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParams
@@ -40,6 +38,7 @@ class CartAssembly():
         self.mixerParam11 = None
         self.mixerParam12 = None
         self.freqLOGHz = 0
+        self.autoLOPol = None
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -120,9 +119,12 @@ class CartAssembly():
     def __autoLOPowerSequence(self, pol0: bool, pol1: bool):
         success = True
         if pol0:
+            self.autoLOPol = 0
             success = self.__autoLOPower(0) and success
         if pol1:
+            self.autoLOPol = 1
             success = self.__autoLOPower(1) and success
+        self.autoLOPol = None
         return success
 
     def __autoLOPower(self, pol) -> bool:
@@ -143,9 +145,8 @@ class CartAssembly():
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
             return False
-        sisCurrent = abs(sis['Ij'])
-        addEvent(Event(type = "sisCurrent", iter = 0, x = paOutput, y = sisCurrent))
 
+        sisCurrent = abs(sis['Ij'])
         tprev = time.time()
         tsum = 0
         while not controller.isComplete():
@@ -155,12 +156,9 @@ class CartAssembly():
             time.sleep(0.1)
             sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
             sisCurrent = abs(sis['Ij'])
-            addEvent(Event(type = "sisCurrent", iter = controller.iter, x = paOutput, y = sisCurrent))
             self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
             tsum += (time.time() - tprev)
             tprev = time.time()
-        
-        addEvent(Event(type = "sisCurrent", iter = "complete"))
         
         iterTime = tsum / (controller.iter + 1)
         self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")

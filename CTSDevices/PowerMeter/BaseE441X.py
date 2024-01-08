@@ -26,7 +26,7 @@ class BaseE441X():
         if self.inst.interface_type == pyvisa.constants.InterfaceType.asrl:
             self.inst.end_input = pyvisa.constants.termination_char
             self.inst.end_output = pyvisa.constants.termination_char
-            self.inst.write(":SYST:COMM:SER:TRAN:ECHO\sOFF")
+            self.inst.write(":SYST:COMM:SER:TRAN:ECHO\sOFF;")
         ok = True
         if ok and idQuery:
             ok = self.idQuery()
@@ -67,8 +67,9 @@ class BaseE441X():
 
         :return bool: True if instrument responed to Operation Complete query
         """
-        if self.inst.query("*RST;*OPC?"):
-            self.inst.write("*CLS;*ESE 60;:STAT:OPER:NTR 65535;:FORM:READ:DATA ASC")
+        opc = removeDelims(self.inst.query("*RST;*OPC?"))
+        if opc and opc[0]:
+            self.inst.write("*CLS;*ESE 60;:STAT:OPER:NTR 65535;:FORM:READ:DATA ASC;")
             return True
         else:
             return False
@@ -91,9 +92,9 @@ class BaseE441X():
         if channel == Channel.B and not self.twoChannel:
             return False
         self.inst.timeout = 25000
-        ret = self.inst.query(f"CAL{channel.value + 1}:ZERO:AUTO ONCE;*OPC?")
+        opc = removeDelims(self.inst.query(f"CAL{channel.value}:ZERO:AUTO ONCE;*OPC?"))        
         self.inst.timeout = self.DEFAULT_TIMEOUT
-        return True if ret else False
+        return opc and opc[0]
 
     def setOutputRef(self, enable:bool):
         """Enable/disable the power ref output: 50 MHz at 0 dBm
@@ -101,9 +102,9 @@ class BaseE441X():
         :param bool enable
         :return bool: True if instrument responed to Operation Complete query
         """
-        self.inst.write(f"OUTP:ROSC {'ON' if enable else 'OFF'}")
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        self.inst.write(f"OUTP:ROSC {'ON' if enable else 'OFF'};")
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def configureTrigger(self, trigger = Trigger.IMMEDIATE, channel = Channel.A, delayAutoState = True):
         """Configure power meter triggering
@@ -115,10 +116,10 @@ class BaseE441X():
         """
         if channel == Channel.B and not self.twoChannel:
             return False
-        self.inst.write(f":TRIG{channel.value + 1}:DEL:AUTO {'ON' if delayAutoState else 'OFF'};")
-        self.inst.write(f":TRIG{channel.value + 1}:SOUR {trigger.value}")
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        self.inst.write(f":TRIG{channel.value}:DEL:AUTO {'ON' if delayAutoState else 'OFF'};")
+        self.inst.write(f":TRIG{channel.value}:SOUR {trigger.value};")
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def initContinuous(self, state = True, channel = Channel.A):
         """Initiate Continuous: set the instrument for either single or contiunous trigger cycles
@@ -129,9 +130,22 @@ class BaseE441X():
         """
         if channel == Channel.B and not self.twoChannel:
             return False
-        self.inst.write(f"INIT{channel.value + 1}:CONT {'ON' if state else 'OFF'};")
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        self.inst.write(f"INIT{channel.value}:CONT {'ON' if state else 'OFF'};")
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
+
+    def initImmediate(self, channel = Channel.A):
+        """Initiate Immediate: set the instrument for immediate trigger
+
+        :param bool state: If true trigger continuously, defaults to True
+        :param Channel channel: which channel to configure, defaults to Channel.A
+        :return bool: True if instrument responed to Operation Complete query
+        """
+        if channel == Channel.B and not self.twoChannel:
+            return False
+        self.inst.write(f"INIT{channel.value}:IMM;")
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def configMeasurement(self, channel = Channel.A, resolution = 3, units = Unit.DBM):
         """Configure measurement options.
@@ -144,10 +158,10 @@ class BaseE441X():
         """
         if channel == Channel.B and not self.twoChannel:
             return False
-        m = channel.value + 1
-        self.inst.write(f":CONF{m} DEF,{resolution},(@{m});:UNIT{m}:POW {units.value}")
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        m = channel.value
+        self.inst.write(f":CONF{m} DEF,{resolution},(@{m});:UNIT{m}:POW {units.value};")
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def read(self, channel = Channel.A):
         """Read the instrument when it is running in continuous mode
@@ -157,4 +171,4 @@ class BaseE441X():
         """
         if channel == Channel.B and not self.twoChannel:
             return False
-        return float(self.inst.query(f"FETC{channel.value + 1}:POW:AC?"))
+        return float(self.inst.query(f"FETC{channel.value}:POW:AC?"))

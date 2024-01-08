@@ -7,11 +7,11 @@ from CTSDevices.Common.BinarySearchController import BinarySearchController
 from CTSDevices.PNA.PNAInterface import PNAInterface
 from CTSDevices.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
 from CTSDevices.SignalGenerator.Interface import SignalGenInterface
-from app.routers.AppEvents import Event, addEvent
 
 from typing import Optional, Union, Tuple
 import time
 import threading
+from DebugOptions import *
 
 class RFSource(LODevice):
     def __init__(
@@ -24,13 +24,14 @@ class RFSource(LODevice):
         ):
         super(RFSource, self).__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
+        self.autoRfPowerValue = None            # for websocket reporting to client
 
-    def lockRF(self, rfReference: SignalGenInterface, freqRF: float) -> Tuple[bool, str]:
+    def lockRF(self, rfReference: SignalGenInterface, freqRF: float, sigGenAmplitude: float = 10.0) -> Tuple[bool, str]:
         self.selectLockSideband(self.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.setLOFrequency(freqRF)
         pllConfig = self.getPLLConfig()
         rfReference.setFrequency((freqRF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
-        rfReference.setAmplitude(16.0)
+        rfReference.setAmplitude(sigGenAmplitude)
         rfReference.setRFOutput(True)
         if not SIMULATE:
             wcaFreq, ytoFreq, ytoCourse = self.lockPLL()
@@ -69,32 +70,29 @@ class RFSource(LODevice):
 
         self.setPAOutput(self.paPol, setValue)
         if isPowerMeter:
-            power = meter.read()
+            self.autoRfPowerValue = meter.read()
         else:
-            power, _ = meter.getAmpPhase()
-        if not power:
+            self.autoRfPowerValue, _ = meter.getAmpPhase()
+        if not self.autoRfPowerValue:
             return False
-        addEvent(Event(type = "rfPower", iter = 0, x = setValue, y = power))
 
         tprev = time.time()
         tsum = 0
         while not controller.isComplete():
-            controller.process(power)
+            controller.process(self.autoRfPowerValue)
             setValue = controller.output
             self.setPAOutput(self.paPol, setValue)
             time.sleep(0.1)
             if isPowerMeter:
-                power = meter.read()
+                self.autoRfPowerValue = meter.read()
             else:
-                power, _ = meter.getAmpPhase()
-            addEvent(Event(type = "rfPower", iter = controller.iter, x = setValue, y = power))
-            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={power:.2f} {units}")
+                self.autoRfPowerValue, _ = meter.getAmpPhase()
+            self.logger.info(f"iter={controller.iter} setValue={setValue:.1f}%, power={self.autoRfPowerValue:.2f} {units}")
             tsum += (time.time() - tprev)
             tprev = time.time()
 
-        addEvent(Event(type = "rfPower", iter = "complete"))
-
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"RFSource.__autoRFPower: setValue={setValue:.1f}%, power={power:.2f} {units}, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
+        self.logger.info(f"RFSource.__autoRFPower: setValue={setValue:.1f}%, power={self.autoRfPowerValue:.2f} {units}, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
+        self.autoRfPowerValue = None
         return controller.success
   

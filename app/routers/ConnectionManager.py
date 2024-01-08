@@ -1,9 +1,11 @@
 from fastapi import WebSocket
+from websockets.exceptions import ConnectionClosed
 from typing import List, Any
-
+import logging
 class ConnectionManager():
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self.logger = logging.getLogger("ALMAFE-CTS-Control")
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -15,12 +17,14 @@ class ConnectionManager():
     async def send(self, message: Any, websocket: WebSocket):
         try:
             await websocket.send_json(message)
-        except Exception as e:
+        except ConnectionClosed:
             pass
+        except Exception as e:
+            self.logger.exception("ConnectionManager.send", e)
 
     async def broadcast(self, message: Any):
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception as e:
+                self.logger.exception("ConnectionManager.broadcast", e)

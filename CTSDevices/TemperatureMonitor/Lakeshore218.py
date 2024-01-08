@@ -3,6 +3,7 @@ import re
 import pyvisa
 import logging
 import time
+from threading import Lock
 
 class TemperatureMonitor():
     DEFAULT_TIMEOUT = 10000
@@ -15,10 +16,13 @@ class TemperatureMonitor():
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
+        self.lock = Lock()        
         rm = pyvisa.ResourceManager()
         try:
             self.inst = rm.open_resource(resource)
             self.inst.timeout = self.DEFAULT_TIMEOUT
+            self.inst.read_termination = '\n'
+            self.inst.write_termination = '\n'
             ok = True
             if ok and idQuery:
                 ok = self.idQuery()
@@ -45,8 +49,9 @@ class TemperatureMonitor():
 
         mfr = None
         model = None
-        response = self.inst.query("*IDN?")
-        match = re.match(r"MODEL218", response, flags=re.IGNORECASE)
+        with self.lock:
+            response = self.inst.query("*IDN?\r")
+        match = re.search(r"MODEL218", response, flags=re.IGNORECASE)
         if match:
             mfr = "Lakeshore"
             model = match.group()
@@ -64,32 +69,50 @@ class TemperatureMonitor():
         if not self.inst:
             return False
 
-        self.inst.write("*RST")
+        with self.lock:
+            self.inst.write("*RST\r")
         time.sleep(0.25)
-        self.inst.write("DFLT 99")
+        with self.lock:
+            self.inst.write("DFLT 99\r")
         return True
 
     def readSingle(self, input: int):
         if not 1 <= input <= 8:
             return -1.0, 1
-        temp = self.inst.query(f"KRDG ? {input}")
-        temp = float(removeDelims(temp)[0])
-        err = self.inst.query(f"RDGST? {input}")
-        err = int(removeDelims(err)[0])
+        with self.lock:
+            temp = self.inst.query(f"KRDG? {input}\r")
+        time.sleep(0.25)
+        with self.lock:
+            err = self.inst.query(f"RDGST? {input}\r")
+        try:
+            temp = float(removeDelims(temp)[0])
+        except:
+            temp = -1.0
+        try:
+            err = int(removeDelims(err)[0])
+        except:
+            err = 0
         if err != 0:
             temp = -1
         return temp, err
 
     def readAll(self):
-        temps = self.inst.query("KRDG ? 0")
-        temps = removeDelims(temps)
-        temps = [float(t) for t in temps]
-        # check for range errors for each sensor:
-        errors = []
-        for i in range(8):
-            err = self.inst.query(f"RDGST? {i + 1}")
-            err = int(removeDelims(err)[0])
-            if err != 0:
-                temps[i] = -1
-            errors.append(err)
+        with self.lock:
+            temps = self.inst.query("KRDG?\r")
+        time.sleep(0.25)
+        with self.lock:
+            errors = self.inst.query("RDGST?\r")
+        try:
+            temps = removeDelims(temps)            
+            temps = [float(temps[i]) for i in range(8)]
+        except:
+            return [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0], [1, 1, 1, 1, 1, 1, 1, 1]
+        try:
+            errors = removeDelims(errors)
+            errors = [int(errors[i]) for i in range(8)]
+        except:
+            errors = [0, 0, 0, 0, 0, 0, 0, 0]
+        for i in range(len(errors)):
+            if errors[i] != 0:
+                temps[i] = -1.0
         return temps, errors

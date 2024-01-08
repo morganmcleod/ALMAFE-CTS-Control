@@ -1,4 +1,5 @@
 from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
+from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
@@ -7,7 +8,7 @@ from DBBand6Cart.schemas.WarmIFNoise import DUT_Types, WarmIFNoise
 from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
 from app.database.CTSDB import CTSDB
 from DebugOptions import *
-
+from ..Shared.MeasurementStatus import MeasurementStatus
 from .schemas import CommonSettings, WarmIFSettings
 
 import concurrent.futures
@@ -21,28 +22,35 @@ class WarmIfNoise():
             warmIFPlate: WarmIFPlate, 
             powerMeter: PowerMeter,
             powerSupply: PowerSupply,
-            temperatureMonitor: TemperatureMonitor):
+            temperatureMonitor: TemperatureMonitor,
+            measurementStatus: MeasurementStatus):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.warmIFPlate = warmIFPlate
         self.powerMeter = powerMeter
         self.powerSupply = powerSupply
         self.temperatureMonitor = temperatureMonitor
+        self.measurementStatus = measurementStatus
         self.database = WarmIFNoiseData(driver = CTSDB())
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
-        self.__reset()
-
-    def __reset(self):
         self.commonSettings = None
         self.settings = None
+        self.finished = True
+        self.rawData = []
+
+    def reset(self):
         self.keyCartTest = 0
         self.stopNow = False
         self.finished = False
         self.rawData = []
 
-    def start(self):
-        self.stopNow = False
-        self.finished = False
+    def updateSettings(self, commonSettings = None):
+        if commonSettings is not None:
+            self.commonSettings = commonSettings
+
+    def start(self, keyCartTest: int):
+        self.reset()
+        self.keyCartTest = keyCartTest
         self.futures = []
         self.futures.append(self.executor.submit(self.__run))
 
@@ -56,11 +64,11 @@ class WarmIfNoise():
         self.powerSupply.setOutputEnable(False)
         self.powerSupply.setVoltage(self.settings.diodeVoltage)
         self.powerSupply.setCurrentLimit(self.settings.diodeCurrentLimit)
-        self.powerMeter.setUnits(Unit.DBM)
+        self.powerMeter.setUnits(Unit.W)
+        self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
         self.warmIFPlate.inputSwitch.setValue(InputSelect.NOISE_DIODE)
         if self.stopNow:
             self.finished = True
-            self.logger.info("User stop")
             return
         
         ifSteps = [
@@ -74,11 +82,13 @@ class WarmIfNoise():
         for freq in ifSteps:
             self.warmIFPlate.yigFilter.setFrequency(freq)
             for atten in attenSteps:
+                self.measurementStatus.setStatusMessage(f"Warm IF Noise: IF={freq:.2f} GHz, atten={atten} dB")
                 self.warmIFPlate.attenuator.setValue(atten)
-
+    
                 if self.stopNow:
+                    self.measurementStatus.setStatusMessage("User stop")
+                    self.measurementStatus.setComplete(True)
                     self.finished = True
-                    self.logger.info("User stop")
                     return
 
                 self.powerSupply.setOutputEnable(True)
@@ -87,10 +97,7 @@ class WarmIfNoise():
                 self.powerSupply.setOutputEnable(False)
                 time.sleep(0.25)
                 pCold = self.powerMeter.autoRead()
-                temps, errors = self.temperatureMonitor.readAll()
-                ambient = temps[self.commonSettings.sensorAmbient - 1]
-                tIFHot = temps[self.settings.sensorIfHot - 1]
-                tIFCold = temps[self.settings.sensorIfCold - 1]
+                ambient, err = self.temperatureMonitor.readSingle(self.commonSettings.sensorAmbient)
                 record = WarmIFNoise(
                     fkCartTest = self.keyCartTest,
                     fkDUT_Type = DUT_Types.BAND6_CARTRIDGE,
@@ -99,8 +106,6 @@ class WarmIfNoise():
                     pHot = pHot,
                     pCold = pCold,
                     tAmbient = ambient,
-                    tIFHot = tIFHot,
-                    tIFCold = tIFCold,
                     noiseDiodeENR = self.settings.diodeEnr
                 )
                 if not SIMULATE:
@@ -108,4 +113,5 @@ class WarmIfNoise():
                 else:
                     record.id = int(freq * 100 + atten)                
                 self.rawData.append(record)
+        self.measurementStatus.setStatusMessage("Warm IF Noise: Done.")
         self.finished = True

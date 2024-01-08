@@ -1,3 +1,4 @@
+from ..Common.RemoveDelims import removeDelims
 from .schemas import Channel, Trigger, Unit, StdErrConfig, StdErrResult
 from .BaseE441X import BaseE441X
 from time import time
@@ -46,13 +47,13 @@ class PowerMeter(BaseE441X):
         :return bool: True if instrument responed to Operation Complete query
         """
         if not channel or channel == Channel.A:
-            self.inst.write(f"UNIT1:POW {units.value}")
+            self.inst.write(f"UNIT1:POW {units.value};")
             self.settings[Channel.A]['units'] = units
         if (not channel or channel == Channel.B) and self.twoChannel:
-            self.inst.write(f"UNIT2:POW {units.value}")
+            self.inst.write(f"UNIT2:POW {units.value};")
             self.settings[Channel.B]['units'] = units
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def setFastMode(self, fastMode:bool, channel = None):
         """Set/clear 200 readings/second fast mode
@@ -63,17 +64,17 @@ class PowerMeter(BaseE441X):
         """
         s = 'SPE 200' if fastMode else 'SPE 40'
         if not channel or channel == Channel.A:
-            self.inst.write(f"SENS1:{s}")
+            self.inst.write(f"SENS1:{s};")
             self.configureTrigger(Trigger.IMMEDIATE, Channel.A)
             self.initContinuous(True, Channel.A)
             self.settings[Channel.A]['fastMode'] = fastMode
         if (not channel or channel == Channel.B) and self.twoChannel:
-            self.inst.write(f"SENS2:{s}")
+            self.inst.write(f"SENS2:{s};")
             self.configureTrigger(Trigger.IMMEDIATE, Channel.B)
             self.initContinuous(True, Channel.B)
             self.settings[Channel.B]['fastMode'] = fastMode
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
     
     def disableAveraging(self, channel = None):
         """Set the display to show both channels, if applicable, turns off averaging and sets the CW frequency to 6 GHz
@@ -83,16 +84,16 @@ class PowerMeter(BaseE441X):
         """
         if not channel or channel == Channel.A:
             self.configMeasurement(Channel.A, units = self.settings[Channel.A].get('units', Unit.DBM))
-            self.inst.write("SENS1:AVER:STAT 0")
-            self.inst.write("SENS1:FREQ:CW 6E9")
+            self.inst.write("SENS1:AVER:STAT 0;")
+            self.inst.write("SENS1:FREQ:CW 6E9;")
             self.initContinuous(True, Channel.A)
         if (not channel or channel == Channel.B) and self.twoChannel:
             self.configMeasurement(Channel.B, units = self.settings[Channel.B].get('units', Unit.DBM))
-            self.inst.write("SENS2:AVER:STAT 0")
-            self.inst.write("SENS2:FREQ:CW 6E9")
+            self.inst.write("SENS2:AVER:STAT 0;")
+            self.inst.write("SENS2:FREQ:CW 6E9;")
             self.initContinuous(True, Channel.B)
-        ret = self.inst.query("*OPC?")
-        return True if ret else False
+        opc = removeDelims(self.inst.query("*OPC?"))
+        return opc and opc[0]
 
     def autoRead(self, channel = Channel.A):
         """Perform an auto-read which takes as long as needed to get (typically) three digits of resolution
@@ -105,9 +106,10 @@ class PowerMeter(BaseE441X):
         wasFast = self.settings[channel].get('fastMode', False)
         if wasFast:
             self.setFastMode(False, channel)
-        self.setTimeout(60000)
+        # self.setTimeout(60000)
         self.configureTrigger(Trigger.IMMEDIATE, channel)
         self.configMeasurement(channel, units = self.settings[channel].get('units', Unit.DBM))
+        self.initImmediate(channel)
         value = self.read(channel)
         self.setTimeout()
         self.disableAveraging()

@@ -5,6 +5,8 @@ from datetime import datetime
 class Settings(BaseModel):
     sampleRate: float = 50      # samples/sec
     sensorAmbient: int = 7
+    attenuateIF: int = 3
+    targetLevel: float = -10    # dBm
     delayAfterLock: float = 10  # minutes
     measureDuration: float = 60 # minutes
     measurePol0: bool = True
@@ -22,3 +24,5 @@ class TimeSeriesInfo(BaseModel):
     sideband: str
     timeStamp: datetime
     dataStatus: str
+    timeSeriesPlot: int = None
+    allanPlot: int = None

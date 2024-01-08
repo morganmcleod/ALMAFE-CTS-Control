@@ -7,8 +7,7 @@ class MeasurementStatus(BaseModel):
     cartTest: Optional[CartTest] = None
     childKey: int = 0
     timeStamp: Optional[datetime] = None
-    stepComplete: bool = False
-    allComplete: bool = False
+    complete: bool = True
     message: str = None
     error: bool = False
 
@@ -16,7 +15,7 @@ class MeasurementStatus(BaseModel):
         self.cartTest = measuring
         self.timeStamp = datetime.now()
         if not measuring:
-            self.stepComplete = self.allComplete = True
+            self.complete = True
 
     def setChildKey(self, childKey: int):
         self.childKey = childKey
@@ -30,7 +29,7 @@ class MeasurementStatus(BaseModel):
         self.cartTest = None
 
     def isMeasuring(self):
-        return self.cartTest is not None and not self.allComplete
+        return self.cartTest is not None and not self.complete
     
     def setStatusMessage(self, msg):
         self.timeStamp = datetime.now()
@@ -39,12 +38,10 @@ class MeasurementStatus(BaseModel):
     def getStatusMessage(self):
         return self.message
 
-    def setComplete(self, step = None, all = None):
+    def setComplete(self, complete = None):
         self.timeStamp = datetime.now()
-        if step is not None:
-            self.stepComplete = step
-        if all is not None:
-            self.allComplete = all
+        if complete is not None:
+            self.complete = complete
 
     def setError(self, error: bool):
         self.timeStamp = datetime.now()

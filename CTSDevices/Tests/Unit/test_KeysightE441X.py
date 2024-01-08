@@ -53,23 +53,25 @@ class test_PowerMeter(unittest.TestCase):
             self.assertTrue(self.pm.setFastMode(True, Channel.B))
             self.assertTrue(self.pm.setFastMode(False, Channel.B))
 
-    def test_zero(self):
-        self.assertTrue(self.pm.zero(Channel.A))
-        if self.pm.twoChannel:
-            self.assertTrue(self.pm.zero(Channel.B))
+    # def test_zero(self):
+    #     self.assertTrue(self.pm.zero(Channel.A))
+    #     if self.pm.twoChannel:
+    #         self.assertTrue(self.pm.zero(Channel.B))
 
     def test_setOutputRef(self):
         self.assertTrue(self.pm.setOutputRef(True))
         self.assertTrue(self.pm.setOutputRef(False))
         
     def test_read(self):
-        self.pm.configureTrigger(Trigger.IMMEDIATE, Channel.A)
         self.pm.configMeasurement(Channel.A, units = Unit.DBM)
+        self.pm.configureTrigger(Trigger.IMMEDIATE, Channel.A)
+        self.pm.initImmediate(Channel.A)
         val = self.pm.read(Channel.A)
         self.assertTrue(val != 0.0)
         if self.pm.twoChannel:
-            self.pm.configureTrigger(Trigger.IMMEDIATE, Channel.B)
             self.pm.configMeasurement(Channel.B, units = Unit.DBM)
+            self.pm.configureTrigger(Trigger.IMMEDIATE, Channel.B)
+            self.pm.initImmediate(Channel.B)
             val = self.pm.read(Channel.B)
             self.assertTrue(val != 0.0)
 

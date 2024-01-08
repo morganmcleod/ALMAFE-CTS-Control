@@ -7,6 +7,9 @@ class TestSteps(BaseModel):
     noiseTemp: bool = True
     imageReject: bool = True
     loWGIntegrity: bool = False
+    
+    def getText(self):
+        return f"warmIF:{self.warmIF}, noiseTemp:{self.noiseTemp}, imageReject:{self.imageReject}, loWGIntegrity:{self.loWGIntegrity}"
 
 class CommonSettings(BaseModel):
     targetPHot: float = -30.0
@@ -15,6 +18,8 @@ class CommonSettings(BaseModel):
     sampleRate: float = 50              # samples/sec
     sensorAmbient: int = 7
     tColdEff: float = 80
+    sigGenAmplitude: float = 10.0
+    pauseForColdLoad: bool = True
     powerMeterConfig: StdErrConfig = StdErrConfig(
         minS = 50,
         maxS = 600,
@@ -23,14 +28,12 @@ class CommonSettings(BaseModel):
     )
 
 class WarmIFSettings(BaseModel):
-    attenStart: int = 0      # dB
-    attenStop: int = 10
+    attenStart: int = 5      # dB
+    attenStop: int = 5
     attenStep: int = 1
     ifStart: float = 4.0     # GHz
     ifStop: float = 12.0
     ifStep: float = 0.1
-    sensorIfHot: int = 1
-    sensorIfCold: int = 3
     diodeVoltage: float = 28.0
     diodeCurrentLimit: float = 0.04
     diodeEnr: float = 15.4
@@ -42,32 +45,12 @@ class NoiseTempSettings(BaseModel):
     ifStart: float = 4.0     # GHz
     ifStop: float = 12.0
     ifStep: float = 0.1
-
-class ImageRejectPowers(BaseModel):
-    pol: int = 0
-    PwrUSB_SrcUSB: float = 0
-    PwrLSB_SrcUSB: float = 0
-    PwrLSB_SrcLSB: float = 0
-    PwrUSB_SrcLSB: float = 0
-
-    def getText(self):
-        return f"pol{self.pol}: {self.PwrUSB_SrcUSB}, {self.PwrLSB_SrcUSB}, {self.PwrLSB_SrcLSB}, {self.PwrUSB_SrcLSB}"
-
-class NoiseTempPowers(BaseModel):
-    pol: int = 0
-    Phot_USB: float = 0
-    Pcold_USB: float = 0
-    Phot_USB_StdErr: float = 0
-    Pcold_USB_StdErr: float = 0
-    Phot_LSB: float = 0
-    Pcold_LSB: float = 0
-    Phot_LSB_StdErr: float = 0
-    Pcold_LSB_StdErr: float = 0
     
-    def getText(self):
-        return f"pol{self.pol}: {self.Phot_USB}, {self.Pcold_USB}, {self.Phot_LSB}, {self.Pcold_LSB}\n" \
-            +  f"errors: {self.Phot_USB_StdErr}, {self.Pcold_USB_StdErr}, {self.Phot_LSB_StdErr}, {self.Pcold_LSB_StdErr}"
-    
-class YFactorDatum(BaseModel):
-    chopperState: State
-    power: float
+class ChopperPowers(BaseModel):
+    input: str
+    chopperState: State = State.TRANSITION
+    power: float = 0
+
+class YFactorSample(BaseModel):
+    Y: float
+    TRx: float

@@ -498,7 +498,7 @@ class BeamScanner():
         self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
         self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
         self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
-        self.warmIFPlate.attenuator.setValue(22)   # TODO:  move into MeasConfig?
+        self.warmIFPlate.attenuator.setValue(self.measurementSpec.ifAttenuator)
         return (True, "")
     
     def __selectIFInput(self, isUSB: bool, pol: int):
@@ -562,6 +562,8 @@ class BeamScanner():
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         success = self.rfSrcDevice.autoRFPower(self.pna, target = self.measurementSpec.targetLevel)
+        if SIMULATE:
+            success = True
         return (success, "__rfSourceAutoLevel")
 
     def __configurePNARaster(self, scan:ScanListItem, subScan:SubScan, moveTimeout:float) -> Tuple[bool, str]:
@@ -572,7 +574,7 @@ class BeamScanner():
         return (True, "")
 
     def __getPNARaster(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        amp, phase = self.pna.getTrace(y = self.yPos)
+        amp, phase = self.pna.getTrace(y = self.yPos, reverseX = self.reverseX)
         if amp and phase:
             self.raster.amplitude = amp
             self.raster.phase = phase

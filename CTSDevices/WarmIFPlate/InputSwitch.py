@@ -51,4 +51,4 @@ class InputSwitch():
                 self.setValue(InputSelect.POL1_USB)
             elif sideband == 1:
                 self.setValue(InputSelect.POL1_LSB)
-        return False
+        return True

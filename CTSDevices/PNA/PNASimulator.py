@@ -54,6 +54,10 @@ class PNASimulator(PNAInterface):
             r2 = x ** 2 + y ** 2
             amp.append(70 * ((exp(-r2)) - 1))
             phase.append(180 * sin(4 * pi * r2))
+        reverseX = kwargs.get('reverseX', None)
+        if reverseX:
+            amp = list(reversed(amp))
+            phase = list(reversed(phase))
         return amp, phase
         
     def getAmpPhase(self) -> Tuple[float]:

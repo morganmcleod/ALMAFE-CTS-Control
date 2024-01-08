@@ -1,21 +1,16 @@
 from fastapi import APIRouter
-from typing import Optional
 from Response import KeyResponse, MessageResponse
+from typing import Optional
+from socket import getfqdn
 from DBBand6Cart.CartTests import CartTest
 from DBBand6Cart.TestTypes import TestTypeIds
-from socket import getfqdn
-
 from Measure.Shared.MeasurementStatus import MeasurementStatus
 
-# Import the modules from measProcedure to get the objects they create:
-import measProcedure.BeamScanner as BSMeasProcedure
-beamScanner = BSMeasProcedure.beamScanner
-import measProcedure.NoiseTemperature as NTMeasProcedure
-noiseTemperature = NTMeasProcedure.noiseTemperature
-import measProcedure.AmplitudeStability as ASMeasProcedure
-amplitudeStablilty = ASMeasProcedure.amplitudeStablilty
-import measProcedure.MeasurementStatus as MSMeasProcedure
-measurementStatus = MSMeasProcedure.measurementStatus
+# Import global objects from measProcedure:
+from app.measProcedure.BeamScanner import beamScanner
+from app.measProcedure.NoiseTemperature import noiseTemperature
+from app.measProcedure.Stability import amplitudeStablilty, phaseStability
+from app.measProcedure.MeasurementStatus import measurementStatus
 
 from DebugOptions import *
 
@@ -41,6 +36,10 @@ async def put_Start(cartTest:CartTest):
         cartTestId = amplitudeStablilty.start(cartTest)
         measurementStatus.setMeasuring(cartTest)
         return KeyResponse(key = cartTestId, message = "Amplitude stability started", success = True)
+    elif cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+        cartTestId = phaseStability.start(cartTest)
+        measurementStatus.setMeasuring(cartTest)
+        return KeyResponse(key = cartTestId, message = "Phase stability started", success = True)
     else:
         return KeyResponse(key = 0, message = f"Nothing to do for test type {cartTest.fkTestType}", success = False)
 
@@ -61,6 +60,10 @@ async def put_Stop():
         amplitudeStablilty.stop()
         measurementStatus.stopMeasuring()
         return MessageResponse(message = "Amplitude stability stopped", success = True)
+    elif cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+        phaseStability.stop()
+        measurementStatus.stopMeasuring()
+        return MessageResponse(message = "Phase stability stopped", success = True)
     else:
         return MessageResponse(message = f"Nothing to do for test type {cartTest.fkTestType}", success = False)
     
@@ -77,6 +80,9 @@ async def get_Status():
             return cartTest
     elif cartTest.fkTestType == TestTypeIds.AMP_STABILITY.value:
         if amplitudeStablilty.isMeasuring():
+            return cartTest    
+    elif cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+        if phaseStability.isMeasuring():
             return cartTest    
     return None
 

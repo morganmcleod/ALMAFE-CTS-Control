@@ -168,7 +168,7 @@ class MCSimulator(MCInterface):
         vector = fromPos.calcMove(toPos)
         xyTime = sqrt(vector.x ** 2 + vector.y ** 2) / self.xySpeed
         polTime = abs(vector.pol) / self.polSpeed
-        return max(xyTime, polTime) * 3.0 + 2
+        return max(xyTime, polTime) * 3.0 + 3
     
     def setNextPos(self, nextPos: Position):
         if not self.positionInBounds(nextPos):
@@ -219,16 +219,14 @@ class MCSimulator(MCInterface):
         return result
 
     def waitForMove(self, timeout: float = None) -> MoveStatus:
-        startTime = time.time()
-        elapsed = 0.0
-        moveStatus = self.getMoveStatus()
         if timeout:
             self.timeout = timeout
+        moveStatus = self.getMoveStatus()
         while not self.stop and not moveStatus.shouldStop():
-            elapsed = time.time() - startTime
+            elapsed = time.time() - self.startTime
             if self.timeout and elapsed > self.timeout:
                 break
-            time.sleep(0.5)
+            time.sleep(0.25)
             moveStatus = self.getMoveStatus()
             torque = self.getPolTorque()
             if abs(torque) > 20:

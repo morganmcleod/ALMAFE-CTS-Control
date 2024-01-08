@@ -66,8 +66,8 @@ class StdErrResult(BaseModel):
     time: float = 0
     
 class Channel(Enum):
-    A = 0
-    B = 1
+    A = 1
+    B = 2
 
 class Unit(Enum):
     DBM = "DBM"
