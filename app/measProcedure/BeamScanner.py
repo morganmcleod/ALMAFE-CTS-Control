@@ -4,7 +4,7 @@ from hardware.BeamScanner import motorController, pna
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
 from hardware.WarmIFPlate import warmIFPlate
-from .MeasurementStatus import measurementStatus
+from app.measProcedure.MeasurementStatus import measurementStatus
 from DebugOptions import *
 import copy
 

@@ -2,7 +2,7 @@ from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
 from hardware.WarmIFPlate import warmIFPlate
 from hardware.NoiseTemperature import powerMeter, powerSupply, temperatureMonitor, chopper
-from .MeasurementStatus import measurementStatus
+from app.measProcedure.MeasurementStatus import measurementStatus
 from DebugOptions import *
 from Measure.NoiseTemperature.Main import NoiseTempMain
 from Measure.NoiseTemperature.YFactor import YFactor

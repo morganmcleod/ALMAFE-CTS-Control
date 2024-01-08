@@ -4,6 +4,7 @@ import time
 from CTSDevices.Common.RemoveDelims import removeDelims
 from typing import Tuple
 import logging
+from DebugOptions import *
 
 class State(Enum):
     OPEN = 0
@@ -25,13 +26,20 @@ class Chopper():
         :raises Exception: If the serial port cannot be opened.
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.inst = serial.Serial(
-            resource, 
-            9600, 
-            timeout=0.2, 
-            write_timeout=0.1, 
-            parity=serial.PARITY_NONE)
-        if not self.inst.is_open:
+        try:
+            self.inst = serial.Serial(
+                resource, 
+                9600, 
+                timeout=0.2, 
+                write_timeout=0.1, 
+                parity=serial.PARITY_NONE)
+            if not self.inst.is_open:
+                if SIMULATE:
+                    return
+                raise Exception("Chopper cannot open serial port " + resource)
+        except:
+            if SIMULATE:
+                return
             raise Exception("Chopper cannot open serial port " + resource)
         self.inst.reset_input_buffer()
         self.inst.reset_output_buffer()

@@ -15,7 +15,7 @@ from routers.RFSource import router as rfRouter
 from routers.TemperatureMonitor import router as tempsRouter
 from routers.MeasControl import router as measControlRouter
 from routers.NoiseTemperature import router as noiseTempRouter
-from routers.AmplitudeStability import router as ampStabilityRouter
+from app.routers.Stability import router as stabilityRouter
 from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
@@ -104,7 +104,7 @@ app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
 app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(noiseTempRouter, tags=["Noise Temp"])
-app.include_router(ampStabilityRouter, tags=["Stability"])
+app.include_router(stabilityRouter, tags=["Stability"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
 app.include_router(eventRouter)
 

@@ -1,9 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
-import measProcedure.BeamScanner as BeamScanner
-import measProcedure.MeasurementStatus as MeasurementStatus
-measurementStatus = MeasurementStatus.measurementStatus
+import app.measProcedure.BeamScanner as BeamScanner
+from app.measProcedure.MeasurementStatus import measurementStatus
 from Response import MessageResponse
 import asyncio
 from .ConnectionManager import ConnectionManager
