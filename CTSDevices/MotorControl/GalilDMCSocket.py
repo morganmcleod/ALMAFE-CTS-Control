@@ -33,7 +33,7 @@ class MotorController(MCInterface):
     Y_MAX = 300
     POL_MIN = -200
     POL_MAX = 180
-    DEFAULT_HOST = "169.254.1.1"
+    DEFAULT_HOST = "10.1.1.20"
     DEFAULT_PORT = 2055
     DELIMS = b'[:,\s\r\n]'
     # constants from DMC-2103 Firmware Command Reference:

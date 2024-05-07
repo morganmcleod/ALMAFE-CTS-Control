@@ -8,13 +8,11 @@ from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots
 from DBBand6Cart.schemas.TestType import TestTypeIds
-from DBBand6Cart.schemas.TestType import TestTypeIds
 from app.database.CTSDB import CTSDB
 from AmpPhaseDataLib.TimeSeriesAPI import TimeSeriesAPI
 from AmpPhaseDataLib.TimeSeries import TimeSeries
 from AmpPhaseDataLib.Constants import Units, DataSource, SpecLines, DataKind, PlotEl
 from AmpPhasePlotLib.PlotAPI import PlotAPI
-from AMB.LODevice import LODevice
 from AMB.LODevice import LODevice
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus

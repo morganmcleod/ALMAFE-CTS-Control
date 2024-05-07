@@ -10,7 +10,7 @@ class AMI1720(ColdLoadBase):
 
     DEFAULT_TIMEOUT = 2500
     
-    def __init__(self, resource="TCPIP0::169.254.1.5::7180::SOCKET", idQuery=True, reset=True):
+    def __init__(self, resource="TCPIP0::10.1.1.5::7180::SOCKET", idQuery=True, reset=True):
         """Constructor
 
         :param str resource: VISA resource string, defaults to "TCPIP0::169.254.1.5::7180::SOCKET"

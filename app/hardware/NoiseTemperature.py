@@ -27,6 +27,6 @@ else:
 if SIMULATE:
     coldLoad = AMI1720Simulator()
 else:
-    coldLoad = AMI1720("TCPIP0::169.254.1.5::7180::SOCKET")
+    coldLoad = AMI1720("TCPIP0::10.1.1.5::7180::SOCKET")
 
 chopper = Chopper()

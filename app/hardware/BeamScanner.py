@@ -9,7 +9,7 @@ from DebugOptions import *
 if SIMULATE:
     motorController = MCSimulator()
 else:
-    motorController = MotorController()
+    motorController = MotorController("10.1.1.20")
 
 if SIMULATE:
     pna = PNASimulator()
