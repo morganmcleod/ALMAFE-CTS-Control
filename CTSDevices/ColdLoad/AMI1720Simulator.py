@@ -13,8 +13,8 @@ class AMI1720Simulator(ColdLoadBase):
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
-        self.setFillMode(FillMode.NORMAL_CH1)
-        self.fillState = FillState.M_CLOSED
+        self.setFillMode(FillMode.NORMAL)
+        self.fillState = FillState.CLOSED
 
     def idQuery(self) -> bool:
         """Perform an ID query and check compatibility
@@ -27,25 +27,41 @@ class AMI1720Simulator(ColdLoadBase):
     def reset(self) -> bool:
         """Reset the instrument and set default configuration
 
-        :return bool: True if write succeeded
+        :return bool: True if reset succeeded
         """
         return True
         
-    def setFillMode(self, fillMode: FillMode):
+    def setFillMode(self, fillMode: FillMode) -> None:
+        """Set the fill mode in a device-dependent way
+
+        :param FillMode defined above
+        """
         self.fillMode = fillMode
 
-    def startFill(self):
-        self.fillState = FillState.AUTO_ON
+    def getFillMode(self) -> FillMode:
+        """Read the fillmode in a device-deptendent way
 
-    def stopFill(self):
-        self.fillState = FillState.M_CLOSED
+        :return FillMode defined above
+        """
+        return getattr(self, 'fillMode', FillMode.NORMAL)
+    
+    def getLevel(self) -> float:
+        """Read LN2 level in percent, device-dependent
 
-    def checkLevel(self, minLevel: float = 25) -> Tuple[float, bool]:
-        return 90.0, True
+        :return float: Percent
+        """
+        return 99.0
+    
+    def setFillState(self, fillState: FillState) -> None:
+        """Set the fill state in a device-dependent way
 
-    def checkFillState(self) -> Tuple[bool, FillState, str]:
-        return True, self.fillState, ""
+        :param FillState defined above
+        """
+        self.fillState = fillState
 
-    def waitForFill(self, minLevel: float = 25, timeoutSeconds: int = 0) -> Tuple[float, bool]:
-        time.sleep(timeoutSeconds)
-        return 90.0, True
+    def getFillState(self) -> FillState:
+        """Read the fill state in a device-dependent way
+
+        :return FillState defined above
+        """
+        return self.fillState

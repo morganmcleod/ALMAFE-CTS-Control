@@ -1,7 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import hardware.FEMC as FEMC
 from Response import MessageResponse
+from .ConnectionManager import ConnectionManager
+import asyncio
+import logging
 
+logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix="/cartassy")
 manager = ConnectionManager()
 
@@ -18,7 +22,6 @@ async def websocket_sis_current(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /cartassy/sis/current_ws")
-manager = ConnectionManager()
 
 @router.websocket("/auto_lo/current_ws")
 async def websocket_sis_current(websocket: WebSocket):
