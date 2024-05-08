@@ -44,7 +44,7 @@ async def getCartConfig():
     DB = CartConfigs(driver = CTSDB())
     return DB.read(configId)[0]
 
-@router.get("/config/keys", response_model = CartKeys)
+@router.get("/config/keys", response_model = Optional[CartKeys])
 async def getConfigKeys(configId:int, pol:int, callback:str = None):
     DB = CartConfigs(driver = CTSDB())
     return DB.readKeys(configId, pol)
