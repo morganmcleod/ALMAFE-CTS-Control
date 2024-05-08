@@ -6,7 +6,7 @@ It uses a TCP/IP socket to communicate directly with the hardware.
 
 from .schemas import MotorStatus, MoveStatus, Position
 from .MCInterface import MCInterface, MCError
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims
 import socket
 import time
 from math import sqrt, copysign
@@ -48,7 +48,7 @@ class MotorController(MCInterface):
 
     def __init__(self, host = DEFAULT_HOST, port = DEFAULT_PORT):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.DEBUG)        
         self.host = host
         self.port = port
         self.socket = None
@@ -68,9 +68,12 @@ class MotorController(MCInterface):
             self.socket.close()
         except:
             pass
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(self.SOCKET_TIMEOUT)
-        self.socket.connect((self.host, self.port))
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(self.SOCKET_TIMEOUT)
+            self.socket.connect((self.host, self.port))
+        except:
+            pass
 
     def __checkHandshake(self, context, expected, receieved):
         if  receieved != expected:
@@ -81,11 +84,15 @@ class MotorController(MCInterface):
         self.stop = False
         self.__connectSocket()
         self.nextPos = Position(x=0, y=0, z=0)
-        self.position = self.getPosition(cached = False)
-        self.motorStatus = MotorStatus()
-        self.xySpeed = self.getXYSpeed()
-        self.polSpeed = self.getPolSpeed()
-        self.__setVectorSpeed(self.xySpeed)
+        self.position = Position(x=0, y=0, z=0)
+        try:
+            self.position = self.getPosition(cached = False)
+            self.motorStatus = MotorStatus()
+            self.xySpeed = self.getXYSpeed()
+            self.polSpeed = self.getPolSpeed()
+            self.__setVectorSpeed(self.xySpeed)
+        except:
+            pass
         # Stop command. All motors come to decelerated stop.
         hs = self.query(b'ST;')
         self.__checkHandshake("MotorController.reset", b':', hs)

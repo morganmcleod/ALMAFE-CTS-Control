@@ -1,5 +1,3 @@
-import re
-import pyvisa
 import logging
 from enum import Enum
 from typing import List, Tuple, Optional
@@ -28,6 +26,9 @@ class VoltMeterSimulator():
         :return bool: True if write succeeded
         """
         self.logger.info("VoltMeterSimulator.reset")
+        return True
+    
+    def isConnected(self) -> bool:
         return True
         
     def configureMeasurement(self, 

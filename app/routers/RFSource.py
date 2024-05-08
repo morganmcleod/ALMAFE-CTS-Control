@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request, Depends, WebSocket, WebSocketDisconnect
-from Response import MessageResponse
+from app.schemas.Response import MessageResponse
+from schemas.common import SingleBool
+from schemas.DeviceInfo import DeviceInfo
 from .LO import router as loRouter
 from hardware.FEMC import rfSrcDevice
 from hardware.NoiseTemperature import powerMeter
@@ -14,6 +16,13 @@ router = APIRouter()
 router.include_router(loRouter)
 manager = ConnectionManager()
 logger = logging.getLogger("ALMAFE-CTS-Control")
+
+@router.get("/device_info", response_model = DeviceInfo)
+async def get_DeviceInfo_RFSource():
+    return DeviceInfo(
+        resource_name = "CAN0:13",
+        is_connected = rfSrcDevice.isConnected()
+    )
 
 @router.websocket("/auto_rf/power_ws")
 async def websocket_rf_power(websocket: WebSocket):

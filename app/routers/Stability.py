@@ -15,7 +15,7 @@ from DBBand6Cart.AmplitudeStability import AmplitudeStability as AmplitudeStabil
 from DBBand6Cart.PhaseStability import PhaseStability as PhaseStability_DB
 from DBBand6Cart.TestResultPlots import TestResultPlots
 from .ConnectionManager import ConnectionManager
-from Response import MessageResponse, ListResponse, prepareListResponse
+from app.schemas.Response import MessageResponse, ListResponse, prepareListResponse
 import asyncio
 import logging
 import json

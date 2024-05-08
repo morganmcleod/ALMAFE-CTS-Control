@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request, Depends
 from schemas.LO import *
 from schemas.common import *
-from Response import MessageResponse
+from app.schemas.Response import MessageResponse
+from schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 
 router = APIRouter()
@@ -12,10 +13,13 @@ def getTarget(request: Request):
     else:
         return FEMC.loDevice, "LO"
 
-@router.get("/connected", response_model = SingleBool)
-async def get_isConnected(request: Request):
+@router.get("/device_info", response_model = DeviceInfo)
+async def get_DeviceInfo_LO(request: Request):
     device, name = getTarget(request)
-    return SingleBool(value = device.isConnected())
+    return DeviceInfo(
+        resource_name = f"{name} at CAN0:13",
+        is_connected = device.isConnected()
+    )
 
 @router.put("/yto/limits", response_model = MessageResponse)
 async def set_YTO_Limits(request: Request, payload: ConfigYTO):

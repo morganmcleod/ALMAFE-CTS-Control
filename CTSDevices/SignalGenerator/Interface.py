@@ -12,6 +12,10 @@ class SignalGenInterface(ABC):
         pass
 
     @abstractmethod
+    def isConnected(self) -> bool:
+        pass
+
+    @abstractmethod
     def errorQuery(self) -> Tuple[bool, str]:
         return 0, "No error"
 

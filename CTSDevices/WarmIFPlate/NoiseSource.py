@@ -11,6 +11,9 @@ class NoiseSource():
         self.powerSupply.setCurrentLimit(0.04)
         self.powerSupply.setVoltage(28)
 
+    def isConnected(self) -> bool:
+        return self.powerSupply.isConnected()
+
     def setEnable(self, enable: bool = False) -> None:
         self.powerSupply.setOutputEnable(enable)
 

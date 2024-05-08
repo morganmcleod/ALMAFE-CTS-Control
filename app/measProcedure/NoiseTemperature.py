@@ -1,7 +1,7 @@
 from hardware.ReferenceSources import loReference, rfReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
 from hardware.WarmIFPlate import warmIFPlate
-from hardware.NoiseTemperature import powerMeter, powerSupply, temperatureMonitor, coldLoad, chopper
+from hardware.NoiseTemperature import powerMeter, powerSupply, temperatureMonitor, coldLoad, chopper, spectrumAnalyzer
 from app.measProcedure.MeasurementStatus import measurementStatus
 from DebugOptions import *
 from Measure.NoiseTemperature.Main import NoiseTempMain
@@ -14,6 +14,7 @@ noiseTemperature = NoiseTempMain(
     rfSrcDevice = rfSrcDevice,
     warmIFPlate = warmIFPlate, 
     powerMeter = powerMeter,
+    spectrumAnalyzer = spectrumAnalyzer,
     powerSupply = powerSupply,
     temperatureMonitor = temperatureMonitor,
     coldLoadController = coldLoad,

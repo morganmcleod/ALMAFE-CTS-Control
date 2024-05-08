@@ -1,5 +1,6 @@
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
+from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.Chopper.Band6Chopper import Chopper
@@ -11,12 +12,13 @@ from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
 from app.database.CTSDB import CTSDB
 
+from .ZeroPowerMeter import ZeroPowerMeter
 from .WarmIFNoise import WarmIfNoise
 from .NoiseTemperature import NoiseTemperature
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DebugOptions import *
 
-from .schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings
+from .schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, SpectrumAnalyzerSettings
 
 import concurrent.futures
 import logging
@@ -31,6 +33,7 @@ class NoiseTempMain():
             rfSrcDevice: LODevice,
             warmIFPlate: WarmIFPlate, 
             powerMeter: PowerMeter,
+            spectrumAnalyzer: SpectrumAnalyzer,
             powerSupply: PowerSupply,
             temperatureMonitor: TemperatureMonitor,
             coldLoadController: AMI1720,
@@ -44,6 +47,7 @@ class NoiseTempMain():
         self.rfSrcDevice = rfSrcDevice
         self.warmIFPlate = warmIFPlate
         self.powerMeter = powerMeter
+        self.spectrumAnalyzer = spectrumAnalyzer,
         self.powerSupply = powerSupply
         self.temperatureMonitor = temperatureMonitor
         self.coldLoadController = coldLoadController
@@ -55,6 +59,11 @@ class NoiseTempMain():
         self.noiseTempSetings = NoiseTempSettings()
         self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
+        self.zeroPowerMeter = ZeroPowerMeter(
+            self.warmIFPlate,
+            self.powerMeter,
+            self.measurementStatus
+        )
         self.warmIfNoise = WarmIfNoise(
             self.warmIFPlate,
             self.powerMeter,
@@ -70,6 +79,7 @@ class NoiseTempMain():
             self.rfSrcDevice,
             self.warmIFPlate,
             self.powerMeter,
+            self.spectrumAnalyzer,
             self.temperatureMonitor,
             self.coldLoadController,
             self.chopper,
@@ -129,6 +139,19 @@ class NoiseTempMain():
                 self.logger.info("NoiseTempMain: User stop")
                 return
                 
+            if self.testSteps.zeroPM:
+                self.measInProgress = self.zeroPowerMeter
+                self.zeroPowerMeter.start()
+                while self.zeroPowerMeter.isMeasuring():
+                    if self.stopNow:
+                        self.logger.info("NoiseTempMain: User stop")                
+                        return
+                    time.sleep(1)
+            
+            if self.stopNow:
+                self.logger.info("NoiseTempMain: User stop")                
+                return
+            
             if self.warmIFSettings and self.testSteps.warmIF:
                 self.measInProgress = self.warmIfNoise
                 self.warmIfNoise.settings = self.warmIFSettings
@@ -188,3 +211,6 @@ class NoiseTempMain():
         self.measInProgress = None
         self.measurementStatus.setComplete(True)
         self.logger.info("NoiseTempMain: stopped")
+
+    def cleanup(self):
+        self.noiseTemp.cleanup()

@@ -22,10 +22,13 @@ class RFSource(LODevice):
             femcPort:Optional[int] = None,  # optional override which port the band is connected to)
             paPol: int = 0                  # which polarization to operate for the RF source
         ):
-        super(RFSource, self).__init__(conn, nodeAddr, band, femcPort)
+        super().__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
         self.autoRfPowerValue = None            # for websocket reporting to client
 
+    def isConnected(self) -> bool:
+        return super().isConnected()
+    
     def lockRF(self, rfReference: SignalGenInterface, freqRF: float, sigGenAmplitude: float = 10.0) -> Tuple[bool, str]:
         self.selectLockSideband(self.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.setLOFrequency(freqRF)
@@ -39,6 +42,12 @@ class RFSource(LODevice):
             self.setNullLoopIntegrator(True)
         return (True, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
+    def getPAVD(self):
+        pa = self.getPA()
+        if self.paPol == 0:
+            return pa['VDp0']
+        elif self.paPol == 1:
+            return pa['VDp1']
 
     def autoRFPower(self, meter: Union[PowerMeter, PNAInterface], target: float = -5.0, onThread: bool = False) -> bool:
         if onThread:

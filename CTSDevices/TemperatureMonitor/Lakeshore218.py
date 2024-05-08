@@ -1,6 +1,6 @@
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 import re
-import pyvisa
 import logging
 import time
 from threading import Lock
@@ -17,20 +17,12 @@ class TemperatureMonitor():
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.lock = Lock()        
-        rm = pyvisa.ResourceManager()
-        try:
-            self.inst = rm.open_resource(resource)
-            self.inst.timeout = self.DEFAULT_TIMEOUT
-            self.inst.read_termination = '\n'
-            self.inst.write_termination = '\n'
-            ok = True
-            if ok and idQuery:
-                ok = self.idQuery()
-            if ok and reset:
-                ok = self.reset()
-        except pyvisa.VisaIOError as err:
-            self.logger.error(err)
-            self.inst = None
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT, read_termination = '\n', write_termination = '\n')
+        ok = self.isConnected()
+        if ok and idQuery:
+            ok = self.idQuery()
+        if ok and reset:
+            ok = self.reset()
 
     def __del__(self):
         """Destructor
@@ -38,6 +30,16 @@ class TemperatureMonitor():
         if self.inst:
             self.inst.close()
             self.inst = None
+
+    def isConnected(self) -> bool:
+        if not self.inst.connected:
+            return False
+        try:
+            result = self.inst.query("QESR?\r")
+            result = removeDelims(result)
+            return len(result) > 0
+        except:
+            return False
 
     def idQuery(self):
         """Perform an ID query and check compatibility

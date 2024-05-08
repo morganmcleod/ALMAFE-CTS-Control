@@ -84,13 +84,13 @@ class LockInfo(BaseModel):
     '''
     Phase Locked Loop monitor data: lock quality info only
     
-    lockDetectBit: True if the lock detector voltage > 3.0
+    lockVoltage: True if the lock detector voltage > 3.0
     unlockDetected: Hardware latches True if an unlock condition was seen since last cleared
     refTP: Reference total power detector. Negative voltage in -5..0.
     IFTP: IF total power detector. Negative voltage in -5..0.
-    isLocked:  True if (lockDetectBit and refTP < -0.5 and ifTP < -0.5).
+    isLocked:  True if (lockVoltage and refTP < -0.5 and ifTP < -0.5).
     '''   
-    lockDetectBit: bool
+    lockVoltage: bool
     unlockDetected: bool
     refTP: float
     IFTP: float
@@ -98,7 +98,7 @@ class LockInfo(BaseModel):
     def getText(self):
         return ("LOCKED " if self.isLocked else "UNLOCKED ") + \
                ("UNLOCK DETECTED " if self.unlockDetected else "OK ") + \
-               f"refTP:{self.refTP} V  IFTP:{self.IFTP} V  lockDet:{self.lockDetectBit}"
+               f"refTP:{self.refTP} V  IFTP:{self.IFTP} V  lockDet:{self.lockVoltage}"
     
 class PLL(LockInfo):
     '''

@@ -1,15 +1,19 @@
 from fastapi import APIRouter
 from schemas.CCA import *
 from schemas.common import *
+from schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
-from Response import MessageResponse
+from app.schemas.Response import MessageResponse
 import yaml
 
 router = APIRouter(prefix="/cca")
 
-@router.get("/connected", response_model = SingleBool)
-async def get_isConnected():
-    return SingleBool(value = FEMC.ccaDevice.isConnected())
+@router.get("/device_info", response_model = DeviceInfo)
+async def get_DeviceInfo_CCA():
+    return DeviceInfo(
+        resource_name = "CAN0:13",
+        is_connected = FEMC.ccaDevice.isConnected()
+    )
 
 @router.put("/sis", response_model = MessageResponse)
 async def set_SIS(request: SetSIS):

@@ -8,6 +8,8 @@ class SignalGenSimulator(SignalGenInterface):
         if reset:
             self.reset()
 
+    def isConnected(self) -> bool:
+        return True
 
     def idQuery(self, doPrint = False):
         """Perform an ID query and check compatibility

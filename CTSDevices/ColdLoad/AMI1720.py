@@ -1,8 +1,7 @@
-import re
-import pyvisa
 from pyvisa.constants import BufferOperation
 import logging
 from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 from .ColdLoadBase import ColdLoadBase, FillMode, FillState
 from threading import Lock
 
@@ -19,12 +18,13 @@ class AMI1720(ColdLoadBase):
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.lock = Lock()
-        rm = pyvisa.ResourceManager()
-        self.inst = rm.open_resource(resource)
-        self.inst.timeout = self.DEFAULT_TIMEOUT
-        self.inst.read_termination = '\n'
-        self.inst.write_termination = '\n'
-        ok = True
+        self.inst = VisaInstrument(
+            resource, 
+            timeout = self.DEFAULT_TIMEOUT,
+            read_termination = '\n',
+            write_termination = '\n'
+        )
+        ok = self.isConnected()        
         if ok and idQuery:
             ok = self.idQuery()
         if ok and reset:
@@ -37,14 +37,28 @@ class AMI1720(ColdLoadBase):
         """
         self.inst.close()
 
+    def isConnected(self) -> bool:
+        # *TST? Returns a value incremented by 1 for each query to the requesting
+        # interface if unit is functioning. Return value does not indicate any
+        # operational status other than a functioning interface.
+        if not self.inst.connected:
+            return False
+        try:
+            with self.lock:            
+                response = self.inst.query("*TST?")
+                response = removeDelims(response)
+                if len(response):
+                    return True
+        except:
+            return False
+
     def idQuery(self) -> bool:
         """Perform an ID query and check compatibility
 
         :return bool: True if the instrument is compatible with this class.
         """
         self.model = None
-        with self.lock:
-            
+        with self.lock:            
             response = self.inst.query("*IDN?")
         match = re.search("MODEL 1720", response)
         if match:
@@ -62,7 +76,7 @@ class AMI1720(ColdLoadBase):
         # TODO implement?
         # manual says *RST Performs a Factory Restore if a restore file is available. All prior settings are lost!
         return True
-        
+
     def setFillMode(self, fillMode: FillMode) -> None:
         """Set the fill mode in a device-dependent way
 

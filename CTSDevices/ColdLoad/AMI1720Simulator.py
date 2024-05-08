@@ -31,6 +31,9 @@ class AMI1720Simulator(ColdLoadBase):
         """
         return True
         
+    def isConnected(self) -> bool:
+        return True
+
     def setFillMode(self, fillMode: FillMode) -> None:
         """Set the fill mode in a device-dependent way
 

@@ -40,6 +40,9 @@ class CartAssembly():
         self.freqLOGHz = 0
         self.autoLOPol = None
 
+    def isConnected(self) -> bool:
+        return self.ccaDevice.isConnected() and self.loDevice.isConnected()
+
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
         self.reset()

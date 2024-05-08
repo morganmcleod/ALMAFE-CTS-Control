@@ -1,5 +1,5 @@
-from CTSDevices.Common.RemoveDelims import removeDelims   #todo move Common out of CTSDevices
-import pyvisa
+from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 import re
 import logging
 
@@ -16,13 +16,10 @@ class PowerSupply():
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        rm = pyvisa.ResourceManager()
-        self.inst = rm.open_resource(resource)
-        self.inst.timeout = self.DEFAULT_TIMEOUT
         self.mfr = None
-        self.model = None        
-
-        ok = True
+        self.model = None
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)
+        ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
         if ok and reset:
@@ -33,6 +30,16 @@ class PowerSupply():
         """
         self.inst.close()
     
+    def isConnected(self) -> bool:
+        if not self.inst.connected:
+            return False
+        try:
+            result = self.inst.query("*ESR?")
+            result = removeDelims(result)
+            return len(result) > 0
+        except:
+            return False
+
     def idQuery(self) -> bool:
         """Perform an ID query and check compatibility
 

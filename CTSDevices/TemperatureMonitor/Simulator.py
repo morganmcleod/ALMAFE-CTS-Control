@@ -8,6 +8,9 @@ class TemperatureMonitorSimulator():
     def __init__(self):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
 
+    def isConnected(self) -> bool:
+        return True
+
     def idQuery(self):
         self.logger.debug("TemperatureMonitorSimulator")
 

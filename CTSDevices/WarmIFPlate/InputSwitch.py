@@ -23,6 +23,9 @@ class InputSwitch():
         self.position = None
         self.setValue(InputSelect.POL0_USB)
 
+    def isConnected(self) -> bool:
+        return self.switchController.isConnected()
+
     def setValue(self, select: InputSelect) -> None:
         # send the compliment of the byte having the selected bit:
         self.switchController.staticWrite(255 - select.value)

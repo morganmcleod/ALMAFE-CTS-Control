@@ -4,16 +4,19 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 # Imports for this app:
-from Response import MessageResponse, VersionResponse, prepareResponse
+from schemas.Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion, gitBranch
 from routers.CartAssembly import router as cartAssyRouter
 from routers.CCA import router as ccaRouter
+from routers.Chopper import router as chopperRouter
 from routers.Database import router as databaseRouter
 from routers.FEMC import router as femcRouter
 from routers.LO import router as loRouter
 from routers.RFSource import router as rfRouter
 from routers.TemperatureMonitor import router as tempsRouter
 from routers.ColdLoad import router as coldLoadRouter
+from routers.SpectrumAnalyzer import router as specAnRouter
+from routers.PowerMeter import router as powerMeterRouter
 from routers.MeasControl import router as measControlRouter
 from routers.NoiseTemperature import router as noiseTempRouter
 from routers.Stability import router as stabilityRouter
@@ -45,6 +48,10 @@ tags_metadata = [
     {
         "name": "CCA",
         "description": "the cold cartridge under test"
+    },    
+    {
+        "name": "Chopper",
+        "description": "the cold load chopper"
     },
     {
         "name": "Database",
@@ -89,6 +96,14 @@ tags_metadata = [
     {
         "name": "Cold load",
         "description": "Cold load fill controller"
+    },
+    {
+        "name": "SpecAn",
+        "description": "Spectrum analyzer"
+    },
+    {
+        "name": "Power Meter",
+        "description": "Power meter"
     }
 ]
 
@@ -96,12 +111,15 @@ app = FastAPI(openapi_tags=tags_metadata)
 app.include_router(beamScanRouter, tags=["BeamScan"])
 app.include_router(cartAssyRouter, tags=["CartAssembly"])
 app.include_router(ccaRouter, tags=["CCA"])
+app.include_router(chopperRouter, tags=["Chopper"])
 app.include_router(databaseRouter, tags=["Database"])
 app.include_router(femcRouter, tags=["FEMC"])
 app.include_router(loRouter, prefix = "/lo", tags=["LO"])
 app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
 app.include_router(tempsRouter, tags={"Temperatures"})
 app.include_router(coldLoadRouter, tags={"Cold load"})
+app.include_router(specAnRouter, tags = ["SpecAn"])
+app.include_router(powerMeterRouter, tags = ["Power Meter"])
 app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
 app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
@@ -120,7 +138,6 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
-
 
 # Send a message on /startup_ws websocket to tell clients to reload
 manager = ConnectionManager()

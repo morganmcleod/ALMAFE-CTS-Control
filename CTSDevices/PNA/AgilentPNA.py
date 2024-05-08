@@ -56,13 +56,13 @@ class AgilentPNA(BaseAgilentPNA):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.measConfig = None
         self.powerConfig = None
-        super(AgilentPNA, self).__init__(resource, idQuery, reset)
-    
+        super().__init__(resource, idQuery, reset)
+
     def reset(self) -> bool:
         """Reset instrument to defaults and set up measurment and power configuration
         :return bool: True if reset successful
         """
-        super(AgilentPNA, self).reset()
+        super().reset()
         if self.measConfig:
             self.setMeasConfig(self.measConfig)
         if self.powerConfig:

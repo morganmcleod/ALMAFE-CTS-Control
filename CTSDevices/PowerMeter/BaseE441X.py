@@ -1,4 +1,5 @@
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 from .schemas import Channel, Trigger, Unit
 import re
 import pyvisa
@@ -19,15 +20,14 @@ class BaseE441X():
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        rm = pyvisa.ResourceManager()
-        self.inst = rm.open_resource(resource)
-        self.inst.timeout = self.DEFAULT_TIMEOUT
         self.twoChannel = False
-        if self.inst.interface_type == pyvisa.constants.InterfaceType.asrl:
-            self.inst.end_input = pyvisa.constants.termination_char
-            self.inst.end_output = pyvisa.constants.termination_char
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)
+        if self.inst.connected and self.inst.inst.interface_type == pyvisa.constants.InterfaceType.asrl:
+            self.inst.inst.end_input = pyvisa.constants.termination_char
+            self.inst.inst.end_output = pyvisa.constants.termination_char
             self.inst.write(":SYST:COMM:SER:TRAN:ECHO\sOFF;")
-        ok = True
+
+        ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
         if ok and reset:
@@ -38,6 +38,16 @@ class BaseE441X():
         """
         self.inst.close()
 
+    def isConnected(self) -> bool:
+        if not self.inst.connected:
+            return False
+        try:
+            result = self.inst.query("*ESR?")
+            result = removeDelims(result)
+            return len(result) > 0
+        except:
+            return False
+
     def idQuery(self):
         """Perform an ID query and check compatibility
 
@@ -45,6 +55,7 @@ class BaseE441X():
         """
         mfr = None
         model = None
+        self.twoChannel = False
         response = self.inst.query("*IDN?")
         match = re.match(r"[ ]*((AGILENT|KEYSIGHT)\s+TECHNOLOGIES|HEWLETT-PACKARD)\s*\,", response, flags=re.IGNORECASE)
         if match:

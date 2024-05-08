@@ -64,6 +64,10 @@ class ColdLoadBase(ABC):
         """
         return True
 
+    @abstractmethod
+    def isConnected(self) -> bool:
+        return True
+
     def startFill(self) -> None:
         """Start filling the cold load, with automatic stop when full
         """

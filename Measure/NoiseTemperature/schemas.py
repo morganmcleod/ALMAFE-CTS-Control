@@ -1,17 +1,43 @@
 from pydantic import BaseModel
+from enum import Enum
 from CTSDevices.PowerMeter.schemas import StdErrConfig
 from CTSDevices.Chopper.Band6Chopper import State
 
+class ChopperMode(Enum):
+    SPIN = "SPIN"
+    SWITCH = "SWITCH"
+
+class BackEndMode(Enum):
+    IF_PLATE = "IF_PLATE"
+    SPEC_AN = "SPEC_AN"
+
+class SelectPolarization(Enum):
+    POL0 = "POL0"
+    POL1 = "POL1"
+    BOTH = "BOTH"
+
+    def testPol(self, pol: int):        
+        if self == SelectPolarization.BOTH:
+            return True
+        if self == SelectPolarization.POL0 and pol == 0:
+            return True
+        if self == SelectPolarization.POL1 and pol == 1:
+            return True
+        return False
+    
 class TestSteps(BaseModel):
+    zeroPM: bool = True
     warmIF: bool = True
     noiseTemp: bool = True
     imageReject: bool = True
     loWGIntegrity: bool = False
     
     def getText(self):
-        return f"warmIF:{self.warmIF}, noiseTemp:{self.noiseTemp}, imageReject:{self.imageReject}, loWGIntegrity:{self.loWGIntegrity}"
+        return f"zeroPM:{self.zeroPM} warmIF:{self.warmIF}, noiseTemp:{self.noiseTemp}, imageReject:{self.imageReject}, loWGIntegrity:{self.loWGIntegrity}"
 
 class CommonSettings(BaseModel):
+    chopperMode: str = ChopperMode.SPIN.value
+    backEndMode: str = BackEndMode.IF_PLATE.value
     targetPHot: float = -30.0
     targetSidebandPower: float = -15.0  # dBm for image reject only
     chopperSpeed: float = 0.5           # rev/sec
@@ -45,7 +71,20 @@ class NoiseTempSettings(BaseModel):
     ifStart: float = 4.0     # GHz
     ifStop: float = 12.0
     ifStep: float = 0.1
+    polarization: str = SelectPolarization.BOTH.value
     
+class SpectrumAnalyzerSettings(BaseModel):
+    attenuation: float = 16
+    enableInternalPreamp: bool = True
+    autoResolutionBW: bool = False
+    resolutionBW: float = 8e6
+    autoVideoBW: bool = False
+    videoBW: float = 1e3
+    autoSweepTime: bool = True
+    sweepTime: float = 0.0663
+    enableAveraging: bool = False
+    averagingCount: int = 1
+
 class ChopperPowers(BaseModel):
     input: str
     chopperState: State = State.TRANSITION

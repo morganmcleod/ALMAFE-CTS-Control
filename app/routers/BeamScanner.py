@@ -1,9 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
+from schemas.DeviceInfo import DeviceInfo
 import app.measProcedure.BeamScanner as BeamScanner
 from app.measProcedure.MeasurementStatus import measurementStatus
-from Response import MessageResponse
+from app.schemas.Response import MessageResponse
 import asyncio
 from .ConnectionManager import ConnectionManager
 from .Database import CTSDB
@@ -13,6 +14,7 @@ from CTSDevices.MotorControl.schemas import MotorStatus, MoveStatus, Position
 from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, SubScansOption, Rasters
 from socket import getfqdn
+from DebugOptions import *
 
 import logging
 logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -89,9 +91,16 @@ async def get_Query(query: str):
     except Exception as e:
         return MessageResponse(message = str(e), success = False)
 
-@router.get("/mc/isconnected", response_model = SingleBool)
-async def get_IsConnected():
-    return SingleBool(value = BeamScanner.motorController.isConnected())
+@router.get("/mc/device_info", response_model = DeviceInfo)
+async def get_MCIsConnected():
+    if SIMULATE:
+        resource_name = "simulated motor controller"
+    else:
+        resource_name = f"{BeamScanner.motorController.host}.{BeamScanner.motorController.port}"
+    return DeviceInfo(
+        resource_name = resource_name,
+        is_connmected = BeamScanner.motorController.isConnected()
+    )
 
 @router.get("/mc/xy_speed", response_model = SingleFloat)
 async def get_XYSpeed():
@@ -235,6 +244,17 @@ async def put_ScanList(scanList: ScanList):
 @router.get("/scan_status", response_model = ScanStatus)
 async def get_ScanStatus():
     return BeamScanner.beamScanner.scanStatus
+
+@router.get("/pna/device_info", response_model = DeviceInfo)
+async def get_PNAIsConnected():
+    if SIMULATE:
+        resource_name = "simulated PNA"
+    else:
+        resource_name = BeamScanner.pna.inst.resource_name
+    return DeviceInfo(
+        resource_name = resource_name,
+        is_connected = BeamScanner.pna.isConnected()
+    )
 
 @router.get("/pna/idquery", response_model = MessageResponse)
 async def get_PNAIdQuery():

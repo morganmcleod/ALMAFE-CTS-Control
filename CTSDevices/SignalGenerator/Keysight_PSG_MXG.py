@@ -1,5 +1,6 @@
 from .Interface import SignalGenInterface
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 import re
 import pyvisa
 import logging
@@ -16,18 +17,12 @@ class SignalGenerator(SignalGenInterface):
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        rm = pyvisa.ResourceManager()
-        try:
-            self.inst = rm.open_resource(resource)
-            self.inst.timeout = self.DEFAULT_TIMEOUT
-            ok = True
-            if ok and idQuery:
-                ok = self.idQuery()
-            if ok and reset:
-                ok = self.reset()
-        except pyvisa.VisaIOError as err:
-            self.logger.error(err)
-            self.inst = None
+        self.inst = VisaInstrument(resource, return_on_error = "", timeout = self.DEFAULT_TIMEOUT)
+        ok = self.isConnected()
+        if ok and idQuery:
+            ok = self.idQuery()
+        if ok and reset:
+            ok = self.reset()
 
     def __del__(self):
         """Destructor
@@ -36,12 +31,22 @@ class SignalGenerator(SignalGenInterface):
             self.inst.close()
             self.inst = None
 
+    def isConnected(self) -> bool:
+        if not self.inst.connected:
+            return False
+        try:
+            result = self.inst.query("*ESR?")
+            result = removeDelims(result)
+            return len(result) > 0
+        except:
+            return False
+
     def idQuery(self):
         """Perform an ID query and check compatibility
 
         :return bool: True if the instrument is compatible with this class.
         """
-        if not self.inst:
+        if not self.inst.connected:
             return False
 
         mfr = None
@@ -87,9 +92,13 @@ class SignalGenerator(SignalGenInterface):
         if not self.inst:
             return (None, "No connection")
         try:
-            err = self.inst.query(":SYST:ERR?")
+            err = self.inst.query(":SYST:ERR?", return_on_error = "-1, SignalGenerator: error query failed")
             err = removeDelims(err)
-            return (int(err[0]), " ".join(err[1:]))            
+            if len(err) >= 2:
+                return (int(err[0]), " ".join(err[1:]))
+            else:
+                return (-1, " ".join(err))
+            
         except pyvisa.VisaIOError as err:
             self.inst.close()
             self.inst = None

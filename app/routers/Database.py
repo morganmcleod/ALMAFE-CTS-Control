@@ -1,9 +1,9 @@
 from fastapi import APIRouter
-from Response import ListResponse, prepareListResponse, MessageResponse
+from app.schemas.Response import ListResponse, prepareListResponse, MessageResponse
 router = APIRouter(prefix="/database")
 
 from app.database.CTSDB import CTSDB
-
+from schemas.common import SingleBool
 from DBBand6Cart.CartConfigs import CartConfig, CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParam, MixerParams
@@ -11,6 +11,10 @@ from DBBand6Cart.PreampParams import PreampParam, PreampParams
 from DBBand6Cart.WCAs import WCAs
 from typing import Optional, List
 from hardware.FEMC import cartAssembly
+
+@router.get("/isconnected")
+async def get_IsConnected():
+    return SingleBool(value = CTSDB().is_connected())
 
 @router.get("/config", response_model = ListResponse)
 async def getConfigs(serialNum:int = None, configId:int = None, callback:str = None):

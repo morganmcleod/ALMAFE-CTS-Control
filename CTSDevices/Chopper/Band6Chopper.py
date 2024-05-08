@@ -2,7 +2,7 @@ from enum import Enum
 import serial
 import time
 from CTSDevices.Common.RemoveDelims import removeDelims
-from typing import Tuple
+from typing import Optional
 import logging
 import threading
 from DebugOptions import *
@@ -13,7 +13,7 @@ class State(Enum):
     CLOSED = 2
 
 class Chopper():
-    """The band 6 chopper is based on an Intelligent Motion Systems Panter LE2 stepper motor controller.
+    """The band 6 chopper is based on an Intelligent Motion Systems Panther LE2 stepper motor controller.
     There are reflective tape marks on the chopper wheel so that the half-clock (HC) and full-clock (FC)
     positions can be sensed, for homing and for reporting its current position.
     Monitor and control is via RS232. The CTS and DSR lines are used as digital inputs for the HC and FC signals.
@@ -34,17 +34,16 @@ class Chopper():
                 timeout=0.2, 
                 write_timeout=0.1, 
                 parity=serial.PARITY_NONE)
-            if not self.inst.is_open:
-                if SIMULATE:
-                    return
-                raise Exception("Chopper cannot open serial port " + resource)
+            if self.inst.is_open:
+                self.inst.reset_input_buffer()
+                self.inst.reset_output_buffer()
+                self.reset(onThread = True)
+            elif SIMULATE:
+                return
+                
         except:
             if SIMULATE:
                 return
-            raise Exception("Chopper cannot open serial port " + resource)
-        self.inst.reset_input_buffer()
-        self.inst.reset_output_buffer()
-        self.reset(onThread = True)
 
     def reset(self, onThread: bool = False):
         """Reset the chopper to a known and indexed state, with default settings for open/close movement.
@@ -65,6 +64,11 @@ class Chopper():
         self.__setRampSlope(accel = 3, decel = 3)
         self.__findOpen()
 
+    def isConnected(self) -> bool:
+        # request position
+        read = self.__serialWrite("Z 0\r")
+        return True if read else False
+
     def getState(self) -> State:
         """Get the chopper state
 
@@ -77,13 +81,17 @@ class Chopper():
             else:
                 return State.TRANSITION
         else:
-            return State.OPEN
+            if HC:
+                return State.OPEN
+            else:
+                return State.TRANSITION
 
     def spin(self, rps:float):
         """Start spinning the chopper at a fixed revolutions per second (rps)
 
         :param float rps: how fast
         """
+        self.__moveFixedVelocity(0)
         self.__setVelocity(initial= 20, slew = 400)
         self.__setCurrent(hold = 3, run = 15)
         self.__setRampSlope(accel = 1, decel = 1)
@@ -207,7 +215,7 @@ class Chopper():
     def __variableResMode(self, enable:bool):
         self.__serialWrite("H 1\r" if enable else "H 0\r")
 
-    def __getClockBits(self) -> Tuple[bool, bool]:
+    def __getClockBits(self) -> tuple[bool, bool]:
         """Get the half-clock (HC) and full-clock (FC) sensor bits.
 
         :return bool, bool: HC, FC
@@ -274,7 +282,7 @@ class Chopper():
             return __isMoving
         return False
        
-    def __serialWrite(self, cmd:str) -> str:
+    def __serialWrite(self, cmd:str) -> Optional[str]:
         """Write to the serial device and read the reply
 
         :param str cmd: string to write
@@ -290,3 +298,4 @@ class Chopper():
             return read.decode()
         except Exception as e:
             self.logger.exception(e)
+            return None

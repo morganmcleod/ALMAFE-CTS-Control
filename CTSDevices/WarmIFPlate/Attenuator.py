@@ -22,6 +22,9 @@ class Attenuator():
         self.switchController.setSwitches(self.RESET_SWITCHES)
         self.value = self.MAX_ATTENUATION
 
+    def isConnected(self) -> bool:
+        return self.switchController.isConnected()
+    
     def setValue(self, atten: int = MAX_ATTENUATION):
         if atten < 0 or atten > self.MAX_ATTENUATION:
             atten = self.MAX_ATTENUATION

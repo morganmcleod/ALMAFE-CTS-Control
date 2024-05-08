@@ -2,8 +2,8 @@ from .PNAInterface import *
 from .schemas import *
 from typing import Tuple, List, Optional
 from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 import re
-import pyvisa
 import time
 import logging
 
@@ -14,14 +14,23 @@ class BaseAgilentPNA(PNAInterface):
 
     def __init__(self, resource="GPIB0::16::INSTR", idQuery=True, reset=True):
         self.logger = logging.getLogger()
-        rm = pyvisa.ResourceManager()
-        self.inst = rm.open_resource(resource)
-        self.inst.timeout = self.DEFAULT_TIMEOUT
-        ok = True
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)        
+        ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
         if ok and reset:
             ok = self.reset()
+
+    def isConnected(self) -> bool:
+        # *TST? Returns the result of a query of the analyzer hardward status. An 0 indicates no failures found.
+        if not self.inst.connected:
+            return False
+        try:
+            result = self.inst.query("*TST?")
+            result = removeDelims(result)
+            return len(result) > 0
+        except:
+            return False
 
     def idQuery(self) -> Optional[str]:
         """Perform an ID query and check compatibility

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import hardware.FEMC as FEMC
-from Response import MessageResponse
+from app.schemas.Response import MessageResponse
+from schemas.DeviceInfo import DeviceInfo
+from schemas.common import SingleBool
 from .ConnectionManager import ConnectionManager
 import asyncio
 import logging
@@ -35,6 +37,13 @@ async def websocket_sis_current(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /cartassy/auto_lo/current_ws")
+
+@router.get("/device_info", response_model = DeviceInfo)
+async def get_DeviceInfo_CartAssembly():
+    return DeviceInfo(
+        resource_name = "CAN0:13",
+        is_connected = FEMC.cartAssembly.isConnected()
+    )
 
 @router.put("/auto_lo", response_model = MessageResponse)
 async def set_AutoLOPower(pol: int):

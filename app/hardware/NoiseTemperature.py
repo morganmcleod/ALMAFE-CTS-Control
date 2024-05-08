@@ -1,5 +1,7 @@
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
 from CTSDevices.PowerMeter.Simulator import PowerMeterSimulator
+from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from CTSDevices.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
 from CTSDevices.PowerSupply.Simulator import PowerSupplySimulator
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
@@ -28,5 +30,10 @@ if SIMULATE:
     coldLoad = AMI1720Simulator()
 else:
     coldLoad = AMI1720("TCPIP0::10.1.1.5::7180::SOCKET")
+
+if SIMULATE:
+    spectrumAnalyzer = SpectrumAnalyzerSimulator()
+else:
+    spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.7::inst0::INSTR")
 
 chopper = Chopper()

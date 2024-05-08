@@ -30,6 +30,9 @@ class OutputSwitch():
     def reset(self) -> None:
         self.setValue()
 
+    def isConnected(self) -> bool:
+        return self.switchController.isConnected()
+
     def setValue(self, output: OutputSelect = OutputSelect.POWER_METER, 
                        load: LoadSelect = LoadSelect.THROUGH,
                        pad: PadSelect = PadSelect.PAD_OUT) -> None:

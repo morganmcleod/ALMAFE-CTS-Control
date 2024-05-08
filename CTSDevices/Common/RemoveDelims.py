@@ -10,5 +10,8 @@ def removeDelims(data: str, delimsRe: str = DEFAULT_DELIMS) -> List[str]:
     :param str delimsRe: regex for delimiters
     :return List[str]: items found between the delimiters
     """
-    d = re.split(delimsRe, data)
-    return [x for x in d if x]
+    try:
+        d = re.split(delimsRe, data)
+        return [x for x in d if x]
+    except:
+        return []

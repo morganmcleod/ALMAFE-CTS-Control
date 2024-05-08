@@ -26,6 +26,9 @@ class YIGFilter():
         self.setFrequency(self.minGHz)
         self.freqGhz = self.minGHz
 
+    def isConnected(self) -> bool:
+        return self.switchController.isConnected()
+
     def setFrequency(self, freqGHz: float) -> None:
         if freqGHz < self.minGHz:
             freqGHz = self.minGHz

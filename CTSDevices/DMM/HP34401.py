@@ -3,6 +3,8 @@ import pyvisa
 import logging
 from enum import Enum
 from typing import List, Tuple, Optional
+from CTSDevices.Common.RemoveDelims import removeDelims
+from CTSDevices.Common.VisaInstrument import VisaInstrument
 
 class Function(Enum):
     DC_VOLTAGE = "VOLT:DC"
@@ -56,20 +58,19 @@ class HP34401():
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        rm = pyvisa.ResourceManager()
-        self.inst = rm.open_resource(resource)
-        self.inst.timeout = self.DEFAULT_TIMEOUT
-        if self.inst.interface_type == pyvisa.constants.InterfaceType.asrl:
-            self.inst.end_input = pyvisa.constants.termination_char
-            self.inst.end_output = pyvisa.constants.termination_char
-            self.inst.baud_rate = 9600
-            self.inst.parity = pyvisa.constants.VI_ASRL_PAR_EVEN
-            self.inst.data_bits = 7
-            self.inst.stop_bits = pyvisa.constants.VI_ASRL_STOP_TWO
-            self.inst.flow_control = pyvisa.constants.VI_ASRL_FLOW_DTR_DSR
-            self.inst.flush(pyvisa.constants.VI_IO_IN_BUF_DISCARD | pyvisa.constants.VI_IO_OUT_BUF_DISCARD)
-            self.inst.bytes_in_buffer = 4096
-        ok = True
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)        
+        if self.inst.connected and self.inst.inst.interface_type == pyvisa.constants.InterfaceType.asrl:
+            self.inst.inst.end_input = pyvisa.constants.termination_char
+            self.inst.inst.end_output = pyvisa.constants.termination_char
+            self.inst.inst.baud_rate = 9600
+            self.inst.inst.parity = pyvisa.constants.VI_ASRL_PAR_EVEN
+            self.inst.inst.data_bits = 7
+            self.inst.inst.stop_bits = pyvisa.constants.VI_ASRL_STOP_TWO
+            self.inst.inst.flow_control = pyvisa.constants.VI_ASRL_FLOW_DTR_DSR
+            self.inst.inst.flush(pyvisa.constants.VI_IO_IN_BUF_DISCARD | pyvisa.constants.VI_IO_OUT_BUF_DISCARD)
+            self.inst.inst.bytes_in_buffer = 4096
+
+        ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
         if ok and reset:
@@ -79,6 +80,17 @@ class HP34401():
         """Destructor
         """
         self.inst.close()
+
+    def isConnected(self) -> bool:
+        if not self.inst.connected:
+            return False
+        try:
+            response = self.inst.query("*ESR?")
+            response = removeDelims(response)
+            if len(response):
+                return True
+        except:
+            return False
 
     def idQuery(self) -> bool:
         """Perform an ID query and check compatibility
@@ -107,7 +119,7 @@ class HP34401():
             return True
         else:
             return False
-        
+    
     def configureMeasurement(self, 
             function: Function, 
             autoRange: bool = True,

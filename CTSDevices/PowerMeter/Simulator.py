@@ -9,6 +9,9 @@ class PowerMeterSimulator():
         self.settings = {Channel.A : {}, Channel.B: {}}
         self.setDefaults()
         
+    def isConnected(self) -> bool:
+        return True
+    
     def setDefaults(self):
         """Set instrument defaults so that the front panel shows live readings
 

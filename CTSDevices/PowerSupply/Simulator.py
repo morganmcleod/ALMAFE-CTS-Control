@@ -1,7 +1,3 @@
-from CTSDevices.Common.RemoveDelims import removeDelims   #todo move Common out of CTSDevices
-import pyvisa
-import re
-import logging
 
 class PowerSupplySimulator():
     
@@ -16,6 +12,9 @@ class PowerSupplySimulator():
     def reset(self):
         return True
         
+    def isConnected(self) -> bool:
+        return True
+
     def errorQuery(self):
         """Send an error query and return the results
 

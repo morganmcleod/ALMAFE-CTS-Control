@@ -24,7 +24,10 @@ class PNASimulator(PNAInterface):
         :return bool: True if reset successful
         """
         return True
-    
+
+    def isConnected(self) -> bool:
+        return True
+
     def setMeasConfig(self, config: MeasConfig):
         """Set the measurement configuration for a channel
         :param MeasConfig config

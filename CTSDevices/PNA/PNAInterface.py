@@ -26,6 +26,10 @@ class PNAInterface(ABC):
         pass
 
     @abstractmethod
+    def isConnected(self) -> bool:
+        pass
+
+    @abstractmethod
     def setMeasConfig(self, config: MeasConfig):
         """Set the measurement configuration for a channel
         :param MeasConfig config

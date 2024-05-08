@@ -9,6 +9,9 @@ class AttenuatorSimulator():
     def reset(self):
         self.value = 100
 
+    def isConnected(self) -> bool:
+        return True
+
     def setValue(self, atten: int = 20):
         self.value = atten
         
@@ -18,6 +21,9 @@ class AttenuatorSimulator():
 class InputSwitchSimulator():
     def __init__(self):
         self.position = InputSelect.POL0_USB
+
+    def isConnected(self) -> bool:
+        return True
 
     def setValue(self, select: InputSelect) -> None:
         self.position = select
@@ -54,6 +60,9 @@ class NoiseSourceSimulator():
     def reset(self) -> None:
         pass
 
+    def isConnected(self) -> bool:
+        return True
+
     def setEnable(self, enable: bool = False) -> None:
         pass
 
@@ -63,6 +72,9 @@ class OutputSwitchSimulator():
 
     def reset(self) -> None:
         pass
+
+    def isConnected(self) -> bool:
+        return True
 
     def setValue(self, output: OutputSelect = OutputSelect.POWER_METER, 
                        load: LoadSelect = LoadSelect.THROUGH,
@@ -75,6 +87,9 @@ class YIGFilterSimulator():
 
     def reset(self):
         self.freqGhz = 1
+
+    def isConnected(self) -> bool:
+        return True
 
     def setFrequency(self, freqGHz: float) -> None:
         self.freqGhz = freqGHz

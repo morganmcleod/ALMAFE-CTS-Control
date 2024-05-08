@@ -1,4 +1,4 @@
-from ..Common.RemoveDelims import removeDelims
+from CTSDevices.Common.RemoveDelims import removeDelims
 from .schemas import Channel, Trigger, Unit, StdErrConfig, StdErrResult
 from .BaseE441X import BaseE441X
 from time import time
@@ -16,7 +16,7 @@ class PowerMeter(BaseE441X):
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
-        super(PowerMeter, self).__init__(resource, idQuery, reset)
+        super().__init__(resource, idQuery, reset)
         self.settings = {Channel.A : {}, Channel.B: {}}
         self.setDefaults()
         
