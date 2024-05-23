@@ -77,7 +77,10 @@ class Chopper():
             else:
                 return State.TRANSITION
         else:
-            return State.OPEN
+            if HC:
+                return State.OPEN
+            else:
+                return State.TRANSITION
 
     def spin(self, rps:float):
         """Start spinning the chopper at a fixed revolutions per second (rps)

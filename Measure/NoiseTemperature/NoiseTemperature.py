@@ -77,6 +77,7 @@ class NoiseTemperature():
         self.keyCartTest = keyCartTest
         self.doNoiseTemp = True
         self.doImageReject = doImageReject
+        self.coldLoadController.startFill()
         self.futures = []
         self.futures.append(self.executor.submit(self.__run))
         concurrent.futures.wait(self.futures)
@@ -125,7 +126,7 @@ class NoiseTemperature():
                 return
             
             self.measurementStatus.setStatusMessage(f"Setting LO power...")
-            success = self.cartAssembly.setAutoLOPower()
+            success = self.cartAssembly.setAutoLOPower(pol1 = False)
             if not success:
                 self.logger.error("cartAssembly.setAutoLOPower failed")
 
@@ -213,7 +214,7 @@ class NoiseTemperature():
         self.powerMeter.setFastMode(False)
         self.warmIFPlate.yigFilter.setFrequency(freqIF)
         
-        for pol in (0, 1):
+        for pol in (0, ):
 
             self.imageRejectHistory = []
 
@@ -267,7 +268,7 @@ class NoiseTemperature():
         self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
         sampleInterval = 1 / self.commonSettings.sampleRate
 
-        for pol in 0, 1:
+        for pol in (0, ):
             for sideband in ('USB', 'LSB'):
                 if self.stopNow:
                     self.finished = True                
@@ -285,14 +286,14 @@ class NoiseTemperature():
                     
                     chopperPower.chopperState = self.chopper.getState()
                     chopperPower.power = self.powerMeter.read()
-                    
+
                     self.chopperPowerHistory.append(copy.copy(chopperPower))                    
-                    
+                
                     if chopperPower.chopperState == State.OPEN:
                         samplesHot.append(chopperPower.power)
                     elif chopperPower.chopperState == State.CLOSED:
                         samplesCold.append(chopperPower.power)
-                    
+                
                     if len(samplesHot) >= self.commonSettings.powerMeterConfig.maxS and len(samplesCold) >= self.commonSettings.powerMeterConfig.maxS:                        
                         done = True
                     elif len(samplesHot) >= self.commonSettings.powerMeterConfig.minS and len(samplesCold) >= self.commonSettings.powerMeterConfig.minS:
