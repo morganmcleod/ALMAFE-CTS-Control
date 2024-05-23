@@ -381,7 +381,7 @@ class NoiseTemperature():
             initialStepPercent = 10, 
             initialOutput = setValue, 
             setPoint = self.commonSettings.targetPHot,
-            tolerance = 1,
+            tolerance = 0.5,
             maxIter = maxIter)
 
         self.warmIFPlate.attenuator.setValue(100 - setValue)
@@ -396,7 +396,7 @@ class NoiseTemperature():
         while not done and not error: 
             iter += 1
             if iter >= maxIter:
-                error = True
+                done = True
                 msg = f"__attenuatorAutoLevel: iter={iter} maxIter={maxIter} setValue={100 - setValue} dB"
             elif controller.isComplete():
                 done = True
