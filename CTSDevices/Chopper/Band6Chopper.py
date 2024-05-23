@@ -197,6 +197,7 @@ class Chopper():
         done = False
         iter = 300
         while not done and iter > 0:
+            time.sleep(0.2)
             if not self.__isMoving():
                 done = True
             else:
