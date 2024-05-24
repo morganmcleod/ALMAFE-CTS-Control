@@ -83,16 +83,8 @@ class PowerMeterSimulator():
             time = 0.001
         )
 
-    def read(self, channel = Channel.A):
+    def read(self, channel = Channel.A, averaging = 1):
         """Read the instrument once, taking into account the configured Measurement
-
-        :param Channel channel: which channel to measure, defaults to Channel.A
-        :return float: measured power level
-        """
-        return -1.0
-    
-    def simpleRead(self, channel = Channel.A):
-        """Read the instrument when it is running in continuous mode
 
         :param Channel channel: which channel to measure, defaults to Channel.A
         :return float: measured power level

@@ -174,7 +174,7 @@ class BaseE441X():
         opc = removeDelims(self.inst.query("*OPC?"))
         return opc and opc[0]
 
-    def read(self, channel = Channel.A):
+    def read(self, channel = Channel.A, averaging = 1):
         """Read the instrument when it is running in continuous mode
 
         :param Channel channel: which channel to measure, defaults to Channel.A
@@ -182,4 +182,7 @@ class BaseE441X():
         """
         if channel == Channel.B and not self.twoChannel:
             return False
-        return float(self.inst.query(f"FETC{channel.value}:POW:AC?"))
+        sum = 0
+        for i in range(averaging):
+            sum += float(self.inst.query(f"FETC{channel.value}:POW:AC?"))
+        return sum / averaging

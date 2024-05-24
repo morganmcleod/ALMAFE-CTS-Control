@@ -70,12 +70,6 @@ class TemperatureMonitor():
         """
         if not self.inst:
             return False
-
-        with self.lock:
-            self.inst.write("*RST\r")
-        time.sleep(0.25)
-        with self.lock:
-            self.inst.write("DFLT 99\r")
         return True
 
     def readSingle(self, input: int):

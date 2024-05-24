@@ -75,16 +75,12 @@ class Chopper():
         :return State: one of OPEN, CLOSED, or TRANSITION
         """
         HC, FC = self.__getClockBits()
-        if FC:
-            if HC:
-                return State.CLOSED
-            else:
-                return State.TRANSITION
-        else:
-            if HC:
-                return State.OPEN
-            else:
-                return State.TRANSITION
+        if HC and FC: 
+            return State.CLOSED
+        elif HC and not FC: 
+            return State.OPEN
+        else: 
+            return State.TRANSITION
 
     def spin(self, rps:float):
         """Start spinning the chopper at a fixed revolutions per second (rps)
@@ -202,6 +198,7 @@ class Chopper():
         done = False
         iter = 300
         while not done and iter > 0:
+            time.sleep(0.2)
             if not self.__isMoving():
                 done = True
             else:

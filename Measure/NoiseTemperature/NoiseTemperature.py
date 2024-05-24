@@ -688,9 +688,11 @@ class NoiseTemperature():
 
     def __attenuatorAutoLevel(self):
         self.measurementStatus.setStatusMessage("Setting attenuator...")
+        self.chopper.stop()
         self.chopper.gotoHot()
         self.powerMeter.setUnits(Unit.DBM)
         self.warmIFPlate.inputSwitch.setValue(InputSelect.POL0_USB)
+        time.sleep(1.0)
 
         # treating (max - atten) as gain because BinarySearchController wants the input to go up when the output does.
         setValue = 100 - self.ifAtten
@@ -698,14 +700,15 @@ class NoiseTemperature():
         
         controller = BinarySearchController(
             outputRange = [0, 100], 
-            initialStepPercent = 10, 
+            initialStepPercent = 5, 
             initialOutput = setValue, 
             setPoint = self.commonSettings.targetPHot,
-            tolerance = 1,
+            tolerance = 0.5,
             maxIter = maxIter)
 
         self.warmIFPlate.attenuator.setValue(100 - setValue)
-        amp = self.powerMeter.read()
+        time.sleep(0.25)
+        amp = self.powerMeter.read(averaging = 10)
 
         done = error = False
         msg = ""
@@ -726,7 +729,7 @@ class NoiseTemperature():
                 setValue = int(round(controller.output))
                 self.warmIFPlate.attenuator.setValue(100 - setValue)
                 time.sleep(0.25)
-                amp = self.powerMeter.read()
+                amp = self.powerMeter.read(averaging = 10)
                 if amp is None:
                     error = True
                     msg = f"__attenuatorAutoLevel: powerMeter.read error at iter={iter}."

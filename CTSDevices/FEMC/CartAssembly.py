@@ -37,11 +37,20 @@ class CartAssembly():
         self.mixerParam02 = None
         self.mixerParam11 = None
         self.mixerParam12 = None
+        self.mixerParams01 = None
+        self.mixerParams02 = None
+        self.mixerParams11 = None
+        self.mixerParams12 = None
+        self.preampParam01 = None
+        self.preampParam02 = None
+        self.preampParam11 = None
+        self.preampParam12 = None
+        self.preampParams01 = None
+        self.preampParams02 = None
+        self.preampParams11 = None
+        self.preampParams12 = None
         self.freqLOGHz = 0
         self.autoLOPol = None
-
-    def isConnected(self) -> bool:
-        return self.ccaDevice.isConnected() and self.loDevice.isConnected()
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -55,20 +64,24 @@ class CartAssembly():
 
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
-        if self.keysPol0 and self.keysPol1:
+        if self.keysPol0 or self.keysPol1:
             self.configId = configId
         else:
             return False
         DB = MixerParams(driver = CTSDB())
-        self.mixerParams01 = DB.read(self.keysPol0.keyChip1)
-        self.mixerParams02 = DB.read(self.keysPol0.keyChip2)
-        self.mixerParams11 = DB.read(self.keysPol1.keyChip1)
-        self.mixerParams12 = DB.read(self.keysPol1.keyChip2)
+        if self.keysPol0:
+            self.mixerParams01 = DB.read(self.keysPol0.keyChip1)
+            self.mixerParams02 = DB.read(self.keysPol0.keyChip2)
+        if self.keysPol1:
+            self.mixerParams11 = DB.read(self.keysPol1.keyChip1)
+            self.mixerParams12 = DB.read(self.keysPol1.keyChip2)
         DB = PreampParams(driver = CTSDB())
-        self.preampParams01: List[PreampParam] = DB.read(self.keysPol0.keyPreamp1)
-        self.preampParams02: List[PreampParam] = DB.read(self.keysPol0.keyPreamp2)
-        self.preampParams11: List[PreampParam] = DB.read(self.keysPol1.keyPreamp1)
-        self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
+        if self.keysPol0:
+            self.preampParams01: List[PreampParam] = DB.read(self.keysPol0.keyPreamp1)
+            self.preampParams02: List[PreampParam] = DB.read(self.keysPol0.keyPreamp2)
+        if self.keysPol1:
+            self.preampParams11: List[PreampParam] = DB.read(self.keysPol1.keyPreamp1)
+            self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
         return True
 
     def getConfig(self) -> int:
@@ -77,26 +90,35 @@ class CartAssembly():
     def setRecevierBias(self, FreqLO:float) -> bool:
         if not self.configId:
             return False
-        self.mixerParam01 = self.__interpolateMixerParams(FreqLO, self.mixerParams01)
-        self.mixerParam02 = self.__interpolateMixerParams(FreqLO, self.mixerParams02)
-        self.mixerParam11 = self.__interpolateMixerParams(FreqLO, self.mixerParams11)
-        self.mixerParam12 = self.__interpolateMixerParams(FreqLO, self.mixerParams12)
-        self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.IMAG)
-        self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.IMAG)
-        self.ccaDevice.setSIS(1, 1, self.mixerParam11.VJ, self.mixerParam11.IMAG)
-        self.ccaDevice.setSIS(1, 2, self.mixerParam12.VJ, self.mixerParam12.IMAG)
-        pp = self.preampParams01[0]
-        self.ccaDevice.setLNA(0, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+        if self.mixerParams01:
+            self.mixerParam01 = self.__interpolateMixerParams(FreqLO, self.mixerParams01)
+            self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.IMAG)
+        if self.mixerParams02:
+            self.mixerParam02 = self.__interpolateMixerParams(FreqLO, self.mixerParams02)
+            self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.IMAG)
+        if self.mixerParams11:
+            self.mixerParam11 = self.__interpolateMixerParams(FreqLO, self.mixerParams11)
+            self.ccaDevice.setSIS(1, 1, self.mixerParam11.VJ, self.mixerParam11.IMAG)
+        if self.mixerParams12:
+            self.mixerParam12 = self.__interpolateMixerParams(FreqLO, self.mixerParams12)
+            self.ccaDevice.setSIS(1, 2, self.mixerParam12.VJ, self.mixerParam12.IMAG)
+        
+        if self.preampParams01:
+            pp = self.preampParams01[0]
+            self.ccaDevice.setLNA(0, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                        pp.ID1, pp.ID2, pp.ID3)
+        if self.preampParams02:
+            pp = self.preampParams02[0]
+            self.ccaDevice.setLNA(0, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
                                     pp.ID1, pp.ID2, pp.ID3)
-        pp = self.preampParams02[0]
-        self.ccaDevice.setLNA(0, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                    pp.ID1, pp.ID2, pp.ID3)
-        pp = self.preampParams11[0]
-        self.ccaDevice.setLNA(1, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                    pp.ID1, pp.ID2, pp.ID3)
-        pp = self.preampParams12[0]
-        self.ccaDevice.setLNA(1, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                    pp.ID1, pp.ID2, pp.ID3)                                    
+        if self.preampParams11:
+            pp = self.preampParams11[0]
+            self.ccaDevice.setLNA(1, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                        pp.ID1, pp.ID2, pp.ID3)
+        if self.preampParams12:
+            pp = self.preampParams12[0]
+            self.ccaDevice.setLNA(1, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                        pp.ID1, pp.ID2, pp.ID3)                                    
         self.ccaDevice.setLNAEnable(True)
         return True
 

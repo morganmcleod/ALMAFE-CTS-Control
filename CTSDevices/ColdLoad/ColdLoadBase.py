@@ -79,13 +79,13 @@ class ColdLoadBase(ABC):
         self.setFillState(FillState.CLOSED)
 
     def shouldPause(self, 
-            minLevel: float = 75, 
+            minLevel: float = 20, 
             maxLevel: float = 105, 
             enablePause: bool = True) -> Tuple[bool, str]:
         """Should the calling measurement procedure pause and wait for cold load intervention?
 
-        :param float minLevel: Percent, defaults to 75
-        :param float maxLevel: Percent, defaults to 105.  
+        :param float minLevel: Percent
+        :param float maxLevel: Percent
             This is intended to catch very out-of-range readings from sensor problems.
         :param bool enablePause: If false generally return True = yes pause, except in error conditions.
         :return Tuple[bool, str]: Should pause?, and a description of why.
