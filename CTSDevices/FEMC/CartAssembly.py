@@ -128,10 +128,7 @@ class CartAssembly():
 
         if not self.configId:
             return False
-
-        if not self.mixerParam01 or not self.mixerParam11:
-            self.setRecevierBias(self.DEFAULT_LO)
-        
+       
         if SIMULATE:
             return True
 
