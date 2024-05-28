@@ -20,8 +20,6 @@ from DebugOptions import *
 
 class CartAssembly():
 
-    DEFAULT_LO = 241
-
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.ccaDevice = ccaDevice
@@ -50,7 +48,7 @@ class CartAssembly():
         self.preampParams11 = None
         self.preampParams12 = None
         self.freqLOGHz = 0
-        self.autoLOPol = None
+        self.autoLOPol = None   # not used internally, but observed by CartAssembly API
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -122,35 +120,39 @@ class CartAssembly():
         self.ccaDevice.setLNAEnable(True)
         return True
 
-    def setAutoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False) -> bool:
+    def setAutoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False) -> tuple[bool, str]:
         if not pol0 and not pol1:
-            return False           
+            return False, "setAutoLOPower: must enable at least one pol"
 
         if not self.configId:
-            return False
+            return False, "setAutoLOPower: no configId"
        
         if SIMULATE:
-            return True
+            return True, ""
 
         if onThread:
             threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1), daemon = True).start()
-            return True
+            return True, ""
         else:
             return self.__autoLOPowerSequence(pol0, pol1)
 
-    def __autoLOPowerSequence(self, pol0: bool, pol1: bool):
-        success = True
+    def __autoLOPowerSequence(self, pol0: bool, pol1: bool) -> tuple[bool, str]:
+        success0 = success1 = True
+        msg0 = msg1 = ""
         if pol0:
             self.autoLOPol = 0
-            success = self.__autoLOPower(0) and success
+            success0, msg0 = self.__autoLOPower(0)
         if pol1:
             self.autoLOPol = 1
-            success = self.__autoLOPower(1) and success
-        self.autoLOPol = None
-        return success
+            success1, msg1 = self.__autoLOPower(1)
+        return success0 & success1, msg0 + " " + msg1
 
-    def __autoLOPower(self, pol) -> bool:
-        targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
+    def __autoLOPower(self, pol) -> tuple[bool, str]:
+        try:
+            targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
+        except:
+            return False, f"No bias available for pol{pol}"
+        
         self.logger.info(f"target Ij = {targetIJ}")
         paOutput = 20
         averaging = 2
@@ -166,7 +168,7 @@ class CartAssembly():
         self.loDevice.setPAOutput(pol, paOutput)
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
-            return False
+            return False, f"Error getting SIS bias readings for pol{pol}"
 
         sisCurrent = abs(sis['Ij'])
         tprev = time.time()
@@ -183,8 +185,9 @@ class CartAssembly():
             tprev = time.time()
         
         iterTime = tsum / (controller.iter + 1)
-        self.logger.info(f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}")
-        return controller.success
+        msg = f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}"
+        self.logger.info(msg)
+        return controller.success, msg
     
     def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:
         return (self.mixerParam01.IJ, self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ)
@@ -223,3 +226,41 @@ class CartAssembly():
         else:
             self.loDevice.setNullLoopIntegrator(True)
         return True, f"lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
+
+    def mixersDeflux(self, 
+            pol0: bool = True, 
+            pol1: bool = True, 
+            iMagMax: float = 40.0, 
+            iMagStep: float = 1.0, 
+            onThread: bool = False) -> tuple[bool, str]:
+        
+        if not pol0 and not pol1:
+            return False, "mixersDeflux: must enable at least one pol"
+       
+        if SIMULATE:
+            return True, ""
+
+        if onThread:
+            threading.Thread(target = self.__mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
+            return True, ""
+        else:
+            return self.__mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
+
+    def __mixerDefluxSequence(self, 
+            pol0: bool, 
+            pol1: bool,
+            iMagMax: float = 40.0, 
+            iMagStep: float = 1.0) -> tuple[bool, str]:
+    
+        msg = f"mixersDeflux: "
+        success0 = success1 = True
+        if pol0:
+            self.loDevice.setPABias(0, 0)
+            success0 = self.ccaDevice.mixerDeflux(0, iMagMax, iMagStep)
+            msg += f"pol0: {'success' if success0 else 'fail'}"
+        if pol1:
+            self.loDevice.setPABias(1, 0)
+            success1 = self.ccaDevice.mixerDeflux(1, iMagMax, iMagStep)
+            msg += f"pol1: {'success' if success1 else 'fail'}"
+
+        return success0 & success1, msg

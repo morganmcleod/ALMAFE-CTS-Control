@@ -10,6 +10,7 @@ router = APIRouter(prefix="/femc")
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_FEMC():
     return DeviceInfo(
+        name = 'femc',
         resource_name = "CAN0:13",
         is_connected = FEMC.femcDevice.isConnected()
     )

@@ -13,8 +13,9 @@ async def get_DeviceInfo_PowerMeter():
     if SIMULATE:
         resource_name = "simulated power meter"
     else:
-        resource_name = powerMeter.inst.port
+        resource_name = powerMeter.inst.resource_name
     return DeviceInfo(
+        name = 'powermeter',
         resource_name = resource_name,
         is_connected = powerMeter.isConnected()
     )

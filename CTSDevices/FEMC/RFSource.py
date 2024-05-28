@@ -38,9 +38,11 @@ class RFSource(LODevice):
         rfReference.setRFOutput(True)
         if not SIMULATE:
             wcaFreq, ytoFreq, ytoCourse = self.lockPLL()
+            success = wcaFreq != 0
         else:
             self.setNullLoopIntegrator(True)
-        return (True, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
+            success = True
+        return (success, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def getPAVD(self):
         pa = self.getPA()

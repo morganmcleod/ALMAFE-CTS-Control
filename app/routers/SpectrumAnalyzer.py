@@ -13,8 +13,9 @@ async def get_DeviceInfo_SpecAn():
     if SIMULATE:
         resource_name = "simulated spectrum analyzer"
     else:
-        resource_name = spectrumAnalyzer.inst.port
+        resource_name = spectrumAnalyzer.inst.resource_name
     return DeviceInfo(
+        name = 'specanalyzer',
         resource_name = resource_name,
         is_connected = spectrumAnalyzer.isConnected()
     )

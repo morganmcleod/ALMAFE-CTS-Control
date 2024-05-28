@@ -20,6 +20,7 @@ logger = logging.getLogger("ALMAFE-CTS-Control")
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_RFSource():
     return DeviceInfo(
+        name = 'rfsource',
         resource_name = "CAN0:13",
         is_connected = rfSrcDevice.isConnected()
     )

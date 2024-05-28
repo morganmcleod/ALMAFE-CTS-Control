@@ -1,8 +1,9 @@
 from .ColdLoadBase import ColdLoadBase, FillMode, FillState
+from Util.Singleton import Singleton
 from typing import Tuple
 import time
 
-class AMI1720Simulator(ColdLoadBase):
+class AMI1720Simulator(ColdLoadBase, Singleton):
 
     DEFAULT_TIMEOUT = 2500
     

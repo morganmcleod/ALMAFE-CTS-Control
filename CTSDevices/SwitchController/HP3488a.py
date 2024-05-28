@@ -31,8 +31,7 @@ class SwitchController():
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.connected = False
-        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)
+        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)        
         if readConfig:
             self.readConfig = readConfig
         if writeConfig:
@@ -44,7 +43,7 @@ class SwitchController():
         self.inst.write("CRESET 1, 2, 3")
 
     def isConnected(self) -> bool:
-        return self.inst.connected and self.connected
+        return self.inst.connected
 
     def staticRead(self) -> int:
         try:
@@ -52,14 +51,14 @@ class SwitchController():
             return int(result.strip())
         except:
             self.logger.error("Not connected to HP3488a switch controller")
-            self.connected = False
+            self.inst.connected = False
     
     def staticWrite(self, data:int) -> None:
         try:
             self.inst.write(f"SWRITE {self.writeConfig.slot}00, {data}")
         except:
             self.logger.error("Not connected to HP3488a switch controller")
-            self.connected = False            
+            self.inst.connected = False            
 
     def digitalRead(self, numReadings: int = 1) -> List[int]:
         try:
@@ -69,7 +68,7 @@ class SwitchController():
             return [int(i) for i in result]
         except:
             self.logger.error("Not connected to HP3488a switch controller")
-            self.connected = False
+            self.inst.connected = False
     
     def digitalWrite(self, data: List[int]) -> None:
         try:
@@ -78,4 +77,4 @@ class SwitchController():
             self.inst.write(cmd)
         except:
             self.logger.error("Not connected to HP3488a switch controller")
-            self.connected = False            
+            self.inst.connected = False            

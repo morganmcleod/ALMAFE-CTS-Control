@@ -3,13 +3,15 @@ import logging
 from CTSDevices.Common.RemoveDelims import removeDelims
 from CTSDevices.Common.VisaInstrument import VisaInstrument
 from .ColdLoadBase import ColdLoadBase, FillMode, FillState
+from Util.Singleton import Singleton
 from threading import Lock
+import re
 
-class AMI1720(ColdLoadBase):
+class AMI1720(ColdLoadBase, Singleton):
 
     DEFAULT_TIMEOUT = 2500
     
-    def __init__(self, resource="TCPIP0::10.1.1.5::7180::SOCKET", idQuery=True, reset=True):
+    def init(self, resource="TCPIP0::10.1.1.5::7180::SOCKET", idQuery=True, reset=True):
         """Constructor
 
         :param str resource: VISA resource string, defaults to "TCPIP0::169.254.1.5::7180::SOCKET"

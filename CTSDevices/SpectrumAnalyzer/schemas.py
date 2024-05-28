@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import BaseModel
 
 class InternalPreamp(Enum):
     OFF = "OFF"
@@ -45,3 +46,16 @@ class MarkerReadout(Enum):
     PERIOD = "PER"
     TIME = "TIME"
     INVERSE_TIME = "ITIM"
+
+class SpectrumAnalyzerSettings(BaseModel):
+    sweepPoints: int = 2001
+    attenuation: float = 2
+    enableInternalPreamp: bool = True
+    autoResolutionBW: bool = False
+    resolutionBW: float = 8e6
+    autoVideoBW: bool = False
+    videoBW: float = 1e3
+    autoSweepTime: bool = True
+    sweepTime: float = 0.0663
+    enableAveraging: bool = False
+    averagingCount: int = 1

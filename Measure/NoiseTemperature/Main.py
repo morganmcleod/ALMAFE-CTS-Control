@@ -1,6 +1,8 @@
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from CTSDevices.WarmIFPlate.ExternalSwitch import ExternalSwitch
 from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
 from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from CTSDevices.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
 from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from CTSDevices.Chopper.Band6Chopper import Chopper
@@ -11,6 +13,7 @@ from AMB.LODevice import LODevice
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
 from app.database.CTSDB import CTSDB
+from Util.Singleton import Singleton
 
 from .ZeroPowerMeter import ZeroPowerMeter
 from .WarmIFNoise import WarmIfNoise
@@ -18,15 +21,15 @@ from .NoiseTemperature import NoiseTemperature
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DebugOptions import *
 
-from .schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, SpectrumAnalyzerSettings
+from .schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings
 
 import concurrent.futures
 import logging
 import time
 
-class NoiseTempMain():
+class NoiseTempMain(Singleton):
 
-    def __init__(self,
+    def init(self,
             loReference: SignalGenerator, 
             rfReference: SignalGenerator,
             cartAssembly: CartAssembly,
@@ -38,7 +41,8 @@ class NoiseTempMain():
             temperatureMonitor: TemperatureMonitor,
             coldLoadController: AMI1720,
             chopper: Chopper,
-            measurementStatus: MeasurementStatus):
+            measurementStatus: MeasurementStatus, 
+            externalSwitch: ExternalSwitch):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.loReference = loReference
@@ -46,8 +50,9 @@ class NoiseTempMain():
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
         self.warmIFPlate = warmIFPlate
+        self.externalSwitch = externalSwitch
         self.powerMeter = powerMeter
-        self.spectrumAnalyzer = spectrumAnalyzer,
+        self.spectrumAnalyzer = spectrumAnalyzer
         self.powerSupply = powerSupply
         self.temperatureMonitor = temperatureMonitor
         self.coldLoadController = coldLoadController
@@ -56,8 +61,10 @@ class NoiseTempMain():
         self.testSteps = TestSteps()
         self.commonSettings = CommonSettings()
         self.warmIFSettings = WarmIFSettings()
-        self.noiseTempSetings = NoiseTempSettings()
+        self.noiseTempSettings = NoiseTempSettings()
         self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
+        self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2)
+        self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3)        
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.zeroPowerMeter = ZeroPowerMeter(
             self.warmIFPlate,
@@ -67,9 +74,11 @@ class NoiseTempMain():
         self.warmIfNoise = WarmIfNoise(
             self.warmIFPlate,
             self.powerMeter,
+            self.spectrumAnalyzer,
             self.powerSupply,
             self.temperatureMonitor,
-            self.measurementStatus
+            self.measurementStatus,
+            self.externalSwitch
         )
         self.warmIfNoise.updateSettings(self.commonSettings)
         self.noiseTemp = NoiseTemperature(
@@ -83,7 +92,8 @@ class NoiseTempMain():
             self.temperatureMonitor,
             self.coldLoadController,
             self.chopper,
-            self.measurementStatus
+            self.measurementStatus,
+            self.externalSwitch
         )
         self.noiseTemp.updateSettings(self.commonSettings)
         self.__reset()
@@ -92,17 +102,30 @@ class NoiseTempMain():
         self.measInProgress = None
         self.stopNow = False
         
-    def updateSettings(self, commonSettings = None, noiseTempSetings = None, warmIFSettings = None, loWgIntegritySettings = None):
+    def updateSettings(self, 
+            commonSettings = None, 
+            noiseTempSettings = None, 
+            warmIFSettings = None, 
+            loWgIntegritySettings = None,
+            ntSpecAnSettings = None,
+            irSpecAnSettings = None):
         if commonSettings is not None:
             self.commonSettings = commonSettings
-        if noiseTempSetings is not None:
-            self.noiseTempSetings = noiseTempSetings
         if warmIFSettings is not None:
             self.warmIFSettings = warmIFSettings
+        if noiseTempSettings is not None:
+            self.noiseTempSettings = noiseTempSettings
+            self.warmIFSettings.ifStart = self.noiseTempSettings.ifStart
+            self.warmIFSettings.ifStop = self.noiseTempSettings.ifStop
+            self.warmIFSettings.ifStep = self.noiseTempSettings.ifStep
         if loWgIntegritySettings is not None:
             self.loWgIntegritySettings = loWgIntegritySettings
-        self.warmIfNoise.updateSettings(self.commonSettings)
-        self.noiseTemp.updateSettings(self.commonSettings)
+        if ntSpecAnSettings is not None:
+            self.ntSpecAnSettings = ntSpecAnSettings
+        if irSpecAnSettings is not None:
+            self.irSpecAnSettings = irSpecAnSettings
+        self.warmIfNoise.updateSettings(self.commonSettings, self.warmIFSettings, self.ntSpecAnSettings)
+        self.noiseTemp.updateSettings(self.commonSettings, self.noiseTempSettings, self.ntSpecAnSettings, self.irSpecAnSettings)
 
     def start(self, cartTest: CartTest) -> int:
         self.__reset()
@@ -111,7 +134,7 @@ class NoiseTempMain():
             self.keyCartTest = 1
         else:
             # if we are measuring noise temperature then make that the master CartTests record
-            if self.testSteps.noiseTemp:
+            if self.testSteps.noiseTemp or self.testSteps.imageReject:
                 cartTest.fkTestType = TestTypeIds.NOISE_TEMP.value
             # if not noise temp but LO WG integrity, make that the master record:
             elif self.testSteps.loWGIntegrity:
@@ -132,7 +155,7 @@ class NoiseTempMain():
     def isMeasuring(self) -> bool:
         return self.warmIfNoise.isMeasuring() or self.noiseTemp.isMeasuring()
 
-    def __run(self):
+    def __run(self) -> None:
         self.measurementStatus.setComplete(False)
         try:
             if self.stopNow:
@@ -167,11 +190,11 @@ class NoiseTempMain():
                 self.logger.info("NoiseTempMain: User stop")                
                 return
             
-            if self.noiseTempSetings and self.testSteps.noiseTemp:
+            if self.noiseTempSettings and (self.testSteps.noiseTemp or self.testSteps.imageReject):
                 self.measInProgress = self.noiseTemp
-                self.noiseTemp.settings = self.noiseTempSetings
+                self.noiseTemp.settings = self.noiseTempSettings
                 self.noiseTemp.commonSettings = self.commonSettings
-                self.noiseTemp.start(self.keyCartTest, doImageReject = self.testSteps.imageReject)
+                self.noiseTemp.start(self.keyCartTest, self.testSteps)
                 while self.noiseTemp.isMeasuring():
                     if self.stopNow:
                         self.logger.info("NoiseTempMain: User stop")                

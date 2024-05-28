@@ -88,9 +88,9 @@ class LockInfo(BaseModel):
     unlockDetected: Hardware latches True if an unlock condition was seen since last cleared
     refTP: Reference total power detector. Negative voltage in -5..0.
     IFTP: IF total power detector. Negative voltage in -5..0.
-    isLocked:  True if (lockVoltage and refTP < -0.5 and ifTP < -0.5).
+    isLocked: True if lockVoltage > 3.0
     '''   
-    lockVoltage: bool
+    lockVoltage: float
     unlockDetected: bool
     refTP: float
     IFTP: float

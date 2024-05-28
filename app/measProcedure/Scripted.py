@@ -32,29 +32,22 @@ class CTSMeasure():
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
     
     def get_status(self) -> MeasurementStatus:
-        return measurementStatus
-    
-    def get_testtype(self) -> Optional[TestTypeIds]:
-        cartTest = measurementStatus.getMeasuring()
-        try:
-            return TestTypeIds(cartTest.fkTestType)    
-        except:
-            return None
+        return measurementStatus.getCurrentValues()
         
     def get_carttest(self) -> Optional[CartTest]:
-        testType = self.get_testtype()
+        testType = self.__get_testtype()
         if not testType:
             return None
-        elif testType == TestTypeIds.BEAM_PATTERN.value:
+        elif testType == TestTypeIds.BEAM_PATTERN:
             if beamScanner.isMeasuring():
                 return measurementStatus.getMeasuring()
-        elif testType in (TestTypeIds.NOISE_TEMP.value, TestTypeIds.LO_WG_INTEGRITY.value, TestTypeIds.IF_PLATE_NOISE.value):
+        elif testType in (TestTypeIds.NOISE_TEMP, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE):
             if noiseTemperature.isMeasuring():
                 return measurementStatus.getMeasuring()
-        elif testType == TestTypeIds.AMP_STABILITY.value:
+        elif testType == TestTypeIds.AMP_STABILITY:
             if amplitudeStablilty.isMeasuring():
                 return measurementStatus.getMeasuring()
-        elif testType == TestTypeIds.PHASE_STABILITY.value:
+        elif testType == TestTypeIds.PHASE_STABILITY:
             if phaseStability.isMeasuring():
                 return measurementStatus.getMeasuring()
         return None
@@ -88,32 +81,39 @@ class CTSMeasure():
             return False
 
     def stop(self) -> tuple[bool, str]:
-        testType = self.get_testtype()
+        testType = self.__get_testtype()
         if not testType:
             msg = "No measurement is in progress."
             self.logger.warn(msg)
             return False, msg
         
-        if testType == TestTypeIds.BEAM_PATTERN.value:
+        if testType == TestTypeIds.BEAM_PATTERN:
             beamScanner.stop()
             measurementStatus.stopMeasuring()
             return True, "Beam scans stopped."
-        elif testType in (TestTypeIds.NOISE_TEMP.value, TestTypeIds.LO_WG_INTEGRITY.value, TestTypeIds.IF_PLATE_NOISE.value):
+        elif testType in (TestTypeIds.NOISE_TEMP, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE):
             noiseTemperature.stop()
             measurementStatus.stopMeasuring()
             return True, f"{TestTypeIds(testType).name} stopped."
-        elif testType == TestTypeIds.AMP_STABILITY.value:
+        elif testType == TestTypeIds.AMP_STABILITY:
             amplitudeStablilty.stop()
             measurementStatus.stopMeasuring()
             return True, "Amplitude stability stopped."
-        elif testType == TestTypeIds.PHASE_STABILITY.value:
+        elif testType == TestTypeIds.PHASE_STABILITY:
             phaseStability.stop()
             measurementStatus.stopMeasuring()
             return True, "Phase stability stopped."
         else:
             msg = f"Nothing to do for test type {testType}."
-            self.logger.error(message = msg)
+            self.logger.error(msg)
             return False, msg
+        
+    def __get_testtype(self) -> Optional[TestTypeIds]:
+        cartTest = measurementStatus.getMeasuring()
+        try:
+            return TestTypeIds(cartTest.fkTestType)    
+        except:
+            return None        
 
 class CTSNoiseTemp(CTSMeasure):
     def __init__(self) -> None:
@@ -132,7 +132,7 @@ class CTSNoiseTemp(CTSMeasure):
     
     @override
     def stop(self) -> tuple[bool, str]:
-        testType = self.get_testtype()
+        testType = self.__get_testtype()
         if not testType:
             msg = "No measurement is in progress."
             self.logger.warn(msg)
@@ -152,16 +152,16 @@ class CTSNoiseTemp(CTSMeasure):
         noiseTemperature.updateSettings(commonSettings = commonSettings)
 
     def get_nt_settings(self) -> NoiseTempSettings:
-        return copy.copy(noiseTemperature.noiseTempSetings)
+        return copy.copy(noiseTemperature.noiseTempSettings)
     
-    def set_nt_settings(self, noiseTempSetings: NoiseTempSettings) -> None:
-        noiseTemperature.updateSettings(noiseTempSetings = noiseTempSetings)
+    def set_nt_settings(self, noiseTempSettings: NoiseTempSettings) -> None:
+        noiseTemperature.updateSettings(noiseTempSettings = noiseTempSettings)
 
     def get_lo_wg_settings(self) -> NoiseTempSettings:
         return copy.copy(noiseTemperature.loWgIntegritySettings)
     
-    def set_lo_wg_settings(self, noiseTempSetings: NoiseTempSettings) -> None:
-        noiseTemperature.updateSettings(loWgIntegritySettings = noiseTempSetings)
+    def set_lo_wg_settings(self, noiseTempSettings: NoiseTempSettings) -> None:
+        noiseTemperature.updateSettings(loWgIntegritySettings = noiseTempSettings)
 
     def get_warm_if_settings(self) -> WarmIFSettings:
         return copy.copy(noiseTemperature.warmIFSettings)
@@ -232,7 +232,7 @@ class CTSNoiseTemp(CTSMeasure):
         return noiseTemperature.noiseTemp.measureNoiseTemp()
 
     def __checkTestType(self) -> tuple[bool, str]:
-        testType = self.get_testtype()
+        testType = self.__get_testtype()
         if not testType:
             msg = "No measurement is in progress."
             self.logger.warn(msg)

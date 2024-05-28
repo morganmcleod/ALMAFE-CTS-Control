@@ -34,6 +34,6 @@ else:
 if SIMULATE:
     spectrumAnalyzer = SpectrumAnalyzerSimulator()
 else:
-    spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.7::inst0::INSTR")
+    spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.10::inst0::INSTR")
 
 chopper = Chopper()

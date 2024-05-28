@@ -5,6 +5,7 @@ from CTSDevices.WarmIFPlate.OutputSwitch import OutputSwitch
 from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
 from CTSDevices.WarmIFPlate.Simulator import AttenuatorSimulator, InputSwitchSimulator, NoiseSourceSimulator, OutputSwitchSimulator, YIGFilterSimulator
 from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from CTSDevices.WarmIFPlate.ExternalSwitch import ExternalSwitch
 from DebugOptions import *
 
 if SIMULATE:
@@ -21,3 +22,5 @@ else:
         NoiseSource(resource = "GPIB0::5::INSTR"),
         OutputSwitch(resource = "GPIB0::9::INSTR"),
         YIGFilter(resource = "GPIB0::9::INSTR"))
+
+externalSwitch = ExternalSwitch("GPIB0::29::INSTR", SIMULATE)

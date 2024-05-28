@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from schemas.DeviceInfo import DeviceInfo
 from hardware.NoiseTemperature import chopper
+from CTSDevices.Chopper.Band6Chopper import State as ChopperState
 from DebugOptions import *
 
 import logging
@@ -15,6 +16,16 @@ async def get_DeviceInfo_Chopper():
     else:
         resource_name = chopper.inst.port
     return DeviceInfo(
+        name = 'chopper',
         resource_name = resource_name,
         is_connected = chopper.isConnected()
     )
+
+@router.get("/state", response_model = ChopperState)
+async def get_ChopperState():
+    if SIMULATE:
+        return ChopperState.TRANSITION
+    if chopper.isSpinning():
+        return ChopperState.SPINNING
+    else:
+        return chopper.getState()

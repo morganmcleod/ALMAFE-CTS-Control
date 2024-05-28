@@ -23,16 +23,17 @@ class ZeroPowerMeter():
 
     def start(self):
         self.finished = False
+        self.measurementStatus.setComplete(False)
         self.futures = []
         self.futures.append(self.executor.submit(self.__run))
         self.measurementStatus.setStatusMessage("Zero Power Meter started")
         self.measurementStatus.setError(False)
-    
+
     def isMeasuring(self):
         return not self.finished    
 
     def __run(self) -> None:
-        self.measurementStatus.setComplete(False)
+        
         self.powerMeter.setUnits(Unit.DBM)
         self.powerMeter.setFastMode(False)
         self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.LOAD, PadSelect.PAD_OUT)

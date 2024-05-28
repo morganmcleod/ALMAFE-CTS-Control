@@ -17,7 +17,12 @@ class SignalGenerator(SignalGenInterface):
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.inst = VisaInstrument(resource, return_on_error = "", timeout = self.DEFAULT_TIMEOUT)
+        self.inst = VisaInstrument(
+            resource, 
+            timeout = self.DEFAULT_TIMEOUT,
+            read_termination = '\n',
+            write_termination = '\n'
+        )
         ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
@@ -133,22 +138,25 @@ class SignalGenerator(SignalGenInterface):
 
     def getAmplitude(self) -> float:
         if self.inst:
-            result = self.inst.query(":POW:LEV?")
-            return float(result)
+            result = self.inst.query(":POW:LEV?", return_on_error = "-999")
+            result = removeDelims(result)
+            return float(result[0])
         else:
-            return -99
+            return -999
 
     def getFrequency(self) -> float:
         if self.inst:
-            result = self.inst.query(":FREQ:FIX?")
-            return float(result) / 1e9
+            result = self.inst.query(":FREQ:FIX?", return_on_error = "0")
+            result = removeDelims(result)
+            return float(result[0]) / 1e9
         else:
             return 0
 
     def getRFOutput(self) -> bool:
         if self.inst:
-            result = self.inst.query(":OUTP:STAT?")
-            return int(result) != 0
+            result = self.inst.query(":OUTP:STAT?", return_on_error = "0")
+            result = removeDelims(result)
+            return int(result[0]) != 0
         else:
             return False
 

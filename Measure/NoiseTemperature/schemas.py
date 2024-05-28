@@ -72,18 +72,6 @@ class NoiseTempSettings(BaseModel):
     ifStop: float = 12.0
     ifStep: float = 0.1
     polarization: str = SelectPolarization.BOTH.value
-    
-class SpectrumAnalyzerSettings(BaseModel):
-    attenuation: float = 16
-    enableInternalPreamp: bool = True
-    autoResolutionBW: bool = False
-    resolutionBW: float = 8e6
-    autoVideoBW: bool = False
-    videoBW: float = 1e3
-    autoSweepTime: bool = True
-    sweepTime: float = 0.0663
-    enableAveraging: bool = False
-    averagingCount: int = 1
 
 class ChopperPowers(BaseModel):
     input: str

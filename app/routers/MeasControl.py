@@ -3,7 +3,7 @@ from typing import Optional
 
 from DBBand6Cart.CartTests import CartTest
 from app.schemas.Response import KeyResponse, MessageResponse
-from Measure.Shared.MeasurementStatus import MeasurementStatus
+from Measure.Shared.MeasurementStatus import MeasurementStatusModel
 from app.measProcedure.Scripted import CTSMeasure
 from DebugOptions import *
 
@@ -30,7 +30,7 @@ async def put_Stop():
 async def get_Status():
     return CTS.get_carttest()
 
-@router.get("/status", response_model = MeasurementStatus)
+@router.get("/status", response_model = MeasurementStatusModel)
 async def get_MeasurementStatus():
     return CTS.get_status()
 

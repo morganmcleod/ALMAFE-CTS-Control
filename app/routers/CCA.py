@@ -11,6 +11,7 @@ router = APIRouter(prefix="/cca")
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_CCA():
     return DeviceInfo(
+        name = 'cca',
         resource_name = "CAN0:13",
         is_connected = FEMC.ccaDevice.isConnected()
     )

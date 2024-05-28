@@ -16,6 +16,14 @@ def getTarget(request: Request):
     else:
         return (None, "")
 
+def getTargetShortName(request: Request):
+    if "/rfref" in request.url.path:
+        return 'rfref'
+    elif "/loref" in request.url.path:
+        return 'loref'
+    else:
+        return 'none'
+
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_isConnected(request: Request):
     target, name = getTarget(request)
@@ -25,6 +33,7 @@ async def get_isConnected(request: Request):
     else:
         resource_name = target.inst.resource_name
     return DeviceInfo(
+        name = getTargetShortName(request),
         resource_name = resource_name,
         is_connected = target.isConnected()
     )

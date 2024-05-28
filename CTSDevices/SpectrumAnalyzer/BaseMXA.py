@@ -14,7 +14,7 @@ class BaseMXA():
     """
     DEFAULT_TIMEOUT = 10000
 
-    def __init__(self, resource="TCPIP0::10.1.1.7::inst0::INSTR", idQuery=True, reset=True) -> None:
+    def __init__(self, resource="TCPIP0::10.1.1.10::inst0::INSTR", idQuery=True, reset=True) -> None:
         """Constructor
 
         :param str resource: VISA resource string
@@ -26,12 +26,17 @@ class BaseMXA():
         self.model = None
         self.traceX = []
         self.traceY = []
+        self.markerX = None
+        self.markerY = None
 
-        self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)
         try:
-            self.inst.inst.flush(pyvisa.constants.VI_IO_IN_BUF_DISCARD | pyvisa.constants.VI_IO_OUT_BUF_DISCARD)
+            self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)                
+            if self.inst.inst and self.inst.inst.session:
+                self.inst.inst.flush(pyvisa.constants.VI_IO_IN_BUF_DISCARD | pyvisa.constants.VI_IO_OUT_BUF_DISCARD)
+                done = True
         except:
             pass
+
         ok = self.isConnected()
         if ok and idQuery:
             ok = self.idQuery()
@@ -97,7 +102,7 @@ class BaseMXA():
 
         :return (int, str): Error code and string
         """
-        err = self.inst.query(":SYST:ERR?")
+        err = self.inst.query(":SYST:ERR?", return_on_error = "-1,VISA Error")
         err = removeDelims(err)
         return int(err[0]), " ".join(err[1:])
 
@@ -114,7 +119,7 @@ class BaseMXA():
         if self.model == "N9030A":
             self.inst.write(":POW:MW:PATH STD;")
         code, msg = self.errorQuery()
-        return code != 0, msg 
+        return code == 0, msg 
 
     def configAveraging(self, 
             count: int = 100,
@@ -126,17 +131,17 @@ class BaseMXA():
             self.inst.write(f":AVER:TYPE {type.value};")
         self.inst.write(f":AVER:COUN {count};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
 
     def configFreqStartStop(self, startHz: float, stopHz: float) -> tuple[bool, str]:
         self.inst.write(f":FREQ:START {startHz};:FREQ:STOP {stopHz};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
     
-    def configFreqSpan(self, centerHz: float, spanHz: float) -> tuple[bool, str]:
-        self.inst.write(f":FREQ:SPAN {spanHz};:FREQ:CENTER {spanHz};")
+    def configFreqCenterSpan(self, centerHz: float, spanHz: float) -> tuple[bool, str]:
+        self.inst.write(f":FREQ:SPAN {spanHz};:FREQ:CENTER {centerHz};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
     
     def configLevel(self, 
             refLevel: float = 0, 
@@ -151,7 +156,7 @@ class BaseMXA():
         else:
             self.inst.write(f":POW:ATT:AUTO OFF;:POW:ATT {manualAtten};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
     
     def configAcquisition(self,
             continuous: bool = True,
@@ -172,7 +177,7 @@ class BaseMXA():
             self.inst.write(":DISP:WIND:TRAC:Y:SPAC LIN;")
         self.inst.write(f":INIT:CONT {'ON' if continuous else 'OFF'};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
 
     def configSweepCoupling(self,
             autoResolutionBW: bool = True,
@@ -181,7 +186,7 @@ class BaseMXA():
             videoBW: float = 3e6,
             autoSweepTime: bool = True,
             sweepTime: float = 0.0663,
-            autoVBWRBWRatio: bool = True,
+            autoVBWRBWRatio: bool = False,
             VBWRBWRatio: float = 1) -> tuple[bool, str]:
         
         if autoVBWRBWRatio:
@@ -195,25 +200,25 @@ class BaseMXA():
         if autoResolutionBW:
             self.inst.write(":BWID:AUTO ON;")
         else:
-            self.inst.write(f":BWID:AUTO OFF;:BWID:VID {resolutionBW};")
+            self.inst.write(f":BWID:AUTO OFF;:BWID {resolutionBW};")
         if autoVideoBW:
             self.inst.write(":BWID:VID:AUTO ON;")
         else:
             self.inst.write(f":BWID:VID:AUTO OFF;:BWID:VID {videoBW};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
 
     def configTraceType(self,
             traceNum: int = 1,
             type: TraceType = TraceType.CLEAR_WRITE,
-            enableUpdate: bool = False,
-            enableDisplay: bool = False) -> tuple[bool, str]:
+            enableUpdate: bool = True,
+            enableDisplay: bool = True) -> tuple[bool, str]:
 
         self.inst.write(f":TRAC{traceNum}:TYPE {type.value};")
-        self.inst.write(f":UPD {'ON' if enableUpdate else 'OFF'};")
-        self.inst.write(f":DISP {'ON' if enableDisplay else 'OFF'};")
+        self.inst.write(f":TRAC{traceNum}:UPD {'ON' if enableUpdate else 'OFF'};")
+        self.inst.write(f":TRAC{traceNum}:DISP {'ON' if enableDisplay else 'OFF'};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
     
     def configDetector(self,
             autoDetector: bool = True,
@@ -229,7 +234,7 @@ class BaseMXA():
         else:
             self.inst.write(f":SEM:DET:CARR:AUTO OFF;:SEM:DET:CARR {refChannel.value};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
 
     def configMarkerType(self,
             markerNum: int = 1,
@@ -247,18 +252,23 @@ class BaseMXA():
             self.inst.write(f"CALC:MARK{markerNum}:X:READ:AUTO ON;")
         else:
             self.inst.write(f"CALC:MARK{markerNum}:X:READ {readout.value};")
-        self.inst.write(f":CALC:MARK%d:FCO {'ON' if enableFreqCounter else 'OFF'};")
+        self.inst.write(f":CALC:MARK{markerNum}:FCO {'ON' if enableFreqCounter else 'OFF'};")
         if autoGateTime:
             self.inst.write(f":CALC:MARK{markerNum}:FCO:GAT:AUTO ON;")
         else:
             self.inst.write(f":CALC:MARK{markerNum}:FCO:GAT:AUTO OFF;:CALC:MARK{markerNum}:FCO:GAT {gateTime};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
             
     def configSmoothing(self, traceNum:int = 1, numPoints: int = 1) -> tuple[bool, str]:
         self.inst.write(f":TRAC:MATH:SMO TRACE{traceNum};:TRAC:MATH:SMO:POIN {numPoints};")
         code, msg = self.errorQuery()
-        return code != 0, msg
+        return code == 0, msg
+
+    def restartTrace(self) -> tuple[bool, str]:
+        self.inst.write(":INIT:REST;")
+        code, msg = self.errorQuery()
+        return code == 0, msg
 
     def readTrace(self, traceNum:int = 1, timeout: int = 30) -> tuple[bool, str]:
         self.inst.write(":INIT:SAN;")
@@ -271,9 +281,9 @@ class BaseMXA():
             if elapsed > timeout:
                 error = True
             else:
-                ret = removeDelims(self.inst.query("*STB?"), delims = r'[;,"\s\r\n]')
+                ret = removeDelims(self.inst.query("*STB?"), delimsRe = r'[;,"\s\r\n]')
                 try:
-                    if int(ret[1]) & 32:
+                    if int(ret[0]) & 32:
                         done = True
                 except:
                     error = True
@@ -284,6 +294,17 @@ class BaseMXA():
         if not ret:
             return False, "Timeout or error reading spectrum analyzer trace"
         ret = removeDelims(ret)
+        ret = [float(x) for x in ret]
         self.traceX = ret[0::2]
         self.traceY = ret[1::2]
-        return True, ""
+        code, msg = self.errorQuery()
+        return code == 0, msg
+
+    def readMarker(self, markerNum: int = 1) -> tuple[bool, str]:
+        ret = self.inst.query(f":CALC:MARK{markerNum}:X?;:CALC:MARK{markerNum}:Y?;")
+        ret = removeDelims(ret, delimsRe = r'[;,"\s\r\n]')
+        ret = [float(x) for x in ret]
+        self.markerX = ret[0]
+        self.markerY = ret[1]
+        code, msg = self.errorQuery()
+        return code == 0, msg

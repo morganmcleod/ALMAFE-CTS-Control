@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from measProcedure.NoiseTemperature import coldLoad
+from app.hardware.NoiseTemperature import coldLoad
 from CTSDevices.ColdLoad.ColdLoadBase import ColdLoadState, FillMode, FillState
 from schemas.common import SingleBool
 from schemas.DeviceInfo import DeviceInfo
@@ -17,6 +17,7 @@ async def get_DeviceInfo_ColdLoad():
     else:
         resource_name = coldLoad.inst.resource_name
     return DeviceInfo(
+        name = 'coldload',
         resource_name = resource_name,
         is_connected = coldLoad.isConnected()
     )

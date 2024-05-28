@@ -6,6 +6,7 @@ class AttenuatorSwitchController():
     """The Agilent 11713A Atten/switch controller"""
     
     DEFAULT_TIMEOUT = 15000     # milliseconds
+    RESET = (False, False, False, False, False, False, False, False, False, False)
     
     def __init__(self, resource="GPIB0::28::INSTR", reset=True):
         """Constructor
@@ -14,16 +15,15 @@ class AttenuatorSwitchController():
         :param bool idQuery: If true, perform an ID query and check compatibility, defaults to True
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
-        self.connected = False
         self.inst = VisaInstrument(resource, timeout = self.DEFAULT_TIMEOUT)
         if reset:
             self.reset()
 
     def reset(self):
-        self.setSwitches(tuple(False * 10))
+        self.setSwitches(self.RESET)
 
     def isConnected(self) -> bool:
-        return self.inst.connected and self.connected
+        return self.inst.connected
 
     def setSwitch(self, index: int, value: bool = False) -> None:
         if index < 1 or index > 10:
@@ -35,7 +35,7 @@ class AttenuatorSwitchController():
             self.inst.write(f"{cmd}{index}")
         except:
             self.logger.error("Not connected to 11713B/C switch controller")
-            self.connected = False
+            self.inst.connected = False
 
     def setSwitches(self, switches: Sequence[bool]) -> None:
         if len(switches) != 10:
@@ -49,6 +49,6 @@ class AttenuatorSwitchController():
             self.inst.write(cmd)
         except:
             self.logger.error("Not connected to 11713B/C switch controller")
-            self.connected = False
+            self.inst.connected = False
 
         

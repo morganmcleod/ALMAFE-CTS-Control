@@ -18,6 +18,7 @@ async def get_DeviceInfo_InputSwitch():
     else:
         resource_name = warmIFPlate.inputSwitch.switchController.inst.resource_name
     return DeviceInfo(
+        name = 'inputswitch',
         resource_name = resource_name,
         is_connected = warmIFPlate.inputSwitch.isConnected())
 
@@ -28,6 +29,7 @@ async def get_DeviceInfo_YIGFilter():
     else:
         resource_name = warmIFPlate.yigFilter.switchController.inst.resource_name
     return DeviceInfo(
+        name = 'yigfilter',
         resource_name = resource_name,        
         is_connected = warmIFPlate.yigFilter.isConnected()
     )
@@ -39,6 +41,7 @@ async def get_DeviceInfo_Attenuator():
     else:
         resource_name = warmIFPlate.attenuator.switchController.inst.resource_name
     return DeviceInfo(
+        name = 'attenuation',
         resource_name = resource_name,        
         is_connected = warmIFPlate.attenuator.isConnected()
     )
@@ -50,6 +53,7 @@ async def get_DeviceInfo_OutputSwitch():
     else:
         resource_name = warmIFPlate.outputSwitch.switchController.inst.resource_name
     return DeviceInfo(
+        name = 'outputswitch',
         resource_name = resource_name,
         is_connected = warmIFPlate.outputSwitch.isConnected()
     )
@@ -61,6 +65,7 @@ async def get_DeviceInfo_NoiseSource():
     else:
         resource_name = warmIFPlate.noiseSource.powerSupply.inst.resource_name
     return DeviceInfo(
+        name = 'noisesource',
         resource_name = resource_name,
         is_connected = warmIFPlate.noiseSource.isConnected()
     )

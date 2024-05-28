@@ -11,8 +11,12 @@ class VisaInstrument():
         rm = pyvisa.ResourceManager()
         self.resource_name = resource_name
         try:
-            self.inst = rm.open_resource(resource_name, kwargs)
-        except:
+            self.inst = rm.open_resource(resource_name, **kwargs)
+            self.connected = True
+        except Exception as e:
+            print(e)
+            self.logger.error(e)
+            self.inst = None
             self.connected = False
         self.max_errors = max_errors
         self.errors_countdown = max_errors
@@ -26,10 +30,7 @@ class VisaInstrument():
         try:
             self.inst.write(message, termination, encoding)
         except:
-            self.errors_countdown -= 1
-            if self.errors_countdown == 0:
-                self.logger.error(f"VisaInstrument {self.resource_name} stopping: too many errors ({self.max_errors}).")
-                self.connected = False
+            return self.__count_error()
             return 0
 
     def query(self, message: str, delay: float | None = None, return_on_error: str | None = None) -> str:

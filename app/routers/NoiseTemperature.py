@@ -1,7 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from typing import List, Optional
-from app.measProcedure.NoiseTemperature import noiseTemperature, coldLoad, yFactor
+from app.hardware.NoiseTemperature import coldLoad
+from app.measProcedure.NoiseTemperature import noiseTemperature, yFactor
 from app.measProcedure.MeasurementStatus import measurementStatus
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSample
 from CTSDevices.ColdLoad.AMI1720 import AMI1720, FillMode
@@ -62,8 +63,9 @@ async def websocket_warmif(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            if noiseTemperature.noiseTemp.rawDataRecords is not None:
-                toSend = jsonable_encoder(noiseTemperature.noiseTemp.rawDataRecords)
+            records = noiseTemperature.noiseTemp.getRawDataRecords()
+            if records is not None:
+                toSend = jsonable_encoder(records)
                 await manager.send(toSend, websocket)
             await asyncio.sleep(5)
     except WebSocketDisconnect:
@@ -105,11 +107,11 @@ async def put_NtSettings(settings: WarmIFSettings):
 
 @router.get("/ntsettings", response_model = NoiseTempSettings)
 async def get_NtSettings():
-    return noiseTemperature.noiseTempSetings
+    return noiseTemperature.noiseTempSettings
 
 @router.post("/ntsettings",  response_model = MessageResponse)
 async def put_NtSettings(settings: NoiseTempSettings):
-    noiseTemperature.updateSettings(noiseTempSetings = settings)
+    noiseTemperature.updateSettings(noiseTempSettings = settings)
     return MessageResponse(message = "Updated Noise Temp Settings", success = True)
 
 @router.get("/lowgsettings", response_model = NoiseTempSettings)

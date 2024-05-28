@@ -182,7 +182,7 @@ async def get_API_Version(callback:str = None):
 
 if __name__ == "__main__":
     logger = logging.getLogger("ALMAFE-CTS-Control")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     if LOG_TO_FILE:
         handler = logging.FileHandler(LOG_FILE)
     else:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     logger.addHandler(handler)
 
     logger2 = logging.getLogger("ALMAFE-AMBDeviceLibrary")
-    logger2.setLevel(logging.DEBUG)
+    logger2.setLevel(logging.INFO)
     logger2.addHandler(handler)
 
     logger.info("---- ALMAFE-CTS-Control start ----")

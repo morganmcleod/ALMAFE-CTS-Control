@@ -105,7 +105,7 @@ class SpectrumAnalyzerSimulator():
         self.freqStop = stopHz
         return True, f"SASim: Set frequency start:{startHz}, stop:{stopHz}"
     
-    def configFreqSpan(self, centerHz: float, spanHz: float) -> tuple[bool, str]:
+    def configFreqCenterSpan(self, centerHz: float, spanHz: float) -> tuple[bool, str]:
         self.freqCenter = centerHz
         self.freqSpan = spanHz
         return True, f"SASim: Set frequency center:{centerHz}, span:{spanHz}"

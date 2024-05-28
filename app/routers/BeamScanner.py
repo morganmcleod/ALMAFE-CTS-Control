@@ -98,8 +98,9 @@ async def get_MCIsConnected():
     else:
         resource_name = f"{BeamScanner.motorController.host}.{BeamScanner.motorController.port}"
     return DeviceInfo(
+        name = 'mc',
         resource_name = resource_name,
-        is_connmected = BeamScanner.motorController.isConnected()
+        is_connected = BeamScanner.motorController.isConnected()
     )
 
 @router.get("/mc/xy_speed", response_model = SingleFloat)
@@ -252,6 +253,7 @@ async def get_PNAIsConnected():
     else:
         resource_name = BeamScanner.pna.inst.resource_name
     return DeviceInfo(
+        name = 'pna',
         resource_name = resource_name,
         is_connected = BeamScanner.pna.isConnected()
     )

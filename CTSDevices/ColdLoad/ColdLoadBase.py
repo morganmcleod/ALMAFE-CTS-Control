@@ -4,7 +4,6 @@ Constants and interface liquid nitrogen cold load level controllers.
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from typing import Tuple
-
 from enum import Enum
 
 class FillMode(Enum):
@@ -79,8 +78,8 @@ class ColdLoadBase(ABC):
         self.setFillState(FillState.CLOSED)
 
     def shouldPause(self, 
-            minLevel: float = 20, 
-            maxLevel: float = 105, 
+            minLevel: float = 55, 
+            maxLevel: float = 110, 
             enablePause: bool = True) -> Tuple[bool, str]:
         """Should the calling measurement procedure pause and wait for cold load intervention?
 

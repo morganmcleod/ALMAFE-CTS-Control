@@ -13,10 +13,17 @@ def getTarget(request: Request):
     else:
         return FEMC.loDevice, "LO"
 
+def getTargetShortName(request: Request):
+    if "/rfsource" in request.url.path:
+        return "rfsource"
+    else:
+        return "lo"
+
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_LO(request: Request):
     device, name = getTarget(request)
     return DeviceInfo(
+        name = getTargetShortName(request),
         resource_name = f"{name} at CAN0:13",
         is_connected = device.isConnected()
     )
@@ -51,6 +58,8 @@ async def lock_PLL(request: Request, payload: LockPLL):
     device, name = getTarget(request)
     (wcaFreq, ytoFreq, ytoCourse) = device.lockPLL(payload.freqLOGHz)
     if wcaFreq:
+        if name == "LO":
+            FEMC.cartAssembly.setRecevierBias(payload.freqLOGHz)
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
         return MessageResponse(message = f"{name} PLL LOCKED " + payload.getText() + wcaText, success = True)
     else:

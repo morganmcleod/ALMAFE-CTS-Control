@@ -83,8 +83,8 @@ class MotorController(MCInterface):
         self.start = False
         self.stop = False
         self.__connectSocket()
-        self.nextPos = Position(x=0, y=0, z=0)
-        self.position = Position(x=0, y=0, z=0)
+        self.nextPos = Position(x=0, y=0, pol=0)
+        self.position = Position(x=0, y=0, pol=0)
         try:
             self.position = self.getPosition(cached = False)
             self.motorStatus = MotorStatus()
@@ -104,7 +104,9 @@ class MotorController(MCInterface):
         time.sleep(1.0)
         hs = self.query(b'XQ #SETUP;')
         self.__checkHandshake("MotorController.reset", b':', hs)
-        
+        time.sleep(1.0)
+        self.setNextPos(Position(x = self.position.x, y = self.position.y, pol = -58.5))
+        self.startMove()
 
     def flush(self):
         flushed = b''

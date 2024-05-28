@@ -6,20 +6,22 @@ from typing import Optional
 import logging
 import threading
 from DebugOptions import *
+from Util.Singleton import Singleton
 
 class State(Enum):
     OPEN = 0
     TRANSITION = 1
     CLOSED = 2
+    SPINNING = 3
 
-class Chopper():
+class Chopper(Singleton):
     """The band 6 chopper is based on an Intelligent Motion Systems Panther LE2 stepper motor controller.
     There are reflective tape marks on the chopper wheel so that the half-clock (HC) and full-clock (FC)
     positions can be sensed, for homing and for reporting its current position.
     Monitor and control is via RS232. The CTS and DSR lines are used as digital inputs for the HC and FC signals.
     """
 
-    def __init__(self, resource="COM1", findOpen = True):
+    def init(self, resource="COM1"):
         """Constructor
 
         :param str resource: serial port to use, defaults to "COM1"
@@ -27,6 +29,7 @@ class Chopper():
         :raises Exception: If the serial port cannot be opened.
         """
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
+        self.spinning = False
         try:
             self.inst = serial.Serial(
                 resource, 
@@ -37,7 +40,7 @@ class Chopper():
             if self.inst.is_open:
                 self.inst.reset_input_buffer()
                 self.inst.reset_output_buffer()
-                self.reset(onThread = True)
+                self.reset()
             elif SIMULATE:
                 return
                 
@@ -45,24 +48,17 @@ class Chopper():
             if SIMULATE:
                 return
 
-    def reset(self, onThread: bool = False):
+    def reset(self):
         """Reset the chopper to a known and indexed state, with default settings for open/close movement.
         """
-        if onThread:
-            threading.Thread(target = self._implReset, daemon = True).start()
-        else:
-            self._implReset()
-
-    def _implReset(self):
-        self.inst.reset_input_buffer()
-        self.inst.reset_output_buffer()
         self.__hardStop()
         self.__variableResMode(True)
         self.__divideResolution(3)
-        self.__setVelocity(initial = 300, slew = 700)
-        self.__setCurrent(hold = 3, run = 6)
+        self.__setVelocity(initial = 50, slew = 500)
+        self.__setCurrent(hold = 3, run = 15)
         self.__setRampSlope(accel = 3, decel = 3)
         self.__findOpen()
+        self.spinning = False
 
     def isConnected(self) -> bool:
         # request position
@@ -82,6 +78,9 @@ class Chopper():
         else: 
             return State.TRANSITION
 
+    def isSpinning(self) -> bool:
+        return self.spinning
+
     def spin(self, rps:float):
         """Start spinning the chopper at a fixed revolutions per second (rps)
 
@@ -93,6 +92,7 @@ class Chopper():
         self.__setRampSlope(accel = 1, decel = 1)
         # scale the requested rps to steps per second:
         self.__moveFixedVelocity(int(rps * 200 * 8))
+        self.spinning = True
 
     def stop(self, hard:bool = False):
         """Stop the chopper
@@ -103,6 +103,7 @@ class Chopper():
             self.__hardStop()
         else:
             self.__softStop()
+        self.spinning = False
 
     def open(self):
         """Move the chopper to the open position
@@ -113,6 +114,7 @@ class Chopper():
         self.__gotoPosition(new)
         if not self.__waitForStop():
             self.logger.debug("Chopper open: timeout")
+        self.spinning = False
        
     def close(self):
         """Move the chopper to the closed position
@@ -123,6 +125,7 @@ class Chopper():
         self.__gotoPosition(new)
         if not self.__waitForStop():
             self.logger.debug("Chopper close: timeout")
+        self.spinning = False
 
     def gotoHot(self):
         self.open()
@@ -137,6 +140,7 @@ class Chopper():
         """
         self.__gotoPosition(pos)
         self.__waitForStop()
+        self.spinning = False
 
     def getPostion(self) -> int:
         """Get the current index position

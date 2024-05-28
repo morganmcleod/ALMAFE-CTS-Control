@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from measProcedure.NoiseTemperature import temperatureMonitor
+from app.hardware.NoiseTemperature import temperatureMonitor
 from CTSDevices.TemperatureMonitor.schemas import Temperatures, DESCRIPTIONS
 from schemas.common import SingleBool
 from schemas.DeviceInfo import DeviceInfo
@@ -17,6 +17,7 @@ async def get_DeviceInfo_TempMonitor():
     else:
         resource_name = temperatureMonitor.inst.resource_name
     return DeviceInfo(
+        name = 'tempmonitor',
         resource_name = resource_name,
         is_connected = temperatureMonitor.isConnected()
     )
