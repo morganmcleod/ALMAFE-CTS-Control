@@ -63,11 +63,14 @@ async def websocket_warmif(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            records = noiseTemperature.noiseTemp.getRawDataRecords()
-            if records is not None:
-                toSend = jsonable_encoder(records)
+            records = noiseTemperature.noiseTemp.currentRecords
+            if records[0] is not None:
+                toSend = jsonable_encoder(records[0])                    
                 await manager.send(toSend, websocket)
-            await asyncio.sleep(5)
+            if records[1] is not None:
+                toSend = jsonable_encoder(records[1])                    
+                await manager.send(toSend, websocket)                
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /rawnoisetemp_ws")

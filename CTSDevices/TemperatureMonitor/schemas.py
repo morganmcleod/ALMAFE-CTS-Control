@@ -2,14 +2,14 @@ from pydantic import BaseModel
 from typing import List
 
 DESCRIPTIONS = [
-    '4K stage',
-    '4K (LS332)',
+    'Cold head',
+    '',
     '15K stage',
     '110K stage',
     'RF source',
-    'RF receiver',
+    'LO',
     'Ambient',
-    'LN2 overflow'
+    ''
 ]
 
 class Temperatures(BaseModel):

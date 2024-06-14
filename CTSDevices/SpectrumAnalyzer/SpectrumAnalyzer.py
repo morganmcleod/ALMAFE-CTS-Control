@@ -12,9 +12,11 @@ class SpectrumAnalyzer(BaseMXA):
         :param bool reset: If true, reset the instrument and set default configuration, defaults to True
         """
         super().__init__(resource, idQuery, reset)
-        self.configFreqStartStop(3e9, 21e9)
+        self.settings = SpectrumAnalyzerSettings()
+        self.configFreqStartStop(4e9, 20e9)
 
     def configureAll(self, settings: SpectrumAnalyzerSettings):
+        self.settings = settings
         self.configAcquisition(
             autoDetector = False,
             manualDetector = DetectorMode.AVERAGE,
@@ -74,3 +76,8 @@ class SpectrumAnalyzer(BaseMXA):
             return False, "SpectrumAnalyzer.measureNarrowBand: too many retries"
         else:
             return True, ""
+        
+    def endNarrowBand(self) -> tuple[bool, str]:
+        self.configMarkerType(1, MarkerType.OFF)
+        # self.configureAll(self.settings)
+

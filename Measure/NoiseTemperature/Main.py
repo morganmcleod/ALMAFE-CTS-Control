@@ -63,8 +63,8 @@ class NoiseTempMain(Singleton):
         self.warmIFSettings = WarmIFSettings()
         self.noiseTempSettings = NoiseTempSettings()
         self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
-        self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2)
-        self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3)        
+        self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
+        self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3, enableInternalPreamp = True)        
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.zeroPowerMeter = ZeroPowerMeter(
             self.warmIFPlate,

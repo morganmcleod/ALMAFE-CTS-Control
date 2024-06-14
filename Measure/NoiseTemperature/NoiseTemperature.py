@@ -77,6 +77,7 @@ class NoiseTemperature():
         self.ifAtten = 22
         self.chopperPowerHistory = []
         self.rawDataRecords = None
+        self.currentRecords = [None, None]
         self.loStep = 0
         self.ifStep = 0
         
@@ -93,12 +94,6 @@ class NoiseTemperature():
             self.ntSpecAnSettings = ntSpecAnSettings
         if irSpecAnSettings is not None:
             self.irSpecAnSettings = irSpecAnSettings
-
-    def getRawDataRecords(self) -> list[NoiseTempRawDatum]:
-        if self.rawDataRecords:
-            return list(self.rawDataRecords.values())
-        else:
-            return []
 
     def start(self, keyCartTest: int, testSteps: TestSteps, automated: bool = True):
         self.__reset()
@@ -147,8 +142,8 @@ class NoiseTemperature():
                 self.logger.info("User stop")
                 return
 
-            success, msg = self.setLO(freqLO)
-            if not success:
+            loLocked, msg = self.setLO(freqLO)
+            if not loLocked:
                 self.logger.error(msg)
             elif msg:
                 self.logger.info(msg)
@@ -170,7 +165,7 @@ class NoiseTemperature():
                         self.measurementStatus.setStatusMessage("User stop")
                         return                
                         
-                    self.__initRawData(freqLO, freqIF)
+                    self.__initRawData(freqLO, freqIF, loLocked)
                         
                     if self.testSteps.imageReject:
                         success, msg = self.measureImageReject(freqLO, freqIF)
@@ -215,7 +210,7 @@ class NoiseTemperature():
                     self.measurementStatus.setStatusMessage("User stop")
                     return                
                     
-                self.__initRawData(freqLO, freqIF = None)
+                self.__initRawData(freqLO, None, loLocked)
                     
                 if self.testSteps.imageReject:
                     success, msg = self.measureImageReject(freqLO, freqIF = None)
@@ -249,7 +244,7 @@ class NoiseTemperature():
         self.measurementStatus.setStatusMessage("Noise Temperature: Done.")
         self.finished = True
 
-    def __initRawData(self, freqLO: float, freqIF: float | None) -> tuple[bool, str]:
+    def __initRawData(self, freqLO: float, freqIF: float | None, loLocked: bool) -> tuple[bool, str]:
         if self.rawDataRecords:
             return False, "Raw data records already exist."
         
@@ -297,7 +292,8 @@ class NoiseTemperature():
                     PLL_Corr_V = lockInfo['corrV'],
                     PLL_Assm_T = pll['temperature'],
                     PA_A_Drain_V = pa['VDp0'],
-                    PA_B_Drain_V = pa['VDp1']
+                    PA_B_Drain_V = pa['VDp1'],
+                    Is_LO_Unlocked = not loLocked
                 )
             
             if self.selectPol.testPol(1):
@@ -324,7 +320,8 @@ class NoiseTemperature():
                     PLL_Corr_V = lockInfo['corrV'],
                     PLL_Assm_T = pll['temperature'],
                     PA_A_Drain_V = pa['VDp0'],
-                    PA_B_Drain_V = pa['VDp1']
+                    PA_B_Drain_V = pa['VDp1'],
+                    Is_LO_Unlocked = not loLocked
                 )
         
         ### SPECTRUM ANALYZER MODE ***
@@ -346,7 +343,7 @@ class NoiseTemperature():
                         BWIF = 100,
                         Pol = 0,
                         TRF_Hot = tAmb,
-                        IF_Attn = self.ifAtten, 
+                        IF_Attn = 0, 
                         TColdLoad = self.commonSettings.tColdEff,
                         Vj1 = sis01['Vj'],
                         Ij1 = sis01['Ij'],
@@ -358,7 +355,8 @@ class NoiseTemperature():
                         PLL_Corr_V = lockInfo['corrV'],
                         PLL_Assm_T = pll['temperature'],
                         PA_A_Drain_V = pa['VDp0'],
-                        PA_B_Drain_V = pa['VDp1']
+                        PA_B_Drain_V = pa['VDp1'],
+                        Is_LO_Unlocked = not loLocked
                     )
                 
                 if self.selectPol.testPol(1):
@@ -370,7 +368,7 @@ class NoiseTemperature():
                         BWIF = 100,
                         Pol = 1,
                         TRF_Hot = tAmb,
-                        IF_Attn = self.ifAtten, 
+                        IF_Attn = 0, 
                         TColdLoad = self.commonSettings.tColdEff,
                         Vj1 = sis11['Vj'],
                         Ij1 = sis11['Ij'],
@@ -382,7 +380,8 @@ class NoiseTemperature():
                         PLL_Corr_V = lockInfo['corrV'],
                         PLL_Assm_T = pll['temperature'],
                         PA_A_Drain_V = pa['VDp0'],
-                        PA_B_Drain_V = pa['VDp1']
+                        PA_B_Drain_V = pa['VDp1'],
+                        Is_LO_Unlocked = not loLocked
                     )
         return True, ""
 
@@ -454,7 +453,9 @@ class NoiseTemperature():
         return success, msg
 
     def measureImageReject(self, freqLO: float, freqIF: float | None) -> tuple[bool, str]:
-        
+
+        self.chopper.gotoHot()
+
         ### IF PLATE MODE ###
         if self.commonSettings.backEndMode == BackEndMode.IF_PLATE.value:
 
@@ -462,7 +463,6 @@ class NoiseTemperature():
                 raise ValueError("NoiseTemperature.measureImageReject freqIF missing in IF_PLATE mode")
 
             self.measurementStatus.setStatusMessage(f"Measure image rejection LO={freqLO:.2f} GHz, IF={freqIF:.2f} GHz...")
-            self.chopper.gotoHot()
             self.powerMeter.setUnits(Unit.DBM)
             self.powerMeter.setFastMode(False)
 
@@ -472,42 +472,50 @@ class NoiseTemperature():
                         self.finished = True                
                         return True, "User stop"
                     
-                    record = self.rawDataRecords[(freqLO, freqIF, pol)]
-
+                    self.currentRecords[pol] = record = self.rawDataRecords[(freqLO, freqIF, pol)]
                     self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO + freqIF:.2f} GHz...")
-                    success, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO + freqIF, self.commonSettings.sigGenAmplitude)
-                    if success:
+                    rfLocked, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO + freqIF, self.commonSettings.sigGenAmplitude)
+                    if rfLocked:
+                        record.Is_RF_Unlocked = False
                         self.warmIFPlate.inputSwitch.setPolAndSideband(pol, 'USB')
                         time.sleep(0.25)                
                         success, msg = self.__rfSourceAutoLevel(freqIF)
-                        record.Source_Power = self.rfSrcDevice.getPAVD()
+                        record.Source_Power_USB = self.rfSrcDevice.getPAVD()
                         record.PwrUSB_SrcUSB = self.powerMeter.read()
                         self.warmIFPlate.inputSwitch.setPolAndSideband(pol, 'LSB')
                         time.sleep(0.25)                
                         record.PwrLSB_SrcUSB = self.powerMeter.read()
-                    if success:
+                    else:
+                        record.Is_RF_Unlocked = True
+                        record.PwrUSB_SrcUSB = -100
+                        record.PwrLSB_SrcUSB = -200
+                    if msg:
                         self.logger.info(msg)
-                    elif msg:
-                        self.logger.error(msg)
 
                     if self.stopNow:
                         self.finished = True                
                         return True, "User stop"      
                     
-                    if success:
-                        self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO - freqIF:.2f} GHz...")
-                        success, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO - freqIF, self.commonSettings.sigGenAmplitude)
+                    self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO - freqIF:.2f} GHz...")
+                    rfLocked, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO - freqIF, self.commonSettings.sigGenAmplitude)
+                    if rfLocked:
+                        record.Is_RF_Unlocked = False
                         self.warmIFPlate.inputSwitch.setPolAndSideband(pol, 'LSB')
                         time.sleep(0.25)                
                         success, msg = self.__rfSourceAutoLevel(freqIF)
+                        record.Source_Power_LSB = self.rfSrcDevice.getPAVD()
                         record.PwrLSB_SrcLSB = self.powerMeter.read()
                         self.warmIFPlate.inputSwitch.setPolAndSideband(pol, 'USB')
                         time.sleep(0.25)                
                         record.PwrUSB_SrcLSB = self.powerMeter.read()
-                    if success:
+                    else:
+                        record.Is_RF_Unlocked = True
+                        record.PwrLSB_SrcLSB = -100
+                        record.PwrUSB_SrcLSB = -200
+                    if msg:
                         self.logger.info(msg)
-                    elif msg:
-                        self.logger.error(msg)
+                        
+                self.__rfSourceOff()
         
         ### SPECTRUM ANALYZER MODE ###
         if self.commonSettings.backEndMode == BackEndMode.SPEC_AN.value:            
@@ -520,34 +528,39 @@ class NoiseTemperature():
                             self.finished = True                
                             return True, "User stop"
                     
-                        record = self.rawDataRecords[(freqLO, freqIF, pol)]
+                        self.currentRecords[pol] = record = self.rawDataRecords[(freqLO, freqIF, pol)]
 
                         self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO + freqIF:.2f} GHz...")
-                        success, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO + freqIF, self.commonSettings.sigGenAmplitude)
-                        if success:
+                        rfLocked, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO + freqIF, self.commonSettings.sigGenAmplitude)
+                        if rfLocked:
+                            record.Is_RF_Unlocked = False
                             self.externalSwitch.setPolAndSideband(pol, 'USB')
                             self.spectrumAnalyzer.configNarrowBand(freqIF, 0.0001)
                             time.sleep(0.25)                
                             success, msg = self.__rfSourceAutoLevel(freqIF)
-                            record.Source_Power = self.rfSrcDevice.getPAVD()
+                            record.Source_Power_USB = self.rfSrcDevice.getPAVD()
                             success, msg = self.spectrumAnalyzer.measureNarrowBand()
                             record.PwrUSB_SrcUSB = self.spectrumAnalyzer.markerY
                             self.externalSwitch.setPolAndSideband(pol, 'LSB')
                             time.sleep(0.25)
                             success, msg = self.spectrumAnalyzer.measureNarrowBand()
+                            record.Source_Power_LSB = self.rfSrcDevice.getPAVD()
                             record.PwrLSB_SrcUSB = self.spectrumAnalyzer.markerY
-                        if success:
+                        else:
+                            record.Is_RF_Unlocked = True
+                            record.PwrUSB_SrcUSB = -100
+                            record.PwrLSB_SrcUSB = -200
+                        if msg:
                             self.logger.info(msg)
-                        elif msg:
-                            self.logger.error(msg)
 
                         if self.stopNow:
                             self.finished = True                
                             return True, "User stop"      
                         
-                        if success:
-                            self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO - freqIF:.2f} GHz...")
-                            success, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO - freqIF, self.commonSettings.sigGenAmplitude)
+                        self.measurementStatus.setStatusMessage(f"Locking RF source at {freqLO - freqIF:.2f} GHz...")
+                        rfLocked, msg = self.rfSrcDevice.lockRF(self.rfReference, freqLO - freqIF, self.commonSettings.sigGenAmplitude)
+                        if rfLocked:
+                            record.Is_RF_Unlocked = False
                             self.externalSwitch.setPolAndSideband(pol, 'LSB')                            
                             time.sleep(0.25)                
                             success, msg = self.__rfSourceAutoLevel(freqIF)
@@ -557,12 +570,15 @@ class NoiseTemperature():
                             time.sleep(0.25)
                             success, msg = self.spectrumAnalyzer.measureNarrowBand()                
                             record.PwrUSB_SrcLSB = self.spectrumAnalyzer.markerY
-                        if success:
+                        else:
+                            record.Is_RF_Unlocked = True
+                            record.PwrLSB_SrcLSB = -100
+                            record.PwrUSB_SrcLSB = -200
+                        if msg:
                             self.logger.info(msg)
-                        elif msg:
-                            self.logger.error(msg)
 
-        self.__rfSourceOff()
+                    self.__rfSourceOff()
+                self.spectrumAnalyzer.endNarrowBand()        
         return True, ""
     
     def measureNoiseTemp(self, freqLO: float, freqIF: float | None) -> tuple[bool, str]:
@@ -608,6 +624,8 @@ class NoiseTemperature():
                         self.finished = True
                         return True, "User stop"
                     
+                    #select the IF record to be displayed to the user:
+                    self.currentRecords[pol] = self.rawDataRecords[(freqLO, 6, pol)]
                     self.chopper.gotoHot()
 
                     self.externalSwitch.setPolAndSideband(pol, 'USB')                        
@@ -659,7 +677,7 @@ class NoiseTemperature():
         samplesCold = []
         done = False
         chopperPower = ChopperPowers(input = f"Pol{pol} {sideband}")
-        record = self.rawDataRecords[(freqLO, freqIF, pol)]
+        self.currentRecords[pol] = record = self.rawDataRecords[(freqLO, freqIF, pol)]
 
         while not done:
             cycleEnd = time.time() + sampleInterval
@@ -734,7 +752,7 @@ class NoiseTemperature():
                 msg = f"__rfSourceAutoLevel: iter={iter} maxIter={maxIter} setValue={setValue}%"
             elif (controller.isComplete()):
                 done = True
-                msg = f"__rfSourceAutoLevel: success iter={iter} amp={amp:.1f} dBm"
+                msg = f"__rfSourceAutoLevel: success iter={iter} setValue={setValue}% amp={amp:.1f} dBm"
             else:
                 controller.process(amp)
                 setValue = controller.output
@@ -748,7 +766,7 @@ class NoiseTemperature():
                 if amp is None:
                     error = True
                     msg = f"__rfSourceAutoLevel: powerMeter.read error at iter={iter}."
-                self.logger.info(f"__rfSourceAutoLevel: iter={iter} amp={amp:.1f} dBm")
+                self.logger.info(f"__rfSourceAutoLevel: iter={iter} setValue={setValue}% amp={amp:.1f} dBm")
 
         if error:
             self.logger.error(msg)

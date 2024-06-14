@@ -50,7 +50,7 @@ class MarkerReadout(Enum):
 class SpectrumAnalyzerSettings(BaseModel):
     sweepPoints: int = 2001
     attenuation: float = 2
-    enableInternalPreamp: bool = True
+    enableInternalPreamp: bool = False
     autoResolutionBW: bool = False
     resolutionBW: float = 8e6
     autoVideoBW: bool = False
