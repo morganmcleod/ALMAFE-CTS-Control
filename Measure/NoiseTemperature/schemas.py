@@ -39,9 +39,10 @@ class CommonSettings(BaseModel):
     chopperMode: str = ChopperMode.SPIN.value
     backEndMode: str = BackEndMode.IF_PLATE.value
     targetPHot: float = -30.0
-    targetSidebandPower: float = -15.0  # dBm for image reject only
-    chopperSpeed: float = 0.5           # rev/sec
-    sampleRate: float = 50              # samples/sec
+    imageRejectSBTarget_PM: float = -15.0   # dBm
+    imageRejectSBTarget_SA: float = -30.0   # dBm
+    chopperSpeed: float = 0.5               # rev/sec
+    sampleRate: float = 50                  # samples/sec
     sensorAmbient: int = 7
     tColdEff: float = 80
     sigGenAmplitude: float = 10.0

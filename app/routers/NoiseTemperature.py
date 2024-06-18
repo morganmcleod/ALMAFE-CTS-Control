@@ -6,6 +6,7 @@ from app.measProcedure.NoiseTemperature import noiseTemperature, yFactor
 from app.measProcedure.MeasurementStatus import measurementStatus
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSample
 from CTSDevices.ColdLoad.AMI1720 import AMI1720, FillMode
+from CTSDevices.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from schemas.common import SingleFloat
 from app.schemas.Response import MessageResponse
 from .ConnectionManager import ConnectionManager
@@ -125,6 +126,24 @@ async def get_NtSettings():
 async def put_NtSettings(settings: NoiseTempSettings):
     noiseTemperature.updateSettings(loWgIntegritySettings = settings)
     return MessageResponse(message = "Updated LO WG Settings", success = True)
+
+@router.get("/specan/settings_nt", response_model = SpectrumAnalyzerSettings)
+async def get_SANTSettings():
+    return noiseTemperature.ntSpecAnSettings
+
+@router.post("/specan/settings_nt",  response_model = MessageResponse)
+async def put_SANTSettings(settings: SpectrumAnalyzerSettings):
+    noiseTemperature.updateSettings(ntSpecAnSettings = settings)
+    return MessageResponse(message = "Updated spectrum analyzer settings for noise temperature", success = True)
+
+@router.get("/specan/settings_ir", response_model = SpectrumAnalyzerSettings)
+async def get_SANTSettings():
+    return noiseTemperature.irSpecAnSettings
+
+@router.post("/specan/settings_ir",  response_model = MessageResponse)
+async def put_SANTSettings(settings: SpectrumAnalyzerSettings):
+    noiseTemperature.updateSettings(irSpecAnSettings = settings)
+    return MessageResponse(message = "Updated spectrum analyzer settings for image rejection", success = True)
 
 @router.get("/coldload/level", response_model = SingleFloat)
 async def get_ColdLoadLevel():

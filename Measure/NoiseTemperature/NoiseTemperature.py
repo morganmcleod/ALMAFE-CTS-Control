@@ -722,12 +722,15 @@ class NoiseTemperature():
 
         setValue = 15 # percent
         maxIter = 25
-        
+        setPoint = self.commonSettings.imageRejectSBTarget_PM
+        if self.commonSettings.backEndMode == BackEndMode.SPEC_AN.value:
+            setPoint = self.commonSettings.imageRejectSBTarget_SA
+
         controller = BinarySearchController(
             outputRange = [15, 100], 
             initialStepPercent = 5, 
             initialOutput = setValue, 
-            setPoint = self.commonSettings.targetSidebandPower,
+            setPoint =  setPoint, 
             tolerance = 3,
             maxIter = maxIter)
         
