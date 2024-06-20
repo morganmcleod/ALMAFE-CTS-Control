@@ -259,7 +259,27 @@ class BaseMXA():
             self.inst.write(f":CALC:MARK{markerNum}:FCO:GAT:AUTO OFF;:CALC:MARK{markerNum}:FCO:GAT {gateTime};")
         code, msg = self.errorQuery()
         return code == 0, msg
-            
+
+    def configMarkerCharacterisitcs(self,
+            markerNum: int = 1,
+            function: MarkerFunction = MarkerFunction.OFF,
+            bandSpanHz: float = 0,
+            bandLeftHz: float = None,
+            bandRightHz: float = None,
+            enableLine: bool = False) -> tuple[bool, str]:
+
+        self.inst.write(f":CALC:MARK{markerNum}:FUNC {function.value};")
+        if function != MarkerFunction.OFF:
+            if bandLeftHz is not None:
+                self.inst.write(f":CALC:MARK{markerNum}:FUNC:BAND:LEFT {bandLeftHz};")
+            if bandRightHz is not None:
+                self.inst.write(f":CALC:MARK{markerNum}:FUNC:BAND:RIGH {bandRightHz};")
+            if bandLeftHz is None and bandRightHz is None and bandSpanHz is not None:
+                self.inst.write(f":CALC:MARK{markerNum}:FUNC:BAND:SPAN {bandSpanHz};")
+            self.inst.write(f":CALC:MARK{markerNum}:LIN {'ON' if enableLine else 'OFF'};")
+        code, msg = self.errorQuery()
+        return code == 0, msg
+    
     def configSmoothing(self, traceNum:int = 1, numPoints: int = 1) -> tuple[bool, str]:
         self.inst.write(f":TRAC:MATH:SMO TRACE{traceNum};:TRAC:MATH:SMO:POIN {numPoints};")
         code, msg = self.errorQuery()

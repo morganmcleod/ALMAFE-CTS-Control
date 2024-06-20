@@ -5,3 +5,4 @@ ALMAFE-CTS-Database.ini
 AmpPhaseDataLib.ini
 AmpPhaseDataLib.sqlite
 Settings_*.yaml
+*.xlsx

@@ -226,10 +226,10 @@ class BaseAgilentPNA(PNAInterface):
                        measName:str = "MY_MEAS"):
         self.configureMeasurementParameter(channel, Mode.SELECT, measName = measName)
         self.setDataFormat(DataFormat.REAL32)
-        trace = self.inst.query_binary_values(f"CALC{channel}:DATA? {format.value};", datatype='f', is_big_endian = True)
-        if trace:
-            return trace
-        else:
-            return None
-
+        trace = None
+        try:
+            trace = self.inst.inst.query_binary_values(f"CALC{channel}:DATA? {format.value};", datatype='f', is_big_endian = True)
+        except:
+            pass
+        return trace
 

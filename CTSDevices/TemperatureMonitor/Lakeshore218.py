@@ -72,7 +72,7 @@ class TemperatureMonitor():
             return False
         return True
 
-    def readSingle(self, input: int):
+    def readSingle(self, input: int) -> tuple[int, int]:
         if not 1 <= input <= 8:
             return -1.0, 1
         with self.lock:

@@ -47,6 +47,12 @@ class MarkerReadout(Enum):
     TIME = "TIME"
     INVERSE_TIME = "ITIM"
 
+class MarkerFunction(Enum):
+    OFF = "OFF"
+    MARKER_NOISE = "NOIS"
+    BAND_POWER = "BPOW"
+    BAND_DENSITY = "BDEN"
+
 class SpectrumAnalyzerSettings(BaseModel):
     sweepPoints: int = 2001
     attenuation: float = 2

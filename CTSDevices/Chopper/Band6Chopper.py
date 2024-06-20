@@ -4,7 +4,6 @@ import time
 from CTSDevices.Common.RemoveDelims import removeDelims
 from typing import Optional
 import logging
-import threading
 from DebugOptions import *
 from Util.Singleton import Singleton
 

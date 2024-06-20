@@ -626,7 +626,7 @@ class NoiseTemperature():
                     self.chopper.gotoHot()
 
                     #prepare the traces to be displayed to the user:
-                    self.specAnPowerHistory = SpecAnPowers(pol = pol)
+                    self.specAnPowerHistory = SpecAnPowers(pol = pol, ifFreqs = [freqIF for freqIF in self.ifSteps])
 
                     self.externalSwitch.setPolAndSideband(pol, 'USB')                        
                     success, msg = self.spectrumAnalyzer.readTrace()

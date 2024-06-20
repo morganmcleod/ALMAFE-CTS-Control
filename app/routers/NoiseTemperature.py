@@ -64,7 +64,7 @@ async def websocket_rawspecan(websocket: WebSocket):
     try:
         while True:
             if noiseTemperature.noiseTemp.specAnPowerHistory is not None:
-                toSend = jsonable_encoder(noiseTemperature.specAnPowerHistory)
+                toSend = jsonable_encoder(noiseTemperature.noiseTemp.specAnPowerHistory)
                 await manager.send(toSend, websocket)
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:

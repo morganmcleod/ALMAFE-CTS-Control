@@ -29,6 +29,9 @@ class ZeroPowerMeter():
         self.measurementStatus.setStatusMessage("Zero Power Meter started")
         self.measurementStatus.setError(False)
 
+    def stop(self):
+        pass
+
     def isMeasuring(self):
         return not self.finished    
 

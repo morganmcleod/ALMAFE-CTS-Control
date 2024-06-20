@@ -1,5 +1,5 @@
 from .BaseMXA import BaseMXA
-from .schemas import AveragingType, DetectorMode, InternalPreamp, TraceType, MarkerType, SpectrumAnalyzerSettings
+from .schemas import *
 import time
 
 class SpectrumAnalyzer(BaseMXA):
@@ -79,5 +79,34 @@ class SpectrumAnalyzer(BaseMXA):
         
     def endNarrowBand(self) -> tuple[bool, str]:
         self.configMarkerType(1, MarkerType.OFF)
-        # self.configureAll(self.settings)
+    
+    def configWideBand(self,
+            bandLeftGHz: float = 4, 
+            bandRightGHz: float = 20, 
+            sweepPoints: int = 161) -> tuple[bool, str]:
+    
+        self.configMarkerType(1, MarkerType.OFF)
+        self.configAcquisition(autoDetector = False, manualDetector = DetectorMode.NORMAL, sweepPoints = sweepPoints)
+        self.configFreqStartStop(bandLeftGHz * 1e9, bandRightGHz * 1e9)
+        self.configTraceType(1, TraceType.CLEAR_WRITE)
+        self.configMarkerType(1, MarkerType.NORMAL)
+        self.configMarkerCharacterisitcs(1, MarkerFunction.BAND_POWER, bandLeftHz = bandLeftGHz * 1e9, bandRightHz = bandRightGHz * 1e9)
+        code, msg = self.errorQuery()
+        return code == 0, msg
 
+    def measureWideBand(self) -> tuple[float, bool, str]:
+        iter = 3
+        done = False
+        # retry a couple times if we get an unreasonable power level:
+        while iter > 0 and not done:
+            iter -= 1
+            self.readMarker()
+            if -100 < self.markerY < 20:
+                done = True
+        if iter == 0:
+            return 0.0, True, "SpectrumAnalyzer.measureNarrowBand: too many retries"
+        else:
+            return self.markerY, True, "" 
+
+    def endWideBand(self):
+        self.configMarkerType(1, MarkerType.OFF)

@@ -90,7 +90,7 @@ class NoiseTempMain(Singleton):
             self.measurementStatus,
             self.externalSwitch
         )
-        self.warmIfNoise.updateSettings(self.commonSettings)
+        self.warmIfNoise.updateSettings(self.commonSettings, self.warmIFSettings, self.ntSpecAnSettings)
         self.noiseTemp = NoiseTemperature(
             self.loReference,
             self.rfReference,
@@ -105,7 +105,7 @@ class NoiseTempMain(Singleton):
             self.measurementStatus,
             self.externalSwitch
         )
-        self.noiseTemp.updateSettings(self.commonSettings)
+        self.noiseTemp.updateSettings(self.commonSettings, self.noiseTempSettings, self.ntSpecAnSettings, self.irSpecAnSettings)
         self.__reset()
         
     def __reset(self):
@@ -160,6 +160,7 @@ class NoiseTempMain(Singleton):
         except:
             self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3, enableInternalPreamp = True)
             self.saveSettingsIRSpecAn()
+
 
     def saveSettingsCommon(self):
         with open(self.COMMON_SETTINGS_FILE, "w") as f:
