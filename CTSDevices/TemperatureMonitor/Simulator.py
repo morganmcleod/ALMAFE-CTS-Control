@@ -2,7 +2,7 @@ import logging
 
 class TemperatureMonitorSimulator():
 
-    SIM_DATA = [3.5, 3.9, 4.1, 15, 110, 273, 274, 275]
+    SIM_DATA = [3.5, -1.0, 14.8, 109, 310, 311, 274, -1]
     SIM_ERRS = [0, 0, 0, 0, 0, 0, 0, 0]
 
     def __init__(self):

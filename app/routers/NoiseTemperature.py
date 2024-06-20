@@ -3,9 +3,8 @@ from fastapi.encoders import jsonable_encoder
 from typing import List, Optional
 from app.hardware.NoiseTemperature import coldLoad
 from app.measProcedure.NoiseTemperature import noiseTemperature, yFactor
-from app.measProcedure.MeasurementStatus import measurementStatus
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSample
-from CTSDevices.ColdLoad.AMI1720 import AMI1720, FillMode
+from CTSDevices.ColdLoad.AMI1720 import FillMode
 from CTSDevices.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from schemas.common import SingleFloat
 from app.schemas.Response import MessageResponse
@@ -39,7 +38,7 @@ async def websocket_warmif(websocket: WebSocket):
         logger.exception("WebSocketDisconnect: /warmif_ws")
 
 @router.websocket("/chopperpower_ws")
-async def websocket_warmif(websocket: WebSocket):
+async def websocket_chopperpower(websocket: WebSocket):
     await manager.connect(websocket)
     lastIndex = 0
     try:
@@ -59,8 +58,21 @@ async def websocket_warmif(websocket: WebSocket):
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /chopperpower_ws")
 
+@router.websocket("/rawspecan_ws")
+async def websocket_rawspecan(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            if noiseTemperature.noiseTemp.specAnPowerHistory is not None:
+                toSend = jsonable_encoder(noiseTemperature.specAnPowerHistory)
+                await manager.send(toSend, websocket)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /rawspecan_ws")
+
 @router.websocket("/rawnoisetemp_ws")
-async def websocket_warmif(websocket: WebSocket):
+async def websocket_raw_nt(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:

@@ -79,6 +79,14 @@ class ChopperPowers(BaseModel):
     chopperState: State = State.TRANSITION
     power: float = 0
 
+class SpecAnPowers(BaseModel):
+    pol: int
+    ifFreqs: list[float] = []
+    pHotUSB: list[float] = []
+    pColdUSB: list[float] = []
+    pHotLSB: list[float] = []
+    pColdLSB: list[float] = []
+
 class YFactorSample(BaseModel):
     Y: float
     TRx: float

@@ -17,7 +17,7 @@ from DBBand6Cart.NoiseTempRawData import NoiseTempRawData
 from app.database.CTSDB import CTSDB
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus
-from .schemas import ChopperPowers, BackEndMode, ChopperMode, SelectPolarization, TestSteps
+from .schemas import ChopperPowers, BackEndMode, SelectPolarization, SpecAnPowers, TestSteps
 
 from DebugOptions import *
 
@@ -63,10 +63,6 @@ class NoiseTemperature():
         self.settings = None
         self.ntSpecAnSettings = None
         self.irSpecAnSettings = None
-        self.ifMode = 'step'
-        self.chopperMode = 'spin'
-        self.chopperPowerHistory = []
-        self.rawDataRecords = None
         self.__reset()        
 
     def __reset(self):
@@ -76,6 +72,7 @@ class NoiseTemperature():
         self.finished = False
         self.ifAtten = 22
         self.chopperPowerHistory = []
+        self.specAnPowerHistory = None
         self.rawDataRecords = None
         self.currentRecords = [None, None]
         self.loStep = 0
@@ -628,11 +625,15 @@ class NoiseTemperature():
                     self.currentRecords[pol] = self.rawDataRecords[(freqLO, 6, pol)]
                     self.chopper.gotoHot()
 
+                    #prepare the traces to be displayed to the user:
+                    self.specAnPowerHistory = SpecAnPowers(pol = pol)
+
                     self.externalSwitch.setPolAndSideband(pol, 'USB')                        
                     success, msg = self.spectrumAnalyzer.readTrace()
                     if not success:
                         return False, msg
 
+                    self.specAnPowerHistory.pHotUSB = self.spectrumAnalyzer.traceY
                     for freqIF, amp in zip(self.ifSteps, self.spectrumAnalyzer.traceY):
                         record = self.rawDataRecords[(freqLO, freqIF, pol)]
                         record.Phot_USB = amp
@@ -642,6 +643,7 @@ class NoiseTemperature():
                     if not success:
                         return False, msg
 
+                    self.specAnPowerHistory.pHotLSB = self.spectrumAnalyzer.traceY
                     for freqIF, amp in zip(self.ifSteps, self.spectrumAnalyzer.traceY):
                         record = self.rawDataRecords[(freqLO, freqIF, pol)]
                         record.Phot_LSB = amp
@@ -653,6 +655,7 @@ class NoiseTemperature():
                     if not success:
                         return False, msg
 
+                    self.specAnPowerHistory.pColdUSB = self.spectrumAnalyzer.traceY
                     for freqIF, amp in zip(self.ifSteps, self.spectrumAnalyzer.traceY):
                         record = self.rawDataRecords[(freqLO, freqIF, pol)]
                         record.Pcold_USB = amp
@@ -662,6 +665,7 @@ class NoiseTemperature():
                     if not success:
                         return False, msg
 
+                    self.specAnPowerHistory.pColdLSB = self.spectrumAnalyzer.traceY
                     for freqIF, amp in zip(self.ifSteps, self.spectrumAnalyzer.traceY):
                         record = self.rawDataRecords[(freqLO, freqIF, pol)]
                         record.Pcold_LSB = amp
