@@ -4,3 +4,9 @@ ALMAFE-CTS-Database.ini
 *.log
 AmpPhaseDataLib.ini
 AmpPhaseDataLib.sqlite
+IRSpecAnSettings.yaml
+LOWGIntegritySettings.yaml
+NoiseTempSettings.yaml
+NTCommonSettings.yaml
+NTSpecAnSettings.yaml
+WarmIFSettings.yaml

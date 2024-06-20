@@ -26,8 +26,17 @@ from .schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSetting
 import concurrent.futures
 import logging
 import time
+import yaml
+
 
 class NoiseTempMain(Singleton):
+
+    COMMON_SETTINGS_FILE = "NTCommonSettings.yaml"
+    WARM_IF_SETTINGS_FILE = "WarmIFSettings.yaml"
+    NOISE_TEMP_SETTINGS_FILE = "NoiseTempSettings.yaml"
+    LO_WG_INTEGRITY_SETTINGS_FILE = "LOWGIntegritySettings.yaml"
+    NT_SPECAN_SETTINGS_FILE = "NTSpecAnSettings.yaml"
+    IR_SPECAN_SETTINGS_FILE = "IRSpecAnSettings.yaml"
 
     def init(self,
             loReference: SignalGenerator, 
@@ -59,12 +68,13 @@ class NoiseTempMain(Singleton):
         self.chopper = chopper
         self.measurementStatus = measurementStatus
         self.testSteps = TestSteps()
-        self.commonSettings = CommonSettings()
-        self.warmIFSettings = WarmIFSettings()
-        self.noiseTempSettings = NoiseTempSettings()
-        self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
-        self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
-        self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3, enableInternalPreamp = True)        
+        self.commonSettings = None
+        self.warmIFSettings = None
+        self.noiseTempSettings = None
+        self.loWgIntegritySettings = None
+        self.ntSpecAnSettings = None
+        self.irSpecAnSettings = None
+        self.loadSettings()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
         self.zeroPowerMeter = ZeroPowerMeter(
             self.warmIFPlate,
@@ -101,7 +111,81 @@ class NoiseTempMain(Singleton):
     def __reset(self):
         self.measInProgress = None
         self.stopNow = False
+
+    def loadSettings(self):
+        try:
+            with open(self.COMMON_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.commonSettings = CommonSettings.parse_obj(d)
+        except:
+            self.commonSettings = CommonSettings()
+
+        try:
+            with open(self.WARM_IF_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.warmIFSettings = WarmIFSettings.parse_obj(d)
+        except:
+            self.warmIFSettings = WarmIFSettings()       
+
+        try:
+            with open(self.NOISE_TEMP_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.noiseTempSettings = NoiseTempSettings.parse_obj(d)
+        except:
+            self.noiseTempSettings = NoiseTempSettings()       
+            
+        try:
+            with open(self.LO_WG_INTEGRITY_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.loWgIntegritySettings = NoiseTempSettings.parse_obj(d)
+        except:
+            self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
         
+        try:
+            with open(self.NT_SPECAN_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.ntSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
+        except:
+            self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
+
+        try:
+            with open(self.IR_SPECAN_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.irSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
+        except:
+            self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3, enableInternalPreamp = True)
+
+        self.saveSettingsCommon()
+        self.saveSettingsWarmIF()
+        self.saveSettingsNoiseTemp()
+        self.saveSettingsLOWGIntegrity()
+        self.saveSettingsNTSpecAn()
+        self.saveSettingsIRSpecAn()
+
+    def saveSettingsCommon(self):
+        with open(self.COMMON_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.commonSettings.dict(), f)
+
+    def saveSettingsWarmIF(self):
+        with open(self.WARM_IF_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.warmIFSettings.dict(), f)
+
+    def saveSettingsNoiseTemp(self):
+        with open(self.NOISE_TEMP_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.noiseTempSettings.dict(), f)
+        
+    def saveSettingsLOWGIntegrity(self):
+        with open(self.LO_WG_INTEGRITY_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.loWgIntegritySettings.dict(), f)
+
+    def saveSettingsNTSpecAn(self):
+        with open(self.NT_SPECAN_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.ntSpecAnSettings.dict(), f)
+
+    def saveSettingsIRSpecAn(self):
+        with open(self.IR_SPECAN_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.irSpecAnSettings.dict(), f)
+
     def updateSettings(self, 
             commonSettings = None, 
             noiseTempSettings = None, 
@@ -111,19 +195,25 @@ class NoiseTempMain(Singleton):
             irSpecAnSettings = None):
         if commonSettings is not None:
             self.commonSettings = commonSettings
+            self.saveSettingsCommon()
         if warmIFSettings is not None:
             self.warmIFSettings = warmIFSettings
+            self.saveSettingsWarmIF()
         if noiseTempSettings is not None:
             self.noiseTempSettings = noiseTempSettings
+            self.saveSettingsNoiseTemp()
             self.warmIFSettings.ifStart = self.noiseTempSettings.ifStart
             self.warmIFSettings.ifStop = self.noiseTempSettings.ifStop
             self.warmIFSettings.ifStep = self.noiseTempSettings.ifStep
         if loWgIntegritySettings is not None:
             self.loWgIntegritySettings = loWgIntegritySettings
+            self.saveSettingsLOWGIntegrity()
         if ntSpecAnSettings is not None:
             self.ntSpecAnSettings = ntSpecAnSettings
+            self.saveSettingsNTSpecAn()
         if irSpecAnSettings is not None:
             self.irSpecAnSettings = irSpecAnSettings
+            self.saveSettingsIRSpecAn()
         self.warmIfNoise.updateSettings(self.commonSettings, self.warmIFSettings, self.ntSpecAnSettings)
         self.noiseTemp.updateSettings(self.commonSettings, self.noiseTempSettings, self.ntSpecAnSettings, self.irSpecAnSettings)
 
