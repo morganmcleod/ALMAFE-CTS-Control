@@ -91,11 +91,13 @@ async def get_Settings():
 @router.post("/amp/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
     amplitudeStablilty.settings = settings
+    amplitudeStablilty.saveSettings()
     return MessageResponse(message = "Updated amplitude stability settings.", success = True)
 
 @router.post("/phase/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
     phaseStability.settings = settings
+    phaseStability.saveSettings()
     return MessageResponse(message = "Updated phase stability settings.", success = True)
 
 @router.get("/amp/timeseries/list", response_model = ListResponse)

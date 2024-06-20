@@ -19,6 +19,7 @@ sampleVoltMeter = SampleVoltMeter(voltMeter)
 calcDataAmplitudeStability = CalcDataAmplitudeStability(driver = CTSDB())
 
 amplitudeStablilty = MeasureStability(
+    mode = 'AMPLITUDE',
     loReference = loReference,
     cartAssembly = cartAssembly,
     warmIFPlate = warmIFPlate,
@@ -29,25 +30,11 @@ amplitudeStablilty = MeasureStability(
     calcDataInterface = calcDataAmplitudeStability
 )
 
-amplitudeStablilty.settings = Settings()
-
-if TESTING:
-    amplitudeStablilty.settings = Settings(
-        delayAfterLock = 0,
-        measureDuration = 2,
-        measurePol0 = True,
-        measurePol1 = False,
-        measureUSB = True,
-        measureLSB = False,
-        loStart = 221.0,
-        loStop = 221.0,
-        loStep = 0
-    )
-
 samplePNA = SamplePNA(pna)
 calcDataPhaseStability = CalcDataPhaseStability(driver = CTSDB())
 
 phaseStability = MeasureStability(
+    mode = 'PHASE',
     loReference = loReference,
     cartAssembly = cartAssembly,
     warmIFPlate = warmIFPlate,
@@ -57,20 +44,3 @@ phaseStability = MeasureStability(
     measurementStatus = measurementStatus,
     calcDataInterface = calcDataPhaseStability
 )
-
-phaseStability.settings = Settings(sampleRate = 5, attenuateIF = 22)
-
-if TESTING:
-    phaseStability.settings = Settings(
-        sampleRate = 5,
-        attenuateIF = 22,
-        delayAfterLock = 0,
-        measureDuration = 2,
-        measurePol0 = True,
-        measurePol1 = False,
-        measureUSB = True,
-        measureLSB = False,
-        loStart = 221.0,
-        loStop = 221.0,
-        loStep = 0
-    )

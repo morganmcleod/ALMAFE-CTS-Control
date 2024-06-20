@@ -16,7 +16,7 @@ from AmpPhasePlotLib.PlotAPI import PlotAPI
 from AMB.LODevice import LODevice
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus
-from .schemas import TimeSeriesInfo
+from .schemas import TimeSeriesInfo, Settings
 from .SampleInterface import SampleInterface
 from .CalcDataInterface import CalcDataInterface, StabilityRecord
 
@@ -29,10 +29,15 @@ import logging
 import time
 from datetime import datetime
 from math import floor
+import yaml
 
 class MeasureStability():
 
+    AMP_STABILITY_SETTINGS_FILE = "Settings_AmpStability.yaml"
+    PHASE_STABILITY_SETTINGS_FILE = "Settings_PhaseStability.yaml"    
+
     def __init__(self,
+            mode: str,      # 'AMPLITUDE' or 'PHASE'
             loReference: SignalGenerator,
             cartAssembly: CartAssembly,            
             warmIFPlate: WarmIFPlate,
@@ -44,6 +49,7 @@ class MeasureStability():
         ):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
+        self.mode = mode
         self.loReference = loReference
         self.cartAssembly = cartAssembly
         self.warmIFPlate = warmIFPlate
@@ -62,7 +68,8 @@ class MeasureStability():
         branch = gitBranch()
         commit = gitVersion(branch = branch)
         self.swVersion = branch + ":" + commit[0:7]
-        self.__reset()    
+        self.loadSettings()
+        self.__reset()
 
     def __reset(self):
         self.cartTest = None
@@ -80,6 +87,26 @@ class MeasureStability():
             self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = self.units[1])
         else:
             self.timeSeries2 = None    
+
+    def loadSettings(self):
+        try:
+            with open(self.STABILITY_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.settings = Settings.parse_obj(d)
+        except:            
+            self.settings = Settings()
+            if self.mode == 'PHASE':
+                self.settings.sampleRate = 5
+                self.settings.attenuateIF = 22
+            self.saveSettings()
+
+    def saveSettings(self):
+        if self.mode == 'AMPLITUDE':
+            with open(self.AMP_STABILITY_SETTINGS_FILE, "w") as f:
+                yaml.dump(self.settings.dict(), f)
+        elif self.mode == 'PHASE':
+            with open(self.PHASE_STABILITY_SETTINGS_FILE, "w") as f:
+                yaml.dump(self.settings.dict(), f)
 
     def start(self, cartTest: CartTest) -> int:
         self.__reset()

@@ -35,6 +35,7 @@ async def getConfigs(serialNum:int = None, configId:int = None, callback:str = N
 @router.put("/config/{configId}", response_model = MessageResponse)
 async def putCartConfig(configId: int):
     if cartAssembly.setConfig(configId):
+        cartAssembly.saveConfig()
         return MessageResponse(message = f"Selected cartridge config {configId}", success = True)
     else:
         return MessageResponse(message = f"ERROR selecting cartridge config {configId}", success = False)

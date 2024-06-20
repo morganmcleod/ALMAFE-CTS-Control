@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from typing import List, Optional, Tuple
 from bisect import bisect_left
 from AMB.LODevice import LODevice
@@ -5,7 +6,6 @@ from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
 from DBBand6Cart.CartConfigs import CartConfigs
-from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
@@ -17,16 +17,21 @@ import time
 import logging
 import threading
 from DebugOptions import *
+import yaml
+
+class CartSerialNum(BaseModel):
+    serialNum: str
 
 class CartAssembly():
 
-    def __init__(self, ccaDevice: CCADevice, loDevice: LODevice, configId: Optional[int] = None):
+    SELECTED_CCA_FILE = "Settings_SelectedCCA.yaml"
+
+    def __init__(self, ccaDevice: CCADevice, loDevice: LODevice):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.ccaDevice = ccaDevice
         self.loDevice = loDevice
         self.reset()
-        if configId:
-            self.setConfig(configId)
+        self.loadConfig()
         
     def reset(self):
         self.serialNum = None
@@ -48,7 +53,28 @@ class CartAssembly():
         self.preampParams11 = None
         self.preampParams12 = None
         self.freqLOGHz = 0
-        self.autoLOPol = None   # not used internally, but observed by CartAssembly API
+        self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
+
+    def loadConfig(self):
+        try:
+            with open(self.SELECTED_CCA_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                s = CartSerialNum.parse_obj(d)
+                if s.serialNum:
+                    DB = CartConfigs(driver = CTSDB())
+                    configs = DB.read(serialNum = s.serialNum, latestOnly = True)
+                    if configs:                    
+                        self.setConfig(configs[0].id)
+        except:
+            self.saveConfig()
+
+    def saveConfig(self):
+        if self.configId and self.serialNum:
+            s = CartSerialNum(serialNum = self.serialNum)            
+        else:
+            s = CartSerialNum(serialNum = "")
+        with open(self.SELECTED_CCA_FILE, "w") as f:
+            yaml.dump(s.dict(), f)
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())

@@ -61,6 +61,8 @@ class Chopper(Singleton):
         self.spinning = False
 
     def isConnected(self) -> bool:
+        if SIMULATE:
+            return True
         # request position
         read = self.__serialWrite("Z 0\r")
         return True if read else False

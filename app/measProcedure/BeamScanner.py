@@ -19,14 +19,6 @@ beamScanner = BeamScanner(
 )
 
 if TESTING:
-    # we can use the RF reference synth to test locking the RF source.  
-    # Normally not used for beam pattern measurement.
-    # beamScanner.rfReference = rfReference
-    pass
-
-beamScanner.measurementSpec = MeasurementSpec()
-
-if TESTING:
     defaultScanList = ScanList(
         items = [
             ScanListItem(RF = 231, LO=241, subScansOption = SubScansOption(copol0 = True, xpol0 = True, copol1 = True, xpol1 = True, copol180 = True))

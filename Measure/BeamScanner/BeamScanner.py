@@ -26,13 +26,15 @@ import concurrent.futures
 from typing import Tuple
 import copy
 import logging
+import yaml
 
 class BeamScanner():
 
+    MEASUREMENT_SETTINGS_FILE = "Settings_BeamScanner.yaml"
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
     POL_SPEED = 10                  # deg/sec
-
+    
     def __init__(self, 
             motorController: MCInterface,
             pna: PNAInterface, 
@@ -52,7 +54,7 @@ class BeamScanner():
         self.warmIFPlate = warmIFPlate
         self.measurementStatus = measurementStatus
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 2)
-        self.measurementSpec = MeasurementSpec()
+        self.measurementSpec = None
         self.scanList = ScanList()
         self.futures = None
         self.keyCartTest = 0
@@ -60,6 +62,7 @@ class BeamScanner():
         self.beamPatternsTable = BeamPatterns(driver = CTSDB())
         self.bpRawDataTable = BPRawData(driver = CTSDB())
         self.bpErrorsTable = BPErrors(driver = CTSDB())
+        self.loadSettings()
         self.__reset()
         
     def __reset(self):
@@ -72,7 +75,20 @@ class BeamScanner():
         self.yPos = 0
         self.stopNow = False
 
-    def getLatestRasterInfo(self) -> (int, int):
+    def loadSettings(self):
+        try:
+            with open(self.MEASUREMENT_SETTINGS_FILE, "r") as f:
+                d = yaml.safe_load(f)
+                self.measurementSpec = MeasurementSpec.parse_obj(d)
+        except:            
+            self.measurementSpec = MeasurementSpec()
+            self.saveSettings()
+
+    def saveSettings(self):
+        with open(self.MEASUREMENT_SETTINGS_FILE, "w") as f:
+            yaml.dump(self.measurementSpec.dict(), f)
+
+    def getLatestRasterInfo(self) -> tuple[int, int]:
         if len(self.rasters):
             return self.rasters[-1].key, self.rasters[-1].index
         else:

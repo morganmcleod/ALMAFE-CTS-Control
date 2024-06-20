@@ -231,6 +231,7 @@ async def get_MeasurementSpec():
 @router.post("/meas_spec", response_model = MessageResponse)
 async def put_MeasurementSpec(measurementSpec:MeasurementSpec):
     BeamScanner.beamScanner.measurementSpec = measurementSpec
+    BeamScanner.beamScanner.saveSettings()
     return MessageResponse(message = "Updated Measurement Spec", success = True)
 
 @router.get("/scan_list", response_model = ScanList)

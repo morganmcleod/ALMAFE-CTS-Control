@@ -31,12 +31,12 @@ import yaml
 
 class NoiseTempMain(Singleton):
 
-    COMMON_SETTINGS_FILE = "NTCommonSettings.yaml"
-    WARM_IF_SETTINGS_FILE = "WarmIFSettings.yaml"
-    NOISE_TEMP_SETTINGS_FILE = "NoiseTempSettings.yaml"
-    LO_WG_INTEGRITY_SETTINGS_FILE = "LOWGIntegritySettings.yaml"
-    NT_SPECAN_SETTINGS_FILE = "NTSpecAnSettings.yaml"
-    IR_SPECAN_SETTINGS_FILE = "IRSpecAnSettings.yaml"
+    COMMON_SETTINGS_FILE = "Settings_NTCommon.yaml"
+    WARM_IF_SETTINGS_FILE = "Settings_WarmIF.yaml"
+    NOISE_TEMP_SETTINGS_FILE = "Settings_NoiseTemp.yaml"
+    LO_WG_INTEGRITY_SETTINGS_FILE = "Settings_LOWGIntegrity.yaml"
+    NT_SPECAN_SETTINGS_FILE = "Settings_NTSpecAn.yaml"
+    IR_SPECAN_SETTINGS_FILE = "Settings_IRSpecAn.yaml"
 
     def init(self,
             loReference: SignalGenerator, 
@@ -119,20 +119,23 @@ class NoiseTempMain(Singleton):
                 self.commonSettings = CommonSettings.parse_obj(d)
         except:
             self.commonSettings = CommonSettings()
+            self.saveSettingsCommon()
 
         try:
             with open(self.WARM_IF_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
                 self.warmIFSettings = WarmIFSettings.parse_obj(d)
         except:
-            self.warmIFSettings = WarmIFSettings()       
+            self.warmIFSettings = WarmIFSettings()
+            self.saveSettingsWarmIF()
 
         try:
             with open(self.NOISE_TEMP_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
                 self.noiseTempSettings = NoiseTempSettings.parse_obj(d)
         except:
-            self.noiseTempSettings = NoiseTempSettings()       
+            self.noiseTempSettings = NoiseTempSettings()
+            self.saveSettingsNoiseTemp()
             
         try:
             with open(self.LO_WG_INTEGRITY_SETTINGS_FILE, "r") as f:
@@ -140,6 +143,7 @@ class NoiseTempMain(Singleton):
                 self.loWgIntegritySettings = NoiseTempSettings.parse_obj(d)
         except:
             self.loWgIntegritySettings = NoiseTempSettings(loStep = 0.1, ifStart = 6.0, ifStop = 6.0)
+            self.saveSettingsLOWGIntegrity()
         
         try:
             with open(self.NT_SPECAN_SETTINGS_FILE, "r") as f:
@@ -147,6 +151,7 @@ class NoiseTempMain(Singleton):
                 self.ntSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
         except:
             self.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
+            self.saveSettingsNTSpecAn()
 
         try:
             with open(self.IR_SPECAN_SETTINGS_FILE, "r") as f:
@@ -154,13 +159,7 @@ class NoiseTempMain(Singleton):
                 self.irSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
         except:
             self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 22, resolutionBW = 10e3, enableInternalPreamp = True)
-
-        self.saveSettingsCommon()
-        self.saveSettingsWarmIF()
-        self.saveSettingsNoiseTemp()
-        self.saveSettingsLOWGIntegrity()
-        self.saveSettingsNTSpecAn()
-        self.saveSettingsIRSpecAn()
+            self.saveSettingsIRSpecAn()
 
     def saveSettingsCommon(self):
         with open(self.COMMON_SETTINGS_FILE, "w") as f:
