@@ -1,4 +1,4 @@
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
 
 settings = SpectrumAnalyzerSettings()
 sa = SpectrumAnalyzer(resource="TCPIP0::10.1.1.10::inst0::INSTR")

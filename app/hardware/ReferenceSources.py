@@ -1,5 +1,5 @@
-from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.SignalGenerator.Simulator import SignalGenSimulator
+from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from INSTR.SignalGenerator.Simulator import SignalGenSimulator
 from DebugOptions import *
 
 if SIMULATE:

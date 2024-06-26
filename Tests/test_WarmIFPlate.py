@@ -2,12 +2,12 @@ import unittest
 from AMB.AMBConnectionDLL import AMBConnectionDLL
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
-from CTSDevices.FEMC.CartAssembly import CartAssembly
-from CTSDevices.WarmIFPlate.Attenuator import Attenuator
-from CTSDevices.WarmIFPlate.InputSwitch import InputSwitch, InputSelect
-from CTSDevices.WarmIFPlate.NoiseSource import NoiseSource
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
-from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
+from FEMC.CartAssembly import CartAssembly
+from INSTR.WarmIFPlate.Attenuator import Attenuator
+from INSTR.WarmIFPlate.InputSwitch import InputSwitch, InputSelect
+from INSTR.WarmIFPlate.NoiseSource import NoiseSource
+from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
+from INSTR.WarmIFPlate.YIGFilter import YIGFilter
 import configparser
 import time
 import logging

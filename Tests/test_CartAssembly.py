@@ -10,7 +10,7 @@ from DBBand6Cart.schemas.PreampParam import PreampParam
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 
-from CTSDevices.FEMC.CartAssembly import CartAssembly
+from FEMC.CartAssembly import CartAssembly
 
 CARTRIDGE_BAND = 6
 YTO_LOW = 12.22

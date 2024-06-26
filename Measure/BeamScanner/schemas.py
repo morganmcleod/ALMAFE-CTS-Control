@@ -1,4 +1,4 @@
-from CTSDevices.MotorControl.schemas import Position
+from INSTR.MotorControl.schemas import Position
 from pydantic import BaseModel
 from enum import Enum
 from typing import List, Optional

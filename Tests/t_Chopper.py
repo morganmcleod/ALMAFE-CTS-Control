@@ -1,5 +1,5 @@
 import asyncio
-from CTSDevices.Chopper.Band6Chopper import Chopper
+from INSTR.Chopper.Band6Chopper import Chopper
 
 async def main():
     print("Init...")

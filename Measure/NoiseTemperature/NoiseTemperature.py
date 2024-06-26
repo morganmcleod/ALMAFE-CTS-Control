@@ -1,17 +1,17 @@
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
-from CTSDevices.WarmIFPlate.ExternalSwitch import ExternalSwitch, ExtInputSelect
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
-from CTSDevices.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
-from CTSDevices.Chopper.Band6Chopper import Chopper, State
-from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.FEMC.CartAssembly import CartAssembly
-from CTSDevices.FEMC.RFSource import RFSource
-from CTSDevices.ColdLoad.AMI1720 import AMI1720
-from CTSDevices.Common.BinarySearchController import BinarySearchController
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
+from INSTR.WarmIFPlate.ExternalSwitch import ExternalSwitch, ExtInputSelect
+from INSTR.PowerMeter.KeysightE441X import PowerMeter, Unit
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.Chopper.Band6Chopper import Chopper, State
+from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from FEMC.CartAssembly import CartAssembly
+from FEMC.RFSource import RFSource
+from INSTR.ColdLoad.AMI1720 import AMI1720
+from INSTR.Common.BinarySearchController import BinarySearchController
 from DBBand6Cart.schemas.NoiseTempRawDatum import NoiseTempRawDatum
 from DBBand6Cart.NoiseTempRawData import NoiseTempRawData
 from app.database.CTSDB import CTSDB

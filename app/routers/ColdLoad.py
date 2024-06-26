@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.hardware.NoiseTemperature import coldLoad
-from CTSDevices.ColdLoad.ColdLoadBase import ColdLoadState, FillMode, FillState
+from INSTR.ColdLoad.ColdLoadBase import ColdLoadState, FillMode, FillState
 from schemas.common import SingleBool
 from schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *

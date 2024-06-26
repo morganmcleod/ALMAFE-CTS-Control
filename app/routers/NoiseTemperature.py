@@ -4,8 +4,8 @@ from typing import List, Optional
 from app.hardware.NoiseTemperature import coldLoad
 from app.measProcedure.NoiseTemperature import noiseTemperature, yFactor
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSample
-from CTSDevices.ColdLoad.AMI1720 import FillMode
-from CTSDevices.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
+from INSTR.ColdLoad.AMI1720 import FillMode
+from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from schemas.common import SingleFloat
 from app.schemas.Response import MessageResponse
 from .ConnectionManager import ConnectionManager

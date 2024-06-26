@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from enum import Enum
-from CTSDevices.PowerMeter.schemas import StdErrConfig
-from CTSDevices.Chopper.Band6Chopper import State
+from INSTR.PowerMeter.schemas import StdErrConfig
+from INSTR.Chopper.Band6Chopper import State
 
 class ChopperMode(Enum):
     SPIN = "SPIN"

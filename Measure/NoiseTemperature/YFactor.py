@@ -1,10 +1,10 @@
 
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.Chopper.Band6Chopper import Chopper, State
+from INSTR.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
+from INSTR.PowerMeter.KeysightE441X import PowerMeter, Unit
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.Chopper.Band6Chopper import Chopper, State
 from .schemas import CommonSettings, ChopperPowers, YFactorSample
 from ..Shared.MeasurementStatus import MeasurementStatus
 import concurrent.futures

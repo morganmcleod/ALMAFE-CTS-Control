@@ -3,8 +3,8 @@ from AMB.FEMCDevice import FEMCDevice
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 from AMB.FEMCDevice import FEMCDevice
-from CTSDevices.FEMC.CartAssembly import CartAssembly
-from CTSDevices.FEMC.RFSource import RFSource
+from FEMC.CartAssembly import CartAssembly
+from FEMC.RFSource import RFSource
 import configparser
 from DebugOptions import *
 

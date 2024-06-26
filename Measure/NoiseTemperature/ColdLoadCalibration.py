@@ -1,6 +1,6 @@
 
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from openpyxl import Workbook
 import threading
 import yaml

@@ -1,5 +1,5 @@
-from CTSDevices.DMM.HP34401 import HP34401
-from CTSDevices.DMM.VoltMeterSimulator import VoltMeterSimulator
+from INSTR.DMM.HP34401 import HP34401
+from INSTR.DMM.VoltMeterSimulator import VoltMeterSimulator
 from DebugOptions import *
 
 if SIMULATE:

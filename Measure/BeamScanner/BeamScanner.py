@@ -1,14 +1,14 @@
-from CTSDevices.MotorControl.schemas import Position
-from CTSDevices.MotorControl.MCInterface import MCInterface
-from CTSDevices.PNA.schemas import TriggerSource
-from CTSDevices.PNA.PNAInterface import PNAInterface
-from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
-from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
-from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.MotorControl.schemas import Position
+from INSTR.MotorControl.MCInterface import MCInterface
+from INSTR.PNA.schemas import TriggerSource
+from INSTR.PNA.PNAInterface import PNAInterface
+from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
+from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from INSTR.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
-from CTSDevices.FEMC.CartAssembly import CartAssembly
+from FEMC.CartAssembly import CartAssembly
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DBBand6Cart.CartTests import CartTest, CartTests

@@ -1,7 +1,7 @@
 from .SampleInterface import SampleInterface
-from CTSDevices.PNA.PNAInterface import PNAInterface
-from CTSDevices.PNA.AgilentPNA import DEFAULT_CONFIG, DEFAULT_POWER_CONFIG
-from CTSDevices.PNA.schemas import TriggerSource
+from INSTR.PNA.PNAInterface import PNAInterface
+from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, DEFAULT_POWER_CONFIG
+from INSTR.PNA.schemas import TriggerSource
 from AmpPhaseDataLib.Constants import Units, DataKind
 from typing import Tuple, Optional
 import copy

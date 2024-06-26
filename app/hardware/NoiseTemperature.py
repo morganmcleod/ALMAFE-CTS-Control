@@ -1,14 +1,14 @@
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
-from CTSDevices.PowerMeter.Simulator import PowerMeterSimulator
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
-from CTSDevices.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
-from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
-from CTSDevices.PowerSupply.Simulator import PowerSupplySimulator
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
-from CTSDevices.TemperatureMonitor.Simulator import TemperatureMonitorSimulator
-from CTSDevices.ColdLoad.AMI1720 import AMI1720
-from CTSDevices.ColdLoad.AMI1720Simulator import AMI1720Simulator
-from CTSDevices.Chopper.Band6Chopper import Chopper
+from INSTR.PowerMeter.KeysightE441X import PowerMeter
+from INSTR.PowerMeter.Simulator import PowerMeterSimulator
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from INSTR.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
+from INSTR.PowerSupply.AgilentE363xA import PowerSupply
+from INSTR.PowerSupply.Simulator import PowerSupplySimulator
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.TemperatureMonitor.Simulator import TemperatureMonitorSimulator
+from INSTR.ColdLoad.AMI1720 import AMI1720
+from INSTR.ColdLoad.AMI1720Simulator import AMI1720Simulator
+from INSTR.Chopper.Band6Chopper import Chopper
 from DebugOptions import *
 
 if SIMULATE:

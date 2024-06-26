@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.hardware.NoiseTemperature import temperatureMonitor
-from CTSDevices.TemperatureMonitor.schemas import Temperatures, DESCRIPTIONS
+from INSTR.TemperatureMonitor.schemas import Temperatures, DESCRIPTIONS
 from schemas.common import SingleBool
 from schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *

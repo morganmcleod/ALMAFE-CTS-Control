@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 from bisect import bisect_left
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
@@ -11,8 +11,8 @@ from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
-from CTSDevices.Common.BinarySearchController import BinarySearchController
-from CTSDevices.SignalGenerator.Interface import SignalGenInterface
+from INSTR.Common.BinarySearchController import BinarySearchController
+from INSTR.SignalGenerator.Interface import SignalGenInterface
 import time
 import logging
 import threading

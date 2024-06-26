@@ -1,6 +1,6 @@
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
-from CTSDevices.Chopper.Band6Chopper import Chopper
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.Chopper.Band6Chopper import Chopper
 from Measure.NoiseTemperature.ColdLoadCalibration import ColdLoadCalibration
 import logging
 import keyboard

@@ -1,11 +1,11 @@
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.WarmIFPlate.ExternalSwitch import ExternalSwitch, ExtInputSelect
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
-from CTSDevices.PowerSupply.AgilentE363xA import PowerSupply
-from CTSDevices.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.WarmIFPlate.ExternalSwitch import ExternalSwitch, ExtInputSelect
+from INSTR.PowerMeter.KeysightE441X import PowerMeter, Unit
+from INSTR.PowerSupply.AgilentE363xA import PowerSupply
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from DBBand6Cart.schemas.WarmIFNoise import DUT_Types, WarmIFNoise
 from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
 from app.database.CTSDB import CTSDB

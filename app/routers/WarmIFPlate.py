@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from hardware.WarmIFPlate import warmIFPlate
-from CTSDevices.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.WarmIFPlate.InputSwitch import InputSelect
 from schemas.common import SingleFloat, SingleInt, SingleBool
 from schemas.DeviceInfo import DeviceInfo
 from app.schemas.Response import MessageResponse

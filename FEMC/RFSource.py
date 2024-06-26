@@ -1,12 +1,12 @@
 from AMB.LODevice import LODevice
 from AMB.AMBConnectionItf import AMBConnectionItf
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter
-from CTSDevices.PowerMeter.Simulator import PowerMeterSimulator
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.Common.BinarySearchController import BinarySearchController
-from CTSDevices.PNA.PNAInterface import PNAInterface
-from CTSDevices.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
-from CTSDevices.SignalGenerator.Interface import SignalGenInterface
+from INSTR.PowerMeter.KeysightE441X import PowerMeter
+from INSTR.PowerMeter.Simulator import PowerMeterSimulator
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.Common.BinarySearchController import BinarySearchController
+from INSTR.PNA.PNAInterface import PNAInterface
+from INSTR.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
+from INSTR.SignalGenerator.Interface import SignalGenInterface
 
 from typing import Optional, Union, Tuple
 import time

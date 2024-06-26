@@ -7,7 +7,7 @@ from hardware.FEMC import rfSrcDevice
 from hardware.NoiseTemperature import powerMeter
 from hardware.BeamScanner import pna
 from hardware.WarmIFPlate import warmIFPlate
-from CTSDevices.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
+from INSTR.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from .ConnectionManager import ConnectionManager
 import asyncio
 import logging

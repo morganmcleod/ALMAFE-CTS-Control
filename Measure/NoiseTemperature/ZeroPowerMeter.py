@@ -1,7 +1,7 @@
 
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
-from CTSDevices.PowerMeter.KeysightE441X import PowerMeter, Unit
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
+from INSTR.PowerMeter.KeysightE441X import PowerMeter, Unit
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from ..Shared.MeasurementStatus import MeasurementStatus
 import concurrent.futures
 from DebugOptions import *

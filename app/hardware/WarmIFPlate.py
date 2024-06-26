@@ -1,11 +1,11 @@
-from CTSDevices.WarmIFPlate.Attenuator import Attenuator
-from CTSDevices.WarmIFPlate.InputSwitch import InputSwitch
-from CTSDevices.WarmIFPlate.NoiseSource import NoiseSource
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSwitch
-from CTSDevices.WarmIFPlate.YIGFilter import YIGFilter
-from CTSDevices.WarmIFPlate.Simulator import AttenuatorSimulator, InputSwitchSimulator, NoiseSourceSimulator, OutputSwitchSimulator, YIGFilterSimulator
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.WarmIFPlate.ExternalSwitch import ExternalSwitch
+from INSTR.WarmIFPlate.Attenuator import Attenuator
+from INSTR.WarmIFPlate.InputSwitch import InputSwitch
+from INSTR.WarmIFPlate.NoiseSource import NoiseSource
+from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch
+from INSTR.WarmIFPlate.YIGFilter import YIGFilter
+from INSTR.WarmIFPlate.Simulator import AttenuatorSimulator, InputSwitchSimulator, NoiseSourceSimulator, OutputSwitchSimulator, YIGFilterSimulator
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.WarmIFPlate.ExternalSwitch import ExternalSwitch
 from DebugOptions import *
 
 if SIMULATE:

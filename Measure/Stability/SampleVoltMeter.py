@@ -1,5 +1,5 @@
 from .SampleInterface import SampleInterface
-from CTSDevices.DMM.HP34401 import HP34401, Function, AutoZero
+from INSTR.DMM.HP34401 import HP34401, Function, AutoZero
 from AmpPhaseDataLib.Constants import Units, DataKind
 from typing import Tuple, Optional
 

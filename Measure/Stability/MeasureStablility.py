@@ -1,9 +1,9 @@
 from ALMAFE.common.GitVersion import gitVersion, gitBranch
-from CTSDevices.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from CTSDevices.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
-from CTSDevices.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
-from CTSDevices.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from CTSDevices.FEMC.CartAssembly import CartAssembly
+from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
+from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from FEMC.CartAssembly import CartAssembly
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots

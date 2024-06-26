@@ -1,8 +1,8 @@
-from CTSDevices.MotorControl.GalilDMCSocket import MotorController
-from CTSDevices.MotorControl.MCSimulator import MCSimulator
-from CTSDevices.PNA.schemas import MeasConfig, PowerConfig
-from CTSDevices.PNA.AgilentPNA import AgilentPNA
-from CTSDevices.PNA.PNASimulator import PNASimulator
+from INSTR.MotorControl.GalilDMCSocket import MotorController
+from INSTR.MotorControl.MCSimulator import MCSimulator
+from INSTR.PNA.schemas import MeasConfig, PowerConfig
+from INSTR.PNA.AgilentPNA import AgilentPNA
+from INSTR.PNA.PNASimulator import PNASimulator
 
 from DebugOptions import *
 
