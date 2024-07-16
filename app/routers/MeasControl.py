@@ -1,18 +1,16 @@
 from fastapi import APIRouter
 from typing import Optional
-
 from DBBand6Cart.CartTests import CartTest
 from app.schemas.Response import KeyResponse, MessageResponse
 from Measure.Shared.MeasurementStatus import MeasurementStatusModel
-from app.measProcedure.Scripted import CTSMeasure
+from app.measProcedure.ScriptRunner import scriptRunner
 from DebugOptions import *
 
 router = APIRouter(prefix="/measure")
-CTS = CTSMeasure()
 
 @router.put("/start", response_model = KeyResponse)
 async def put_Start(cartTest:CartTest):
-    success, msg = CTS.start(cartTest)
+    success, msg = scriptRunner.start(cartTest)
     if not success:
         return KeyResponse(key = 0, message = msg, success = False)
     else:
@@ -20,17 +18,17 @@ async def put_Start(cartTest:CartTest):
 
 @router.put("/stop", response_model = MessageResponse)
 async def put_Stop():
-    success, msg = CTS.stop()
+    success, msg = scriptRunner.stop()
     if not success:
         return MessageResponse(message = msg, success = False)
     else:
         return MessageResponse(message = msg, success = True)
     
-@router.get("/currentTest", response_model = Optional[CartTest])
-async def get_Status():
-    return CTS.get_carttest()
+@router.get("/current_test", response_model = Optional[CartTest])
+async def get_CurrentTest():
+    return scriptRunner.get_carttest()
 
 @router.get("/status", response_model = MeasurementStatusModel)
 async def get_MeasurementStatus():
-    return CTS.get_status()
+    return scriptRunner.get_status()
 

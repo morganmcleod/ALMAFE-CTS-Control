@@ -3,7 +3,6 @@ from fastapi.encoders import jsonable_encoder
 from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
 from app.measProcedure.Stability import amplitudeStablilty, phaseStability
-from app.measProcedure.MeasurementStatus import measurementStatus
 from AmpPhaseDataLib.Constants import DataSource, PlotEl, SpecLines
 from AmpPhaseDataLib.TimeSeriesAPI import TimeSeriesAPI
 from AmpPhasePlotLib.PlotAPI import PlotAPI
@@ -18,8 +17,6 @@ from .ConnectionManager import ConnectionManager
 from app.schemas.Response import MessageResponse, ListResponse, prepareListResponse
 import asyncio
 import logging
-import json
-from datetime import datetime
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 

@@ -1,161 +1,117 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from fastapi.encoders import jsonable_encoder
-from typing import List, Optional
+from fastapi import APIRouter
 from app.hardware.NoiseTemperature import coldLoad
-from app.measProcedure.NoiseTemperature import noiseTemperature, yFactor
-from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSample
+from app.measProcedure.NoiseTemperature import settingsContainer as nt_settings
+from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings
 from INSTR.ColdLoad.AMI1720 import FillMode
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from schemas.common import SingleFloat
 from app.schemas.Response import MessageResponse
-from .ConnectionManager import ConnectionManager
-from DBBand6Cart.schemas.WarmIFNoise import WarmIFNoise
-import asyncio
-
-import logging
-logger = logging.getLogger("ALMAFE-CTS-Control")
 
 router = APIRouter(prefix="/noisetemp")
-manager = ConnectionManager()
-
-@router.websocket("/warmif_ws")
-async def websocket_warmif(websocket: WebSocket):
-    await manager.connect(websocket)
-    lastId = 0            
-    try:
-        while True:
-            if not noiseTemperature.warmIfNoise.rawData:
-                lastId = 0
-            else:
-                record = noiseTemperature.warmIfNoise.rawData[-1]
-                if record.key != lastId:
-                    lastId = record.key
-                    toSend = jsonable_encoder(record.asDBM())
-                    await manager.send(toSend, websocket)
-            await asyncio.sleep(1.0)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /warmif_ws")
-
-@router.websocket("/chopperpower_ws")
-async def websocket_chopperpower(websocket: WebSocket):
-    await manager.connect(websocket)
-    lastIndex = 0
-    try:
-        while True:
-            if not noiseTemperature.noiseTemp.chopperPowerHistory:
-                lastIndex = 0
-            else:
-                nextIndex = len(noiseTemperature.noiseTemp.chopperPowerHistory)
-                if nextIndex < lastIndex:
-                    lastIndex = 0
-                records = noiseTemperature.noiseTemp.chopperPowerHistory[lastIndex:]
-                lastIndex = nextIndex
-                toSend = jsonable_encoder(records)
-                await manager.send(toSend, websocket)
-            await asyncio.sleep(0.2)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /chopperpower_ws")
-
-@router.websocket("/rawspecan_ws")
-async def websocket_rawspecan(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            if noiseTemperature.noiseTemp.specAnPowerHistory is not None:
-                toSend = jsonable_encoder(noiseTemperature.noiseTemp.specAnPowerHistory)
-                await manager.send(toSend, websocket)
-            await asyncio.sleep(0.5)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rawspecan_ws")
-
-@router.websocket("/rawnoisetemp_ws")
-async def websocket_raw_nt(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            records = noiseTemperature.noiseTemp.currentRecords
-            if records[0] is not None:
-                toSend = jsonable_encoder(records[0])                    
-                await manager.send(toSend, websocket)
-            if records[1] is not None:
-                toSend = jsonable_encoder(records[1])                    
-                await manager.send(toSend, websocket)                
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rawnoisetemp_ws")
-
-@router.get("/warmif_raw", response_model = List[WarmIFNoise])
-async def get_warmif_raw(first: int, last: Optional[int] = -1):
-    meas = noiseTemperature.warmIfNoise
-    if meas and meas.rawData:
-        return meas.rawData
 
 @router.get("/teststeps", response_model = TestSteps)
 async def get_TestSteps():
-    return noiseTemperature.testSteps
+    return nt_settings.testSteps
 
 @router.post("/teststeps",  response_model = MessageResponse)
-async def put_TestSteps(testSteps: TestSteps):
-    noiseTemperature.testSteps = testSteps
-    return MessageResponse(message = "Updated Test Steps " + testSteps.getText(), success = True)
+async def put_TestSteps(steps: TestSteps):
+    nt_settings.testSteps = steps
+    return MessageResponse(message = "Updated Test Steps " + nt_settings.testSteps.getText(), success = True)
+
+@router.post("/teststeps/reset",  response_model = MessageResponse)
+async def reset_TestSteps():
+    nt_settings.setDefaultTestSteps()
+    return MessageResponse(message = "Reset Test Steps " + nt_settings.testSteps.getText(), success = True)
 
 @router.get("/settings", response_model = CommonSettings)
 async def get_TestSettings():
-    return noiseTemperature.commonSettings
+    return nt_settings.commonSettings
 
 @router.post("/settings",  response_model = MessageResponse)
 async def put_Settings(settings: CommonSettings):
-    noiseTemperature.updateSettings(settings)
+    nt_settings.commonSettings = settings
+    nt_settings.saveSettingsCommon()
     return MessageResponse(message = "Updated Settings", success = True)
+
+@router.post("/settings/reset",  response_model = MessageResponse)
+async def reset_Settings():
+    nt_settings.setDefaultsCommon()
+    return MessageResponse(message = "Reset common settings to defaults", success = True)
 
 @router.get("/wifsettings", response_model = WarmIFSettings)
 async def get_WifSettings():
-    return noiseTemperature.warmIFSettings
+    return nt_settings.warmIFSettings
 
 @router.post("/wifsettings",  response_model = MessageResponse)
 async def put_NtSettings(settings: WarmIFSettings):
-    noiseTemperature.updateSettings(warmIFSettings = settings)
-    return MessageResponse(message = "Updated Warm IF Noise Settings", success = True)
+    nt_settings.warmIFSettings = settings
+    nt_settings.saveSettingsWarmIF()
+    return MessageResponse(message = "Updated Warm IF noise settings", success = True)
+
+@router.post("/wifsettings/reset",  response_model = MessageResponse)
+async def reset_wifsettings():
+    nt_settings.setDefaultsWarmIF()
+    return MessageResponse(message = "Reset Warm IF Noise settings to defaults", success = True)
 
 @router.get("/ntsettings", response_model = NoiseTempSettings)
 async def get_NtSettings():
-    return noiseTemperature.noiseTempSettings
+    return nt_settings.noiseTempSettings
 
 @router.post("/ntsettings",  response_model = MessageResponse)
 async def put_NtSettings(settings: NoiseTempSettings):
-    noiseTemperature.updateSettings(noiseTempSettings = settings)
-    return MessageResponse(message = "Updated Noise Temp Settings", success = True)
+    nt_settings.noiseTempSettings = settings
+    nt_settings.saveSettingsNoiseTemp()
+    return MessageResponse(message = "Updated Noise Temp settings", success = True)
+
+@router.post("/ntsettings/reset",  response_model = MessageResponse)
+async def reset_ntsettings():
+    nt_settings.setDefaultsNoiseTemp()
+    return MessageResponse(message = "Reset Noise Temp settings to defaults", success = True)
 
 @router.get("/lowgsettings", response_model = NoiseTempSettings)
 async def get_NtSettings():
-    return noiseTemperature.loWgIntegritySettings
+    return nt_settings.loWgIntegritySettings
 
 @router.post("/lowgsettings",  response_model = MessageResponse)
 async def put_NtSettings(settings: NoiseTempSettings):
-    noiseTemperature.updateSettings(loWgIntegritySettings = settings)
-    return MessageResponse(message = "Updated LO WG Settings", success = True)
+    nt_settings.loWgIntegritySettings = settings
+    nt_settings.saveSettingsLOWGIntegrity()
+    return MessageResponse(message = "Updated LO WG settings", success = True)
+
+@router.post("/lowgsettings/reset",  response_model = MessageResponse)
+async def reset_lowgsettings():
+    nt_settings.setDefaultsLOWGIntegrity()
+    return MessageResponse(message = "Reset LO WG settings to defaults", success = True)
 
 @router.get("/specan/settings_nt", response_model = SpectrumAnalyzerSettings)
 async def get_SANTSettings():
-    return noiseTemperature.ntSpecAnSettings
+    return nt_settings.ntSpecAnSettings
 
 @router.post("/specan/settings_nt",  response_model = MessageResponse)
 async def put_SANTSettings(settings: SpectrumAnalyzerSettings):
-    noiseTemperature.updateSettings(ntSpecAnSettings = settings)
+    nt_settings.ntSpecAnSettings = settings
+    nt_settings.saveSettingsNTSpecAn()
     return MessageResponse(message = "Updated spectrum analyzer settings for noise temperature", success = True)
+
+@router.post("/specan/settings_nt/reset",  response_model = MessageResponse)
+async def reset_ntSpecAnSettings():
+    nt_settings.setDefaultsNTSpecAn()
+    return MessageResponse(message = "Reset spectrum analyzer settings for noise temperature to defaults", success = True)
 
 @router.get("/specan/settings_ir", response_model = SpectrumAnalyzerSettings)
 async def get_SANTSettings():
-    return noiseTemperature.irSpecAnSettings
+    return nt_settings.irSpecAnSettings
 
 @router.post("/specan/settings_ir",  response_model = MessageResponse)
 async def put_SANTSettings(settings: SpectrumAnalyzerSettings):
-    noiseTemperature.updateSettings(irSpecAnSettings = settings)
+    nt_settings.irSpecAnSettings = settings
+    nt_settings.saveSettingsIRSpecAn()
     return MessageResponse(message = "Updated spectrum analyzer settings for image rejection", success = True)
+
+@router.post("/specan/settings_ir/reset",  response_model = MessageResponse)
+async def reset_irSpecAnSettings():
+    nt_settings.setDefaultsIRSpecAn()
+    return MessageResponse(message = "Reset spectrum analyzer settings for image rejection to defaults", success = True)
 
 @router.get("/coldload/level", response_model = SingleFloat)
 async def get_ColdLoadLevel():
@@ -180,39 +136,3 @@ async def put_ColdLoadStartFill():
 async def put_ColdLoadStopFill():
     coldLoad.stopFill()
     return MessageResponse(message = "Cold load: Fill stopped", success = True)
-
-@router.websocket("/yfactor_ws")
-async def websocket_yfactor(websocket: WebSocket):
-    await manager.connect(websocket)
-    lastMsg = None
-    try:
-        while True:
-            if not yFactor.isMeasuring() or not yFactor.yFactorHistory:
-                lastMsg = None
-            else:
-                record = yFactor.yFactorHistory[-1]
-                if record != lastMsg:
-                    lastMsg = record
-                    toSend = jsonable_encoder(record)
-                    await manager.send(toSend, websocket)
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /yfactor_ws")
-
-@router.post("/yfactor/start", response_model = MessageResponse)
-async def put_YFactorStart():
-    yFactor.start()
-    return MessageResponse(message = "Y-factor started", success = True)
-
-@router.post("/yfactor/stop", response_model = MessageResponse)
-async def put_YFactorStop():
-    yFactor.stop()
-    return MessageResponse(message = "Y-factor stopped", success = True)
-
-@router.get("/yfactor/now", response_model = YFactorSample)
-async def get_YFactorNow():
-    if not yFactor.yFactorHistory:
-        return YFactorSample(Y = 0, TRx = 0)
-    else:
-        return yFactor.yFactorHistory[-1]

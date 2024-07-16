@@ -36,4 +36,5 @@ if SIMULATE:
 else:
     spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.10::inst0::INSTR")
 
-chopper = Chopper()
+chopper = Chopper(simulate = SIMULATE)
+

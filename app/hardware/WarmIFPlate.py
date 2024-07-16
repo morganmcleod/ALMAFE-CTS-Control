@@ -1,20 +1,21 @@
 from INSTR.WarmIFPlate.Attenuator import Attenuator
-from INSTR.WarmIFPlate.InputSwitch import InputSwitch
+from INSTR.InputSwitch.InputSwitch import InputSwitch
+from INSTR.InputSwitch.ExternalSwitch import ExternalSwitch
 from INSTR.WarmIFPlate.NoiseSource import NoiseSource
 from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch
 from INSTR.WarmIFPlate.YIGFilter import YIGFilter
-from INSTR.WarmIFPlate.Simulator import AttenuatorSimulator, InputSwitchSimulator, NoiseSourceSimulator, OutputSwitchSimulator, YIGFilterSimulator
 from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from INSTR.WarmIFPlate.ExternalSwitch import ExternalSwitch
+
 from DebugOptions import *
 
 if SIMULATE:
     warmIFPlate = WarmIFPlate(
-        AttenuatorSimulator(),
-        InputSwitchSimulator(),
-        NoiseSourceSimulator(),
-        OutputSwitchSimulator(),
-        YIGFilterSimulator())
+        Attenuator(simulate = True),
+        InputSwitch(simulate = True),
+        NoiseSource(simulate = True),
+        OutputSwitch(simulate = True),
+        YIGFilter(simulate = True)
+    )
 else:
     warmIFPlate = WarmIFPlate(
         Attenuator(resource = "GPIB0::28::INSTR"),

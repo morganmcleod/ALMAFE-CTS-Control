@@ -4,11 +4,11 @@ from INSTR.PNA.schemas import TriggerSource
 from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from INSTR.WarmIFPlate.InputSwitch import InputSelect
+from INSTR.InputSwitch.Interface import InputSelect
 from INSTR.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
 from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from AMB.LODevice import LODevice
-from FEMC.CartAssembly import CartAssembly
+from Control.CartAssembly import CartAssembly
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DBBand6Cart.CartTests import CartTest, CartTests
@@ -80,9 +80,12 @@ class BeamScanner():
             with open(self.MEASUREMENT_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
                 self.measurementSpec = MeasurementSpec.parse_obj(d)
-        except:            
-            self.measurementSpec = MeasurementSpec()
-            self.saveSettings()
+        except:
+            self.defaultSetttings()
+
+    def defaultSetttings(self):
+        self.measurementSpec = MeasurementSpec()
+        self.saveSettings()
 
     def saveSettings(self):
         with open(self.MEASUREMENT_SETTINGS_FILE, "w") as f:
@@ -528,7 +531,7 @@ class BeamScanner():
                 position = InputSelect.POL0_LSB
             else:
                 position = InputSelect.POL1_LSB
-        self.warmIFPlate.inputSwitch.setValue(position)
+        self.warmIFPlate.inputSwitch.selected = position
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
         self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
@@ -548,13 +551,13 @@ class BeamScanner():
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         if self.cartAssembly.setRecevierBias(scan.LO):
             if not SIMULATE:
-                ret = self.cartAssembly.setAutoLOPower()
+                ret = self.cartAssembly.autoLOPower()
             else:
                 ret = False
             if ret or SIMULATE:
                 return (True, "")
             else:
-                return (False, "cartAssembly.setAutoLOPower failed")
+                return (False, "cartAssembly.autoLOPower failed")
         else:
             return (False, "cartAssembly.setRecevierBias failed.  Provide config ID?")
 

@@ -10,7 +10,7 @@ from DBBand6Cart.schemas.PreampParam import PreampParam
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 
-from FEMC.CartAssembly import CartAssembly
+from Control.CartAssembly import CartAssembly
 
 CARTRIDGE_BAND = 6
 YTO_LOW = 12.22
@@ -93,7 +93,7 @@ class test_CartAssembly(unittest.TestCase):
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)
         self.cartAssembly.loDevice.lockPLL(221)
         self.cartAssembly.setRecevierBias(221)
-        self.cartAssembly.setAutoLOPower()
+        self.cartAssembly.autoLOPower()
     
     def test_getSISCurrentTargets(self) -> None:
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)

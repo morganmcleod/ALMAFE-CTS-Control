@@ -16,7 +16,6 @@ manager = ConnectionManager()
 async def websocket_sis_current(websocket: WebSocket):
     await manager.connect(websocket)
     try:
-        prevSis0 = prevSis1 = None
         while True:
             if FEMC.cartAssembly.autoLOPol is not None:
                 sis = FEMC.ccaDevice.getSIS(pol = FEMC.cartAssembly.autoLOPol, sis=1, averaging=2, nDigits = 1, takeAbs = True)
@@ -44,7 +43,7 @@ async def put_AutoLOPower(pol: int):
     pol0 = True if pol in (-1, 0) else False
     pol1 = True if pol in (-1, 1) else False
 
-    if not FEMC.cartAssembly.setAutoLOPower(pol0, pol1, onThread = True):
+    if not FEMC.cartAssembly.autoLOPower(pol0, pol1, onThread = True):
         return MessageResponse(message = f"Auto LO power failed pol={pol}", success = False)
     else:
         return MessageResponse(message = f"Setting auto LO power for pol={pol}...", success = True)

@@ -1,12 +1,11 @@
-from INSTR.WarmIFPlate.InputSwitch import InputSelect
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional
 from DebugOptions import *
 
-def makeSteps(start: float, stop: float, step: float, extras: Optional[List[float]] = None):
+def makeSteps(start: float, stop: float, step: float, extras: Optional[List[float]] = None, round_decimals: int = 6):
     if stop <= start or step <= 0:
-        steps = [start]
+        steps = [round(start, round_decimals)]
     else:
-        steps = [start + i * step for i in range(int((stop - start) / step + 1))]
+        steps = [round(start + i * step, round_decimals) for i in range(int((stop - start) / step + 1))]
     if extras:
-        steps += extras
+        steps += [round(x, round_decimals) for x in extras]
     return steps

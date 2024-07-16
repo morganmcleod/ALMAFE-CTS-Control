@@ -2,8 +2,7 @@ from AMB.LODevice import LODevice
 from AMB.AMBConnectionItf import AMBConnectionItf
 from INSTR.PowerMeter.KeysightE441X import PowerMeter
 from INSTR.PowerMeter.Simulator import PowerMeterSimulator
-from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from INSTR.Common.BinarySearchController import BinarySearchController
+from .BinarySearchController import BinarySearchController
 from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Interface import SignalGenInterface
@@ -24,6 +23,7 @@ class RFSource(LODevice):
         ):
         super().__init__(conn, nodeAddr, band, femcPort)
         self.paPol = paPol
+        self.setPAOutput(self.paPol, 0)
         self.autoRfPowerValue = None            # for websocket reporting to client
 
     def isConnected(self) -> bool:
@@ -32,6 +32,8 @@ class RFSource(LODevice):
     def lockRF(self, rfReference: SignalGenInterface, freqRF: float, sigGenAmplitude: float = 10.0) -> Tuple[bool, str]:
         self.selectLockSideband(self.LOCK_ABOVE_REF)
         wcaFreq, ytoFreq, ytoCourse = self.setLOFrequency(freqRF)
+        if wcaFreq == 0:
+            return False, "lockRF: frequency out of range"
         pllConfig = self.getPLLConfig()
         rfReference.setFrequency((freqRF / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
         rfReference.setAmplitude(sigGenAmplitude)
@@ -42,7 +44,7 @@ class RFSource(LODevice):
         else:
             self.setNullLoopIntegrator(True)
             success = True
-        return (success, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
+        return success, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
 
     def getPAVD(self):
         pa = self.getPA()
@@ -50,6 +52,13 @@ class RFSource(LODevice):
             return pa['VDp0']
         elif self.paPol == 1:
             return pa['VDp1']
+
+    def setPAOutput(self, pol: int, percent: float):
+        self._paOutput = percent
+        return super().setPAOutput(pol, percent)
+    
+    def getPAOutput(self) -> float:
+        return self._paOutput
 
     def autoRFPower(self, meter: Union[PowerMeter, PNAInterface], target: float = -5.0, onThread: bool = False) -> bool:
         if onThread:

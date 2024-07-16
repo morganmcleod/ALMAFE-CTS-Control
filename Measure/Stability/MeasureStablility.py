@@ -3,7 +3,7 @@ from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
 from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
 from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from FEMC.CartAssembly import CartAssembly
+from Control.CartAssembly import CartAssembly
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots
@@ -212,9 +212,9 @@ class MeasureStability():
             if not success:
                 return success, msg
 
-            success = self.cartAssembly.setAutoLOPower()
+            success = self.cartAssembly.autoLOPower()
             if not success:
-                return False, "cartAssembly.setAutoLOPower failed"
+                return False, "cartAssembly.autoLOPower failed"
 
         pols = []
         if self.settings.measurePol0:
@@ -238,10 +238,10 @@ class MeasureStability():
                     return True, "User stop"
 
                 success, msg = self.__rfSourceOff()                
-                self.warmIFPlate.inputSwitch.setPolAndSideband(pol, sideband)
+                self.warmIFPlate.inputSwitch.set_pol_sideband(pol, sideband)
                     
                 if self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
-                    success = self.cartAssembly.setAutoLOPower()
+                    success = self.cartAssembly.autoLOPower()
                     freqRF = freqLO - self.signalIF if sideband.lower() == 'lsb' else freqLO + self.signalIF
                     self.measurementStatus.setStatusMessage(f"Locking RF at {freqRF} GHz...")
                     

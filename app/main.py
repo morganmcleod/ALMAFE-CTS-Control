@@ -24,7 +24,9 @@ from routers.ReferenceSource import router as loRefRouter
 from routers.ReferenceSource import router as rfRefRouter
 from routers.BeamScanner import router as beamScanRouter
 from routers.WarmIFPlate import router as warmIfRouter
+from routers.DataDisplay import router as dataDisplayRouter
 from routers.ConnectionManager import ConnectionManager
+
 
 # logging:
 import logging
@@ -54,6 +56,14 @@ tags_metadata = [
         "description": "the cold load chopper"
     },
     {
+        "name": "Cold load",
+        "description": "Cold load fill controller"
+    },
+    {
+        "name": "Data display",
+        "description": "Real-time data for the user interface"
+    },
+    {
         "name": "Database",
         "description": "the band 6 cartridge database"
     },
@@ -70,12 +80,12 @@ tags_metadata = [
         "description": "start and stop measurements"
     },
     {
-        "name": "Noise Temp",
+        "name": "Noise temp",
         "description": "Noise Temperature measurement and hardware"
     },
     {
-        "name": "Stability",
-        "description": "Amplitude and phase stability"
+        "name": "Power meter",
+        "description": "Power meter"
     },
     {
         "name": "RF source",
@@ -86,24 +96,20 @@ tags_metadata = [
         "description": "LO and RF reference sources"
     },
     {
-        "name": "Warm IF plate",
-        "description": "Input switch, YIG filter, etc."
+        "name": "SpecAn",
+        "description": "Spectrum analyzer"
+    },
+    {
+        "name": "Stability",
+        "description": "Amplitude and phase stability"
     },
     {
         "name": "Temperatures",
         "description": "Temperature Monitor"
     },
     {
-        "name": "Cold load",
-        "description": "Cold load fill controller"
-    },
-    {
-        "name": "SpecAn",
-        "description": "Spectrum analyzer"
-    },
-    {
-        "name": "Power Meter",
-        "description": "Power meter"
+        "name": "Warm IF plate",
+        "description": "Input switch, YIG filter, etc."
     }
 ]
 
@@ -119,13 +125,14 @@ app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
 app.include_router(tempsRouter, tags={"Temperatures"})
 app.include_router(coldLoadRouter, tags={"Cold load"})
 app.include_router(specAnRouter, tags = ["SpecAn"])
-app.include_router(powerMeterRouter, tags = ["Power Meter"])
+app.include_router(powerMeterRouter, tags = ["Power meter"])
 app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
 app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
-app.include_router(noiseTempRouter, tags=["Noise Temp"])
+app.include_router(noiseTempRouter, tags=["Noise temp"])
 app.include_router(stabilityRouter, tags=["Stability"])
 app.include_router(warmIfRouter, tags=["Warm IF plate"])
+app.include_router(dataDisplayRouter, tags=["Data display"])
 
 API_VERSION = "0.0.1"
 

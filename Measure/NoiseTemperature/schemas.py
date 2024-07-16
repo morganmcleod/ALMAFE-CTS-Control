@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 from enum import Enum
 from INSTR.PowerMeter.schemas import StdErrConfig
-from INSTR.Chopper.Band6Chopper import State
+from INSTR.Chopper.Interface import ChopperState
+from Control.IFSystem.Interface import InputSelect
 
 class ChopperMode(Enum):
     SPIN = "SPIN"
@@ -36,7 +37,6 @@ class TestSteps(BaseModel):
         return f"zeroPM:{self.zeroPM} warmIF:{self.warmIF}, noiseTemp:{self.noiseTemp}, imageReject:{self.imageReject}, loWGIntegrity:{self.loWGIntegrity}"
 
 class CommonSettings(BaseModel):
-    chopperMode: str = ChopperMode.SPIN.value
     backEndMode: str = BackEndMode.IF_PLATE.value
     targetPHot: float = -30.0
     imageRejectSBTarget_PM: float = -15.0   # dBm
@@ -74,9 +74,23 @@ class NoiseTempSettings(BaseModel):
     ifStep: float = 0.1
     polarization: str = SelectPolarization.BOTH.value
 
+class BiasOptSettings(BaseModel):
+    vjMin: float = 4.0
+    vjStep: float = 0.2
+    vjMax: float = 5.0
+    ijMin: float = 32.0
+    ijStep: float = 2.0
+    ijMax: float = 42.0
+    polarization: str = SelectPolarization.BOTH.value
+
+class YFactorSettings(BaseModel):
+    inputSelect: InputSelect = InputSelect.POL0_USB
+    ifStart: float = 5
+    ifStop: float = 10
+
 class ChopperPowers(BaseModel):
-    input: str
-    chopperState: State = State.TRANSITION
+    inputName: str
+    chopperState: ChopperState = ChopperState.TRANSITION
     power: float = 0
 
 class SpecAnPowers(BaseModel):

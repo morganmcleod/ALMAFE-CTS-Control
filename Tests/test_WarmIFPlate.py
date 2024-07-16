@@ -2,9 +2,9 @@ import unittest
 from AMB.AMBConnectionDLL import AMBConnectionDLL
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
-from FEMC.CartAssembly import CartAssembly
+from Control.CartAssembly import CartAssembly
 from INSTR.WarmIFPlate.Attenuator import Attenuator
-from INSTR.WarmIFPlate.InputSwitch import InputSwitch, InputSelect
+from INSTR.InputSwitch.InputSwitch import InputSwitch, InputSelect
 from INSTR.WarmIFPlate.NoiseSource import NoiseSource
 from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch, OutputSelect, LoadSelect
 from INSTR.WarmIFPlate.YIGFilter import YIGFilter
@@ -37,7 +37,7 @@ class test_WarmIFPlate(unittest.TestCase):
         cls.cartAssembly = CartAssembly(cls.ccaDevice, cls.loDevice, CARTRIDGE_CONFIG)
         cls.ccaDevice.setFeMode(cls.ccaDevice.MODE_TROUBLESHOOTING)
         cls.cartAssembly.setRecevierBias(241)
-        cls.cartAssembly.setAutoLOPower()
+        cls.cartAssembly.autoLOPower()
 
     @classmethod
     def tearDownClass(cls):

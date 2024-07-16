@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from hardware.WarmIFPlate import warmIFPlate
-from INSTR.WarmIFPlate.InputSwitch import InputSelect
-from schemas.common import SingleFloat, SingleInt, SingleBool
+from INSTR.InputSwitch.Interface import InputSelect
+from schemas.common import SingleFloat, SingleInt
 from schemas.DeviceInfo import DeviceInfo
 from app.schemas.Response import MessageResponse
 from DebugOptions import *
@@ -20,7 +20,7 @@ async def get_DeviceInfo_InputSwitch():
     return DeviceInfo(
         name = 'inputswitch',
         resource_name = resource_name,
-        is_connected = warmIFPlate.inputSwitch.isConnected())
+        is_connected = warmIFPlate.inputSwitch.is_connected())
 
 @router.get("/yigfilter/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_YIGFilter():
@@ -72,8 +72,7 @@ async def get_DeviceInfo_NoiseSource():
 
 @router.get("/inputswitch", response_model = MessageResponse)
 async def getInputSwitch():
-    position = warmIFPlate.inputSwitch.getValue()
-    return MessageResponse(message = position.name, success = True)
+    return MessageResponse(message = warmIFPlate.inputSwitch.selected.name, success = True)
 
 @router.get("/yigfilter", response_model = SingleFloat)
 async def getYigFilter():
@@ -96,7 +95,7 @@ async def setInputSwitch(value: int):
     else:
         return MessageResponse(message = f"Invalid value for input switch: {value}", success = False)
 
-    warmIFPlate.inputSwitch.setValue(sel)
+    warmIFPlate.inputSwitch.selected = sel
     return MessageResponse(message = f"Set input switch to {sel}", success = True)
 
 @router.post("/yigfilter", response_model = MessageResponse)

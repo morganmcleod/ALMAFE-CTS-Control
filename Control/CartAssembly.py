@@ -11,7 +11,7 @@ from DBBand6Cart.PreampParams import PreampParams
 from DBBand6Cart.schemas.MixerParam import MixerParam
 from DBBand6Cart.schemas.PreampParam import PreampParam
 
-from INSTR.Common.BinarySearchController import BinarySearchController
+from Control.PBAController import PBAController
 from INSTR.SignalGenerator.Interface import SignalGenInterface
 import time
 import logging
@@ -19,22 +19,33 @@ import threading
 from DebugOptions import *
 import yaml
 
-class CartSerialNum(BaseModel):
-    serialNum: str
+class CartAssemblySettings(BaseModel):
+    serialNum: str = ""
+    min_percent: int = 15
+    max_percent: int = 100    
+    max_iter: int = 15
+    tolerance: float = 0.5   # uA
+    sleep: float = 0.2
+
 
 class CartAssembly():
 
-    SELECTED_CCA_FILE = "Settings_SelectedCCA.yaml"
+    CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
 
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.ccaDevice = ccaDevice
         self.loDevice = loDevice
         self.reset()
-        self.loadConfig()
+        self.loadSettings()
+        self.controller = PBAController(
+            tolerance = self.settings.tolerance,
+            output_limits = (self.settings.min_percent, self.settings.max_percent),
+            min_resolution = 0.0005,
+            max_iter = self.settings.max_iter
+        )
         
     def reset(self):
-        self.serialNum = None
         self.configId = self.keysPol0 = self.keysPol1 = None
         self.mixerParam01 = None
         self.mixerParam02 = None
@@ -55,26 +66,25 @@ class CartAssembly():
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
-    def loadConfig(self):
+    def loadSettings(self):
         try:
-            with open(self.SELECTED_CCA_FILE, "r") as f:
+            with open(self.CARTASSEMBLY_SETTINGS, "r") as f:
                 d = yaml.safe_load(f)
-                s = CartSerialNum.parse_obj(d)
-                if s.serialNum:
+                self.settings = CartAssemblySettings.parse_obj(d)
+                if self.settings.serialNum:
                     DB = CartConfigs(driver = CTSDB())
-                    configs = DB.read(serialNum = s.serialNum, latestOnly = True)
+                    configs = DB.read(serialNum = self.settings.serialNum, latestOnly = True)
                     if configs:                    
                         self.setConfig(configs[0].id)
         except:
-            self.saveConfig()
+            self.settings = CartAssemblySettings()
+            self.saveSettings()
 
-    def saveConfig(self):
-        if self.configId and self.serialNum:
-            s = CartSerialNum(serialNum = self.serialNum)            
-        else:
-            s = CartSerialNum(serialNum = "")
-        with open(self.SELECTED_CCA_FILE, "w") as f:
-            yaml.dump(s.dict(), f)
+    def saveSettings(self):
+        if not self.configId:
+            self.settings.serialNum = ""
+        with open(self.CARTASSEMBLY_SETTINGS, "w") as f:
+            yaml.dump(self.settings.dict(), f)
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
@@ -84,14 +94,17 @@ class CartAssembly():
         configRecords = DB.read(keyColdCart = configId)
         if not configRecords:
             return False
-        self.serialNum = configRecords[0].serialNum
-
+        self.settings.serialNum = configRecords[0].serialNum
+        
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
         if self.keysPol0 or self.keysPol1:
             self.configId = configId
         else:
             return False
+        
+        self.saveSettings()
+
         DB = MixerParams(driver = CTSDB())
         if self.keysPol0:
             self.mixerParams01 = DB.read(self.keysPol0.keyChip1)
@@ -146,74 +159,79 @@ class CartAssembly():
         self.ccaDevice.setLNAEnable(True)
         return True
 
-    def setAutoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False) -> tuple[bool, str]:
+    def autoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False, targetIJ = None) -> tuple[bool, str]:
         if not pol0 and not pol1:
-            return False, "setAutoLOPower: must enable at least one pol"
+            return False, "autoLOPower: must enable at least one pol"
 
         if not self.configId:
-            return False, "setAutoLOPower: no configId"
+            return False, "autoLOPower: no configId"
        
         if SIMULATE:
             return True, ""
 
         if onThread:
-            threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1), daemon = True).start()
+            threading.Thread(target = self.__autoLOPowerSequence, args = (pol0, pol1, targetIJ), daemon = True).start()
             return True, ""
         else:
             return self.__autoLOPowerSequence(pol0, pol1)
 
-    def __autoLOPowerSequence(self, pol0: bool, pol1: bool) -> tuple[bool, str]:
+    def __autoLOPowerSequence(self, pol0: bool, pol1: bool, targetIJ = None) -> tuple[bool, str]:
         success0 = success1 = True
         msg0 = msg1 = ""
         if pol0:
             self.autoLOPol = 0
-            success0, msg0 = self.__autoLOPower(0)
+            success0, msg0 = self.__autoLOPower(0, targetIJ)
         if pol1:
             self.autoLOPol = 1
-            success1, msg1 = self.__autoLOPower(1)
+            success1, msg1 = self.__autoLOPower(1, targetIJ)
+        self.autoLOPol = None
         return success0 & success1, msg0 + " " + msg1
 
-    def __autoLOPower(self, pol) -> tuple[bool, str]:
-        try:
-            targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
-        except:
-            return False, f"No bias available for pol{pol}"
+    def __autoLOPower(self, pol, targetIJ = None) -> tuple[bool, str]:
+        if targetIJ is None:
+            try:
+                targetIJ = abs(self.mixerParam01.IJ if pol == 0 else self.mixerParam11.IJ)
+            except:
+                return False, f"No bias available for pol{pol}"
         
         self.logger.info(f"target Ij = {targetIJ}")
-        paOutput = 20
+        
         averaging = 2
-
-        controller = BinarySearchController(
-            outputRange = [0, 100], 
-            initialStepPercent = 20, 
-            initialOutput = paOutput, 
-            setPoint = targetIJ,
-            tolerance = 0.5,
-            maxIter = 20)
-
+        self.controller.reset()
+        self.controller.setpoint = targetIJ
+        paOutput = self.controller.output
         self.loDevice.setPAOutput(pol, paOutput)
+        time.sleep(self.settings.sleep)
         sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
         if sis is None:
             return False, f"Error getting SIS bias readings for pol{pol}"
 
         sisCurrent = abs(sis['Ij'])
-        tprev = time.time()
-        tsum = 0
-        while not controller.isComplete():
-            controller.process(sisCurrent)
-            paOutput = controller.output
-            self.loDevice.setPAOutput(pol, paOutput)
-            time.sleep(0.1)
-            sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
-            sisCurrent = abs(sis['Ij'])
-            self.logger.info(f"iter={controller.iter} PA={paOutput:.1f} % Ij={sisCurrent:.3f} uA")
-            tsum += (time.time() - tprev)
-            tprev = time.time()
-        
-        iterTime = tsum / (controller.iter + 1)
-        msg = f"CartAssembly.__autoLOPower: pol{pol} PA={paOutput:.1f} %, IJ={sisCurrent:.3f} uA, iter={controller.iter} iterTime={round(iterTime, 2)} success={controller.success}"
-        self.logger.info(msg)
-        return controller.success, msg
+
+        done = error = False
+        msg = ""
+
+        while not done and not error:
+            self.logger.info(f"CartAssembly.autoLOPower iter={self.controller.iter} PA={self.controller.output:.1f} % Ij={sisCurrent:.3f} uA")
+            paOutput = self.controller.process(sisCurrent)
+            if self.controller.done and not self.controller.fail:
+                msg = f"CartAssembly.autoLOPower: success Ij={sisCurrent:.3f} uA"
+                done = True
+            elif self.controller.fail:
+                msg = f"CartAssembly.autoLOPower: fail iter={self.controller.iter} max_iter={self.settings.max_iter} setValue={paOutput:.2f} %"
+                error = True
+            else:
+                self.loDevice.setPAOutput(pol, paOutput)
+                time.sleep(self.settings.sleep)
+                sis = self.ccaDevice.getSIS(pol, sis = 1, averaging = averaging)
+                sisCurrent = abs(sis['Ij'])
+
+        if error:
+            self.logger.error(msg)
+            return error, msg
+        elif msg:
+            self.logger.info(msg)
+            return True, ""
     
     def getSISCurrentTargets(self) -> Tuple[float, float, float, float]:
         return (self.mixerParam01.IJ, self.mixerParam02.IJ, self.mixerParam11.IJ,  self.mixerParam12.IJ)
@@ -252,6 +270,10 @@ class CartAssembly():
         else:
             self.loDevice.setNullLoopIntegrator(True)
         return True, f"lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}"
+
+    def isLocked(self) -> bool:
+        pll = self.loDevice.getLockInfo()
+        return pll['isLocked']
 
     def mixersDeflux(self, 
             pol0: bool = True, 

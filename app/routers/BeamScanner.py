@@ -232,7 +232,12 @@ async def get_MeasurementSpec():
 async def put_MeasurementSpec(measurementSpec:MeasurementSpec):
     BeamScanner.beamScanner.measurementSpec = measurementSpec
     BeamScanner.beamScanner.saveSettings()
-    return MessageResponse(message = "Updated Measurement Spec", success = True)
+    return MessageResponse(message = "Updated measurement settings", success = True)
+
+@router.post("/meas_spec/reset", response_model = MessageResponse)
+async def reset_MeasurementSpec():
+    BeamScanner.beamScanner.defaultSetttings()
+    return MessageResponse(message = "Reset measurement settings to default", success = True)
 
 @router.get("/scan_list", response_model = ScanList)
 async def get_ScanList(defaults: bool = False):
