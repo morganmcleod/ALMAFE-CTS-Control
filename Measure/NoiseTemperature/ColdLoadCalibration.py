@@ -37,7 +37,7 @@ class ColdLoadCalibration():
                 d = yaml.safe_load(f)
                 self.specAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
         except:
-            self.specAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
+            self.specAnSettings = SpectrumAnalyzerSettings(attenuation = 16, videoBW = 300, enableInternalPreamp = True)
             self.saveSettingsSpecAn()
     
     def saveSettingsSpecAn(self):

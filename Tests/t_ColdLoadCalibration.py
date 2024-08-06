@@ -9,11 +9,15 @@ LOG_TO_FILE = True
 LOG_FILE = 'ALMAFE-CTS-Control.log'
 
 def main():
-    specAn = SpectrumAnalyzer("TCPIP0::10.1.1.10::inst0::INSTR")
+    specAn = SpectrumAnalyzer("TCPIP0::10.1.1.5::inst0::INSTR")
     tempMon = TemperatureMonitor("GPIB0::12::INSTR")
     chopper = Chopper()
     cal = ColdLoadCalibration(specAn, tempMon)
-    cal.start()
+    cal.start(
+        bandLeftGHz = 9.95,
+        bandRightGHz = 10.05,
+        ambSensorNum = 6   
+    )
 
     filename = "Coldload.xlsx"
 
