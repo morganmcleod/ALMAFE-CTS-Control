@@ -5,10 +5,12 @@ from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from INSTR.InputSwitch.Interface import InputSelect
-from INSTR.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
-from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from Control.IFSystem.Interface import OutputSelect
 from AMB.LODevice import LODevice
 from Control.CartAssembly import CartAssembly
+from Control.RFAutoLevel import RFAutoLevel
+from Control.IFSystem.Interface import IFSystem_Interface
+from Control.PowerDetect.PDPNA import PDPNA
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DBBand6Cart.CartTests import CartTest, CartTests
@@ -41,7 +43,7 @@ class BeamScanner():
             loReference: SignalGenerator, 
             cartAssembly: CartAssembly,
             rfSrcDevice: LODevice,
-            warmIFPlate: WarmIFPlate,
+            ifSystem: IFSystem_Interface,
             measurementStatus: MeasurementStatus):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -51,8 +53,10 @@ class BeamScanner():
         self.rfReference = None     # normally we don't use the RF source reference synth.  Set this to do so for debugging.
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
-        self.warmIFPlate = warmIFPlate
+        self.ifSystem = ifSystem
         self.measurementStatus = measurementStatus
+        self.pdPNA = PDPNA(pna)
+        self.rfAutoLevel = RFAutoLevel(self.ifSystem, self.pdPNA, self.rfSrcDevice)
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 2)
         self.measurementSpec = None
         self.scanList = ScanList()
@@ -515,9 +519,9 @@ class BeamScanner():
 
     def __configureIfProcessor(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
-        self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-        self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
-        self.warmIFPlate.attenuator.setValue(self.measurementSpec.ifAttenuator)
+        self.ifSystem.output_select = OutputSelect.PNA_INTERFACE
+        self.ifSystem.frequency = abs(scan.RF - scan.LO)
+        self.ifSystem.attenuation = self.measurementSpec.ifAttenuator
         return (True, "")
     
     def __selectIFInput(self, isUSB: bool, pol: int):
@@ -531,7 +535,7 @@ class BeamScanner():
                 position = InputSelect.POL0_LSB
             else:
                 position = InputSelect.POL1_LSB
-        self.warmIFPlate.inputSwitch.selected = position
+        self.ifSystem.input_select = position
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
         self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
@@ -580,7 +584,8 @@ class BeamScanner():
         return (success, "__moveToBeamCenter: " + msg)
 
     def __rfSourceAutoLevel(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        success = self.rfSrcDevice.autoRFPower(self.pna, target = self.measurementSpec.targetLevel)
+        self.pdPNA.configure(power_config = DEFAULT_POWER_CONFIG, config = FAST_CONFIG)
+        success = self.rfAutoLevel.autoLevel(abs(scan.RF - scan.LO), self.measurementSpec.targetLevel)
         if SIMULATE:
             success = True
         return (success, "__rfSourceAutoLevel")

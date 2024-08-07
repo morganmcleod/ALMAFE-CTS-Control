@@ -3,26 +3,7 @@ from .NTCommon import *
 
 def noise_temperature():
     logger = logging.getLogger("ALMAFE-CTS-Control")
-    ifSystem = IFSystem(externalSwitch, spectrumAnalyzer)
-    powerDetect = PDSpecAn(spectrumAnalyzer)
-
-    actor = NoiseTempActions(
-        loReference,
-        rfReference,
-        receiver,
-        rfSrcDevice,
-        ifSystem,
-        powerDetect, 
-        temperatureMonitor,
-        powerSupply, 
-        coldLoad,
-        chopper, 
-        measurementStatus,
-        dataDisplay,
-        DUT_Type.Band6_Cartridge,
-        settings
-    )
-
+    
     cart_test = measurementStatus.getMeasuring()
     receiver.setConfig(cart_test.configId)
 

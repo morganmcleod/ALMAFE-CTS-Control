@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from INSTR.InputSwitch.Interface import InputSelect
+from Control.schemas.DeviceInfo import DeviceInfo
 
 class OutputSelect(Enum):
     POWER_DETECT = 'POWER'
@@ -11,6 +12,11 @@ class IFSystem_Interface(ABC):
 
     @abstractmethod
     def reset(self) -> None:
+        pass
+
+    @property
+    @abstractmethod    
+    def device_info(self) -> DeviceInfo:
         pass
 
     @property

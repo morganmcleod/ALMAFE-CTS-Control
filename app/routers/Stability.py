@@ -81,21 +81,31 @@ async def get_TimeSeries(first: int, last: Optional[int] = -1, targetLength: Opt
 async def get_Settings():
     return amplitudeStablilty.settings
 
-@router.get("/phase/settings", response_model = Settings)
-async def get_Settings():
-    return phaseStability.settings
-
 @router.post("/amp/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
     amplitudeStablilty.settings = settings
     amplitudeStablilty.saveSettings()
     return MessageResponse(message = "Updated amplitude stability settings.", success = True)
 
+@router.post("/amp/settings/reset", response_model = MessageResponse)
+async def reset_settings():
+    amplitudeStablilty.defaultSettings()
+    return MessageResponse(message = "Reset amplitude stability settings to defaults.", success = True)
+
+@router.get("/phase/settings", response_model = Settings)
+async def get_Settings():
+    return phaseStability.settings
+
 @router.post("/phase/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
     phaseStability.settings = settings
     phaseStability.saveSettings()
     return MessageResponse(message = "Updated phase stability settings.", success = True)
+
+@router.post("/phase/settings/reset", response_model = MessageResponse)
+async def reset_settings():
+    phaseStability.defaultSettings()
+    return MessageResponse(message = "Reset phase stability settings to defaults.", success = True)
 
 @router.get("/amp/timeseries/list", response_model = ListResponse)
 async def get_TimeSeriesIds():

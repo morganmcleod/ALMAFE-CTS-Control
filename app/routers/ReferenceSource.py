@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Request
 from hardware.ReferenceSources import loReference, rfReference
-from schemas.common import SingleBool
 from schemas.ReferenceSource import ReferenceSourceStatus
-from schemas.DeviceInfo import DeviceInfo
+from Control.schemas.DeviceInfo import DeviceInfo
 from app.schemas.Response import MessageResponse
 from DebugOptions import *
 
@@ -27,16 +26,19 @@ def getTargetShortName(request: Request):
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_isConnected(request: Request):
     target, name = getTarget(request)
-    assert(target)
+    assert(target)    
     if SIMULATE:
-        resource_name = f"simulated {name}"
+        return DeviceInfo(
+            name = name,
+            resource = 'simulated',
+            connected = True
+        )
     else:
-        resource_name = target.inst.resource_name
-    return DeviceInfo(
-        name = getTargetShortName(request),
-        resource_name = resource_name,
-        is_connected = target.isConnected()
-    )
+        return DeviceInfo(
+            name = name,
+            resource = target.inst.resource,
+            connected = target.connected()
+        )
 
 @router.get("/status", response_model = ReferenceSourceStatus)
 async def get_Status(request: Request):

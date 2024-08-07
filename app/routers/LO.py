@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from schemas.LO import *
 from schemas.common import *
 from app.schemas.Response import MessageResponse
-from schemas.DeviceInfo import DeviceInfo
+from Control.schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 
 router = APIRouter()
@@ -13,19 +13,13 @@ def getTarget(request: Request):
     else:
         return FEMC.loDevice, "LO"
 
-def getTargetShortName(request: Request):
-    if "/rfsource" in request.url.path:
-        return "rfsource"
-    else:
-        return "lo"
-
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_LO(request: Request):
     device, name = getTarget(request)
     return DeviceInfo(
-        name = getTargetShortName(request),
-        resource_name = f"{name} at CAN0:13",
-        is_connected = device.isConnected()
+        name = name,
+        resource = "CAN0:13",
+        connected = device.connected()
     )
 
 @router.put("/yto/limits", response_model = MessageResponse)

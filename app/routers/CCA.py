@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from schemas.CCA import *
 from schemas.common import *
-from schemas.DeviceInfo import DeviceInfo
+from Control.schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 from app.schemas.Response import MessageResponse
 import yaml
@@ -11,9 +11,9 @@ router = APIRouter(prefix="/cca")
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_CCA():
     return DeviceInfo(
-        name = 'cca',
-        resource_name = "CAN0:13",
-        is_connected = FEMC.ccaDevice.isConnected()
+        name = 'CCA',
+        resource = "CAN0:13",
+        connected = FEMC.ccaDevice.connected()
     )
 
 @router.put("/sis", response_model = MessageResponse)

@@ -9,7 +9,7 @@ manager = ConnectionManager()
 router = APIRouter(prefix="/display")
 logger = logging.getLogger("ALMAFE-CTS-Control")
 
-@router.websocket("/warmif_ws")
+@router.websocket("/ifsystem_ws")
 async def websocket_warmif(websocket: WebSocket):
     await manager.connect(websocket)
     lastCartTest = None
@@ -27,7 +27,7 @@ async def websocket_warmif(websocket: WebSocket):
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /warmif_ws")
+        logger.exception("WebSocketDisconnect: /ifsystem_ws")
 
 @router.websocket("/chopperpower_ws")
 async def websocket_chopperpower(websocket: WebSocket):

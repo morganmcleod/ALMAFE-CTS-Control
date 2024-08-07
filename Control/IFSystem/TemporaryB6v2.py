@@ -1,11 +1,13 @@
-from .Interface import IFSystem_Interface, OutputSelect
+from .Interface import IFSystem_Interface, InputSelect, OutputSelect, DeviceInfo
 from INSTR.InputSwitch.ExternalSwitch import ExternalSwitch
-from INSTR.InputSwitch.Interface import InputSelect
 from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from DebugOptions import *
 
 class IFSystem(IFSystem_Interface):
 
-    def __init__(self, externalSwitch: ExternalSwitch, spectrumAnalyzer: SpectrumAnalyzer):
+    def __init__(self, 
+            externalSwitch: ExternalSwitch, 
+            spectrumAnalyzer: SpectrumAnalyzer):
         self.externalSwitch = externalSwitch
         self.spectrumAnalyzer = spectrumAnalyzer
         self.reset()
@@ -15,6 +17,29 @@ class IFSystem(IFSystem_Interface):
         self._output_select = OutputSelect.POWER_DETECT
         self.freqCenter = 0
         self.freqSpan = 0.0001
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        if SIMULATE:
+            return DeviceInfo(
+                name = 'IF system',
+                resource = 'simulated spectrum analyzer',
+                connected = True
+            )
+            
+        switchOk = self.externalSwitch.connected()
+        specAnOk = self.spectrumAnalyzer.connected()
+        reason = ""
+        if not switchOk:
+            reason += "External switch not connected. "
+        if not specAnOk:
+            reason += "Spectrum analyzer not connected. "
+        return DeviceInfo(
+            name = "IF System",
+            resource = "External switch and spectrum analyzer",
+            connected = switchOk and specAnOk,
+            reason = reason
+        )
 
     @property
     def input_select(self) -> InputSelect:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.schemas.Response import MessageResponse
-from schemas.common import SingleInt, SingleFloat, SingleBool
-from schemas.DeviceInfo import DeviceInfo
+from schemas.common import SingleInt, SingleFloat
+from Control.schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 from typing import List
 
@@ -10,9 +10,9 @@ router = APIRouter(prefix="/femc")
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_FEMC():
     return DeviceInfo(
-        name = 'femc',
-        resource_name = "CAN0:13",
-        is_connected = FEMC.femcDevice.isConnected()
+        name = 'FEMC module',
+        resource = "CAN0:13",
+        connected = FEMC.femcDevice.connected()
     )
 
 @router.get("/femcversion", response_model = MessageResponse)

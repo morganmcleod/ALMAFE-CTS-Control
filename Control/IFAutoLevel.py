@@ -49,7 +49,7 @@ class IFAutoLevel():
             yaml.dump(self.settings.dict(), f)
 
     def autoLevel(self, 
-            targetLevel_dBm: float, 
+            targetLevel: float, 
             inputSelect: InputSelect = InputSelect.POL0_USB) -> tuple[bool, str]:
         
         if self.powerDetect.detect_mode == DetectMode.SPEC_AN:
@@ -58,7 +58,7 @@ class IFAutoLevel():
 
         self.loadSettings()
         self.controller.reset()
-        self.controller.setpoint = targetLevel_dBm
+        self.controller.setpoint = targetLevel
 
         self.powerDetect.configure(units = 'DBM')
         self.ifSystem.input_select = inputSelect

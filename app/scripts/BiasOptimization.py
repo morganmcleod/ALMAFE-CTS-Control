@@ -3,24 +3,6 @@ from .NTCommon import *
 
 def bias_optimization():
     logger = logging.getLogger("ALMAFE-CTS-Control")
-    ifSystem = IFSystem(externalSwitch, spectrumAnalyzer)
-    powerDetect = PDSpecAn(spectrumAnalyzer)
-
-    actor = NoiseTempActions(
-        loReference,
-        rfReference,
-        receiver,
-        rfSrcDevice,
-        ifSystem,
-        powerDetect, 
-        temperatureMonitor,
-        powerSupply, 
-        coldLoad,
-        chopper, 
-        measurementStatus,
-        dataDisplay,
-        DUT_Type.Band6_Cartridge
-    )
     actor.ntSpecAnSettings = settings.ntSpecAnSettings
     
     cart_test = measurementStatus.getMeasuring()

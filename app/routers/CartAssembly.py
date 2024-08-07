@@ -1,12 +1,10 @@
+import asyncio
+import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import hardware.FEMC as FEMC
 from app.schemas.Response import MessageResponse
-from schemas.DeviceInfo import DeviceInfo
-from schemas.common import SingleBool
 from .ConnectionManager import ConnectionManager
 from AMB.CCADevice import DefluxStatus
-import asyncio
-import logging
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix="/cartassy")

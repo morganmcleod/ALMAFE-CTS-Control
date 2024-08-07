@@ -1,6 +1,7 @@
 import logging
-from .Interface import PowerDetect_Interface, DetectMode
+from .Interface import PowerDetect_Interface, DeviceInfo, DetectMode, Units
 from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
+from DebugOptions import *
 
 class PDSpecAn(PowerDetect_Interface):
 
@@ -27,10 +28,27 @@ class PDSpecAn(PowerDetect_Interface):
             success, msg = self.spectrumAnalyzer.configFreqStartStop(startGHz * 1e9, stopGHz * 1e9)
             if not success:
                 self.logger.error(msg)
-
+    
+    @property
+    def device_info(self) -> DeviceInfo:
+        if SIMULATE:
+            return DeviceInfo(
+                name = 'Power detect',
+                resource = 'simulated spectrum analyzer',
+                connected = True
+            )
+        else:
+            deviceInfo = DeviceInfo.parse_obj(self.spectrumAnalyzer.deviceInfo)
+            deviceInfo.name = "Power detect"
+            return deviceInfo
+    
     @property
     def detect_mode(self) -> DetectMode:
         return DetectMode.SPEC_AN
+
+    @property
+    def units(self) -> Units:
+        return Units.DBM
 
     def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
         averaging = kwargs.get('averaging', 1)

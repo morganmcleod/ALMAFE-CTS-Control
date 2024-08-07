@@ -1,9 +1,9 @@
 from hardware.BeamScanner import motorController, pna
-from hardware.ReferenceSources import loReference, rfReference
+from hardware.ReferenceSources import loReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
-from hardware.WarmIFPlate import warmIFPlate
+from app.hardware.IFSystem import ifSystem
 from app.measProcedure.MeasurementStatus import measurementStatus
-from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanListItem, SubScansOption
+from Measure.BeamScanner.schemas import ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from DebugOptions import *
 import copy
@@ -14,7 +14,7 @@ beamScanner = BeamScanner(
     loReference = loReference, 
     cartAssembly = cartAssembly, 
     rfSrcDevice = rfSrcDevice, 
-    warmIFPlate = warmIFPlate,
+    ifSystem = ifSystem,
     measurementStatus = measurementStatus
 )
 

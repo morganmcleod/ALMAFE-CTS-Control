@@ -1,9 +1,11 @@
 from ALMAFE.common.GitVersion import gitVersion, gitBranch
-from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-from INSTR.WarmIFPlate.OutputSwitch import OutputSelect, LoadSelect, PadSelect
 from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from INSTR.PNA.AgilentPNA import DEFAULT_POWER_CONFIG, FAST_CONFIG
 from Control.CartAssembly import CartAssembly
+from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
+from Control.PowerDetect.Interface import PowerDetect_Interface
+from Control.RFAutoLevel import RFAutoLevel
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots
@@ -17,7 +19,6 @@ from AMB.LODevice import LODevice
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus
 from .schemas import TimeSeriesInfo, Settings
-from .SampleInterface import SampleInterface
 from .CalcDataInterface import CalcDataInterface, StabilityRecord
 
 from DebugOptions import *
@@ -40,8 +41,8 @@ class MeasureStability():
             mode: str,      # 'AMPLITUDE' or 'PHASE'
             loReference: SignalGenerator,
             cartAssembly: CartAssembly,            
-            warmIFPlate: WarmIFPlate,
-            sampler: SampleInterface,
+            ifSystem: IFSystem_Interface,
+            powerDetect: PowerDetect_Interface,
             tempMonitor: TemperatureMonitor,
             rfSrcDevice: LODevice,              # for phase stability only            
             measurementStatus: MeasurementStatus,
@@ -52,8 +53,8 @@ class MeasureStability():
         self.mode = mode
         self.loReference = loReference
         self.cartAssembly = cartAssembly
-        self.warmIFPlate = warmIFPlate
-        self.sampler = sampler
+        self.ifSystem = ifSystem
+        self.powerDetect = powerDetect
         self.tempMonitor = tempMonitor
         self.rfSrcDevice = rfSrcDevice
         self.measurementStatus = measurementStatus
@@ -80,25 +81,35 @@ class MeasureStability():
         self.timeSeriesInfo = None
         self.plotIds = []
         self.testResult = None
-        self.units = self.sampler.getUnits()
         startTime = datetime.now()
-        self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units[0])
-        if self.units[1]:
-            self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = self.units[1])
+        if self.mode == 'PHASE':
+            self.units = Units.DEG
+            self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
+            self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = Units.DB)
         else:
-            self.timeSeries2 = None    
+            self.units = self.powerDetect.units
+            self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
+            self.timeSeries2 = None
 
     def loadSettings(self):
         try:
-            with open(self.STABILITY_SETTINGS_FILE, "r") as f:
-                d = yaml.safe_load(f)
-                self.settings = Settings.parse_obj(d)
-        except:            
-            self.settings = Settings()
-            if self.mode == 'PHASE':
-                self.settings.sampleRate = 5
-                self.settings.attenuateIF = 22
-            self.saveSettings()
+            if self.mode == 'AMPLITUDE':
+                with open(self.AMP_STABILITY_SETTINGS_FILE, "r") as f:
+                    d = yaml.safe_load(f)
+                    self.settings = Settings.parse_obj(d)
+            elif self.mode == 'PHASE':
+                with open(self.PHASE_STABILITY_SETTINGS_FILE, "r") as f:
+                    d = yaml.safe_load(f)
+                    self.settings = Settings.parse_obj(d)
+        except:
+            self.defaultSettings()
+
+    def defaultSettings(self):
+        self.settings = Settings()
+        if self.mode == 'PHASE':
+            self.settings.sampleRate = 5
+            self.settings.attenuateIF = 22
+        self.saveSettings()
 
     def saveSettings(self):
         if self.mode == 'AMPLITUDE':
@@ -120,9 +131,9 @@ class MeasureStability():
         self.dataSources[DataSource.DATA_SOURCE] = f"CTS2 test ID {self.cartTest.key}"
         self.dataSources[DataSource.CONFIG_ID] = cartTest.configId
         self.dataSources[DataSource.SERIALNUM] = self.cartAssembly.serialNum
-        self.dataSources[DataSource.DATA_KIND] = self.sampler.getDataKind().value
+        self.dataSources[DataSource.DATA_KIND] = DataKind.PHASE if self.mode == 'PHASE' else DataKind.AMPLITUDE
         self.dataSources[DataSource.TEST_SYSTEM] = cartTest.testSysName
-        self.dataSources[DataSource.UNITS] = self.units[0].value
+        self.dataSources[DataSource.UNITS] = Units.DEG if self.mode == 'PHASE' else self.powerDetect.units
         self.dataSources[DataSource.T_UNITS] = Units.KELVIN.value
         self.dataSources[DataSource.OPERATOR] = cartTest.operator
         self.dataSources[DataSource.NOTES] = cartTest.description
@@ -150,13 +161,13 @@ class MeasureStability():
         self.timeSeriesAPI = TimeSeriesAPI()    # these must be created in the worker thread because SQLite
         self.plotAPI = PlotAPI()                #
         self.measurementStatus.setComplete(False)
-        self.sampler.configure()
-        self.warmIFPlate.attenuator.setValue(self.settings.attenuateIF)
+        self.powerDetect.configure()
+        self.ifSystem.attenuation = self.settings.attenuateIF
         if self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
-            self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-            self.warmIFPlate.yigFilter.setFrequency(self.signalIF)
+            self.ifSystem.output_select = OutputSelect.PNA_INTERFACE
+            self.ifSystem.frequency = self.signalIF
         else:
-            self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+            self.ifSystem.output_select = OutputSelect.POWER_DETECT
 
         success, msg = self.__updateTestResult()
         if not success:
@@ -238,7 +249,7 @@ class MeasureStability():
                     return True, "User stop"
 
                 success, msg = self.__rfSourceOff()                
-                self.warmIFPlate.inputSwitch.set_pol_sideband(pol, sideband)
+                self.ifSystem.set_pol_sideband(pol, sideband)
                     
                 if self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
                     success = self.cartAssembly.autoLOPower()
@@ -274,7 +285,6 @@ class MeasureStability():
         self.measurementStatus.setChildKey(self.timeSeries.tsId)
 
         sampleInterval = 1 / self.settings.sampleRate
-
         timeStart = time.time()
         timeEnd = timeStart + self.settings.measureDuration * 60
         done = False
@@ -282,17 +292,22 @@ class MeasureStability():
         while not done:
             sampleStart = time.time()
             sampleEnd = sampleStart + sampleInterval
-            temp, err = self.tempMonitor.readSingle(self.settings.sensorAmbient)
+            temperature, err = self.tempMonitor.readSingle(self.settings.sensorAmbient)
             if err != 0 and not temperatureError:
                 temperatureError = err
-            sample = self.sampler.getSample()
             timeStamp = datetime.now()
-            self.timeSeries.appendData(sample[0], temp, timeStamps = timeStamp)
-            if sample[1]:
-                self.timeSeries2.appendData(sample[1], temp, timeStamps = timeStamp)                
+            if self.mode == 'PHASE':
+                amp, phase = self.powerDetect.read(amp_phase = True)
+                self.timeSeries.appendData(phase, temperature, timeStamps = timeStamp)
+                self.timeSeries2.appendData(amp, temperature, timeStamps = timeStamp)
+            else:
+                amp = self.powerDetect.read()
+                self.timeSeries.appendData(amp, temperature, timeStamps = timeStamp)
+
             if self.stopNow:
                 done = self.finished = True
                 msg = "User stop"
+
             now = time.time()
             if now >= timeEnd:
                 done = True
@@ -488,12 +503,16 @@ class MeasureStability():
             wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
         return (wcaFreq != 0, f"__lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")        
     
-    def __rfSourceAutoLevel(self) -> Tuple[bool, str]:    
+    def __rfSourceAutoLevel(self) -> Tuple[bool, str]:
         if not self.rfSrcDevice:
-            raise ValueError("__rfSourceAutoLevel: no rfSrcDevice")    
-        success = self.rfSrcDevice.autoRFPower(self.sampler.pna, target = self.settings.targetLevel)
+            raise ValueError("__rfSourceAutoLevel: no rfSrcDevice")        
+        self.powerDetect.configure(power_config = DEFAULT_POWER_CONFIG, config = FAST_CONFIG)
+        rfAutoLevel = RFAutoLevel(self.ifSystem, self.powerDetect, self.rfSrcDevice)
+        success = rfAutoLevel.autoLevel(self.signalIF, self.settings.targetLevel)
+        if SIMULATE:
+            success = True
         return (success, "__rfSourceAutoLevel")
-
+    
     def getTimeSeries(self, 
             first: int = 0, 
             last: int = -1, 

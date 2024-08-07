@@ -1,7 +1,7 @@
-from .Interface import IFSystem_Interface, OutputSelect
+from .Interface import IFSystem_Interface, InputSelect, OutputSelect, DeviceInfo
 from INSTR.WarmIFPlate import WarmIFPlate
-from INSTR.InputSwitch.Interface import InputSelect
 from INSTR.WarmIFPlate.OutputSwitch import OutputSelect as WIFOutputSelect, LoadSelect, PadSelect
+from DebugOptions import *
 
 class IFSystem(IFSystem_Interface):
 
@@ -15,6 +15,19 @@ class IFSystem(IFSystem_Interface):
         self.warmIFPlate.yigFilter.setFrequency(0.0)
         self.warmIFPlate.attenuator.setValue(20.0)
         self.outputSelect = OutputSelect.NONE
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        if SIMULATE:
+            return DeviceInfo(
+                name = 'If system',
+                resource = 'simulated',
+                connected = True
+            )
+        else:
+            deviceInfo = DeviceInfo.parse_obj(self.warmIFPlate.device_info)
+            deviceInfo.name = "IF System"
+            return deviceInfo
 
     @property
     def input_select(self) -> InputSelect:

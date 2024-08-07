@@ -6,26 +6,26 @@ from fastapi.middleware.cors import CORSMiddleware
 # Imports for this app:
 from schemas.Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion, gitBranch
-from routers.CartAssembly import router as cartAssyRouter
-from routers.CCA import router as ccaRouter
-from routers.Chopper import router as chopperRouter
-from routers.Database import router as databaseRouter
-from routers.FEMC import router as femcRouter
-from routers.LO import router as loRouter
-from routers.RFSource import router as rfRouter
-from routers.TemperatureMonitor import router as tempsRouter
-from routers.ColdLoad import router as coldLoadRouter
-from routers.SpectrumAnalyzer import router as specAnRouter
-from routers.PowerMeter import router as powerMeterRouter
-from routers.MeasControl import router as measControlRouter
-from routers.NoiseTemperature import router as noiseTempRouter
-from routers.Stability import router as stabilityRouter
-from routers.ReferenceSource import router as loRefRouter
-from routers.ReferenceSource import router as rfRefRouter
-from routers.BeamScanner import router as beamScanRouter
-from routers.WarmIFPlate import router as warmIfRouter
-from routers.DataDisplay import router as dataDisplayRouter
-from routers.ConnectionManager import ConnectionManager
+from app.routers.CartAssembly import router as cartAssyRouter
+from app.routers.CCA import router as ccaRouter
+from app.routers.Chopper import router as chopperRouter
+from app.routers.Database import router as databaseRouter
+from app.routers.FEMC import router as femcRouter
+from app.routers.LO import router as loRouter
+from app.routers.RFSource import router as rfRouter
+from app.routers.TemperatureMonitor import router as tempsRouter
+from app.routers.ColdLoad import router as coldLoadRouter
+from app.routers.SpectrumAnalyzer import router as specAnRouter
+from app.routers.PowerDetect import router as powerDetectRouter
+from app.routers.MeasControl import router as measControlRouter
+from app.routers.NoiseTemperature import router as noiseTempRouter
+from app.routers.Stability import router as stabilityRouter
+from app.routers.ReferenceSource import router as loRefRouter
+from app.routers.ReferenceSource import router as rfRefRouter
+from app.routers.BeamScanner import router as beamScanRouter
+from app.routers.IFSystem import router as ifSystemRouter
+from app.routers.DataDisplay import router as dataDisplayRouter
+from app.routers.ConnectionManager import ConnectionManager
 
 
 # logging:
@@ -84,8 +84,8 @@ tags_metadata = [
         "description": "Noise Temperature measurement and hardware"
     },
     {
-        "name": "Power meter",
-        "description": "Power meter"
+        "name": "Power detection",
+        "description": "Power detection"
     },
     {
         "name": "RF source",
@@ -108,7 +108,7 @@ tags_metadata = [
         "description": "Temperature Monitor"
     },
     {
-        "name": "Warm IF plate",
+        "name": "IF system",
         "description": "Input switch, YIG filter, etc."
     }
 ]
@@ -125,13 +125,13 @@ app.include_router(rfRouter, prefix = "/rfsource", tags=["RF source"])
 app.include_router(tempsRouter, tags={"Temperatures"})
 app.include_router(coldLoadRouter, tags={"Cold load"})
 app.include_router(specAnRouter, tags = ["SpecAn"])
-app.include_router(powerMeterRouter, tags = ["Power meter"])
+app.include_router(powerDetectRouter, tags = ["Power detection"])
 app.include_router(loRefRouter, prefix = "/loref", tags=["Signal generators"])
 app.include_router(rfRefRouter, prefix = "/rfref", tags=["Signal generators"])
 app.include_router(measControlRouter, tags=["Measure"])
 app.include_router(noiseTempRouter, tags=["Noise temp"])
 app.include_router(stabilityRouter, tags=["Stability"])
-app.include_router(warmIfRouter, tags=["Warm IF plate"])
+app.include_router(ifSystemRouter, tags=["IF system"])
 app.include_router(dataDisplayRouter, tags=["Data display"])
 
 API_VERSION = "0.0.1"

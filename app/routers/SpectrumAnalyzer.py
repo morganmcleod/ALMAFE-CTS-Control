@@ -1,21 +1,23 @@
+import logging
 from fastapi import APIRouter
-from schemas.DeviceInfo import DeviceInfo
-from hardware.NoiseTemperature import spectrumAnalyzer
+from Control.schemas.DeviceInfo import DeviceInfo
+from hardware.PowerDetect import spectrumAnalyzer
 from DebugOptions import *
 
-import logging
 logger = logging.getLogger("ALMAFE-CTS-Control")
-
 router = APIRouter(prefix="/specanalyzer")
 
 @router.get("/device_info", response_model = DeviceInfo)
-async def get_DeviceInfo_SpecAn():
+async def get_DeviceInfo_SpecAn():    
     if SIMULATE:
-        resource_name = "simulated spectrum analyzer"
+        return DeviceInfo(
+            name = 'spectrum analyzer',
+            resource = 'simulated',
+            connected = True
+        )
     else:
-        resource_name = spectrumAnalyzer.inst.resource_name
-    return DeviceInfo(
-        name = 'specanalyzer',
-        resource_name = resource_name,
-        is_connected = spectrumAnalyzer.isConnected()
-    )
+        return DeviceInfo(
+            name = 'spectrum analyzer',
+            resource = spectrumAnalyzer.inst.resource,
+            connected = spectrumAnalyzer.connected()
+        )

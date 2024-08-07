@@ -4,7 +4,7 @@ import yaml
 from pydantic import BaseModel
 from Control.RFSource import RFSource
 from Control.IFSystem.Interface import IFSystem_Interface
-from Control.PowerDetect.Interface import PowerDetect_Interface, DetectMode
+from Control.PowerDetect.Interface import PowerDetect_Interface
 from Control.PBAController import PBAController
 
 class RFAutoLevelSettings(BaseModel):
@@ -48,14 +48,12 @@ class RFAutoLevel():
 
     def autoLevel(self, 
                 freqIF: float, 
-                targetLevel_dBm: float) -> tuple[bool, str]:
+                targetLevel: float) -> tuple[bool, str]:
 
         self.loadSettings()
         self.controller.reset()
-        self.controller.setpoint = targetLevel_dBm
-        
-        if self.powerDetect.detect_mode == DetectMode.SPEC_AN:
-            self.ifSystem.frequency = freqIF
+        self.controller.setpoint = targetLevel        
+        self.ifSystem.frequency = freqIF
         
         self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, self.controller.output)
         time.sleep(self.settings.sleep)
