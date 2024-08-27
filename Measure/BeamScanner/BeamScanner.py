@@ -4,9 +4,7 @@ from INSTR.PNA.schemas import TriggerSource
 from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from INSTR.InputSwitch.Interface import InputSelect
-from INSTR.WarmIFPlate.OutputSwitch import PadSelect, LoadSelect, OutputSelect
-from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
+from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
 from AMB.LODevice import LODevice
 from Control.CartAssembly import CartAssembly
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
@@ -41,7 +39,7 @@ class BeamScanner():
             loReference: SignalGenerator, 
             cartAssembly: CartAssembly,
             rfSrcDevice: LODevice,
-            warmIFPlate: WarmIFPlate,
+            ifSystem: IFSystem_Interface,            
             measurementStatus: MeasurementStatus):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -51,7 +49,7 @@ class BeamScanner():
         self.rfReference = None     # normally we don't use the RF source reference synth.  Set this to do so for debugging.
         self.cartAssembly = cartAssembly
         self.rfSrcDevice = rfSrcDevice
-        self.warmIFPlate = warmIFPlate
+        self.ifSystem = ifSystem
         self.measurementStatus = measurementStatus
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 2)
         self.measurementSpec = None
@@ -515,9 +513,9 @@ class BeamScanner():
 
     def __configureIfProcessor(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
-        self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
-        self.warmIFPlate.yigFilter.setFrequency(abs(scan.RF - scan.LO))
-        self.warmIFPlate.attenuator.setValue(self.measurementSpec.ifAttenuator)
+        self.ifSystem.output_select = OutputSelect.PNA_INTERFACE
+        self.ifSystem.frequency = abs(scan.RF - scan.LO)
+        self.ifSystem.attenuation = self.measurementSpec.ifAttenuator
         return (True, "")
     
     def __selectIFInput(self, isUSB: bool, pol: int):
@@ -531,7 +529,7 @@ class BeamScanner():
                 position = InputSelect.POL0_LSB
             else:
                 position = InputSelect.POL1_LSB
-        self.warmIFPlate.inputSwitch.selected = position
+        self.ifSystem.input_select = position
 
     def __rfSourceOff(self) -> Tuple[bool, str]:
         self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)
