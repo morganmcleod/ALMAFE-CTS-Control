@@ -5,6 +5,7 @@ import hardware.FEMC as FEMC
 from app.schemas.Response import MessageResponse
 from .ConnectionManager import ConnectionManager
 from AMB.CCADevice import DefluxStatus
+from Control.CartAssembly import IVCurveResults
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix="/cartassy")
@@ -59,3 +60,14 @@ async def put_MixerDeflux(pol: int, iMagMax: float = 40.0, iMagStep: float = 1.0
 @router.get("/mixersdeflux", response_model = DefluxStatus)
 async def get_MixerDeflux():
     return FEMC.cartAssembly.ccaDevice.defluxStatus
+
+
+@router.put("/ivcurve", response_model = MessageResponse)
+async def sis_IVCurve(pol0: bool = True, pol1: bool = True, sis1: bool = True, sis2: bool = True,
+                      VjLow: float = None, VjHigh: float = None, VjStep: float = None):
+    FEMC.cartAssembly.IVCurve(pol0, pol1, sis1, sis2, VjLow, VjHigh, VjStep, True)
+    return MessageResponse(message = "I-V Curve started", success = True)
+
+@router.get("/ivcurve", response_model = IVCurveResults)
+async def get_IVCurve():
+    return FEMC.cartAssembly.ivCurveResults

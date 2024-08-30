@@ -6,10 +6,9 @@ from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
 from DBBand6Cart.CartConfigs import CartConfigs
-from DBBand6Cart.MixerParams import MixerParams
-from DBBand6Cart.PreampParams import PreampParams
-from DBBand6Cart.schemas.MixerParam import MixerParam
-from DBBand6Cart.schemas.PreampParam import PreampParam
+from DBBand6Cart.MixerParams import MixerParams, MixerParam
+from DBBand6Cart.PreampParams import PreampParams, PreampParam
+from DBBand6Cart.WCAs import WCAs, WCA
 
 from Control.PBAController import PBAController
 from INSTR.SignalGenerator.Interface import SignalGenInterface
@@ -27,10 +26,29 @@ class CartAssemblySettings(BaseModel):
     tolerance: float = 0.5   # uA
     sleep: float = 0.2
 
+class IVCurveResult(BaseModel):
+    VjSet: list[float] = []
+    VjRead: list[float] = []
+    IjRead: list[float] = []
+
+    def is_valid(self) -> bool:
+        return self.VjSet and self.VjRead and self.IjRead
+    
+    def assign(self, VjSet, VjRead, IjRead) -> None:
+        self.VjSet = VjSet
+        self.VjRead = VjRead
+        self.IjRead = IjRead
+
+class IVCurveResults(BaseModel):
+    curve01: IVCurveResult = IVCurveResult()
+    curve02: IVCurveResult = IVCurveResult()
+    curve11: IVCurveResult = IVCurveResult()
+    curve12: IVCurveResult = IVCurveResult()
 
 class CartAssembly():
 
     CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
+    LO_SETTINGS = "Settings_LO.yaml"
 
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -63,6 +81,7 @@ class CartAssembly():
         self.preampParams02 = None
         self.preampParams11 = None
         self.preampParams12 = None
+        self.ivCurveResults = IVCurveResults()
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
@@ -70,7 +89,7 @@ class CartAssembly():
         try:
             with open(self.CARTASSEMBLY_SETTINGS, "r") as f:
                 d = yaml.safe_load(f)
-                self.settings = CartAssemblySettings.parse_obj(d)
+                self.settings = CartAssemblySettings.model_validate(d)
                 if self.settings.serialNum:
                     DB = CartConfigs(driver = CTSDB())
                     configs = DB.read(serialNum = self.settings.serialNum, latestOnly = True)
@@ -78,23 +97,36 @@ class CartAssembly():
                         self.setConfig(configs[0].id)
         except:
             self.settings = CartAssemblySettings()
-            self.saveSettings()
+        try:
+            with open(self.LO_SETTINGS, "r") as f:
+                d = yaml.safe_load(f)
+                self.wca = WCA.model_validate(d)
+                if self.wca.serialNum:
+                    DB = WCAs(driver = CTSDB())
+                    configs = DB.read(serialNum = self.wca.serialNum)
+                    if configs:
+                        self.setLOConfig(configs[0].id)
+        except:
+            self.wca = WCA()
+        self.saveSettings()
 
     def saveSettings(self):
         if not self.configId:
             self.settings.serialNum = ""
         with open(self.CARTASSEMBLY_SETTINGS, "w") as f:
             yaml.dump(self.settings.dict(), f)
+        with open(self.LO_SETTINGS, "w") as f:
+            yaml.dump(self.wca.dict(), f)
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
         self.reset()
         if configId == 0:
             return True
-        configRecords = DB.read(keyColdCart = configId)
-        if not configRecords:
+        configs = DB.read(keyColdCart = configId)
+        if not configs:
             return False
-        self.settings.serialNum = configRecords[0].serialNum
+        self.settings.serialNum = configs[0].serialNum
         
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
@@ -114,15 +146,29 @@ class CartAssembly():
             self.mixerParams12 = DB.read(self.keysPol1.keyChip2)
         DB = PreampParams(driver = CTSDB())
         if self.keysPol0:
-            self.preampParams01: List[PreampParam] = DB.read(self.keysPol0.keyPreamp1)
-            self.preampParams02: List[PreampParam] = DB.read(self.keysPol0.keyPreamp2)
+            self.preampParams01 = DB.read(self.keysPol0.keyPreamp1)
+            self.preampParams02 = DB.read(self.keysPol0.keyPreamp2)
         if self.keysPol1:
-            self.preampParams11: List[PreampParam] = DB.read(self.keysPol1.keyPreamp1)
-            self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
+            self.preampParams11 = DB.read(self.keysPol1.keyPreamp1)
+            self.preampParams12 = DB.read(self.keysPol1.keyPreamp2)
         return True
 
     def getConfig(self) -> int:
         return self.configId if self.configId else 0
+    
+    def setLOConfig(self, configId:int) -> bool:
+        DB = WCAs(driver = CTSDB())
+        self.wca = WCA()
+        if configId == 0:
+            return True
+        configs = DB.read(configId)
+        if not configs:
+            return False
+        self.wca = configs[0]
+        self.saveSettings()
+
+    def getLOConfig(self) -> WCA:
+        return self.wca
 
     def setRecevierBias(self, FreqLO:float) -> bool:
         if not self.configId:
@@ -289,12 +335,12 @@ class CartAssembly():
             return True, ""
 
         if onThread:
-            threading.Thread(target = self.__mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
+            threading.Thread(target = self._mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
             return True, ""
         else:
-            return self.__mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
+            return self._mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
 
-    def __mixerDefluxSequence(self, 
+    def _mixerDefluxSequence(self, 
             pol0: bool, 
             pol1: bool,
             iMagMax: float = 40.0, 
@@ -305,10 +351,64 @@ class CartAssembly():
         if pol0:
             self.loDevice.setPABias(0, 0)
             success0 = self.ccaDevice.mixerDeflux(0, iMagMax, iMagStep)
-            msg += f"pol0: {'success' if success0 else 'fail'}"
+            msg += f"pol0: {'success' if success0 else 'fail'} "
         if pol1:
             self.loDevice.setPABias(1, 0)
             success1 = self.ccaDevice.mixerDeflux(1, iMagMax, iMagStep)
-            msg += f"pol1: {'success' if success1 else 'fail'}"
+            msg += f"pol1: {'success' if success1 else 'fail'} "
 
-        return success0 & success1, msg
+        return success0 and success1, msg
+    
+    def IVCurve(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            vjStart: float = None,
+            vjStop: float = None,
+            vjStep: float = None,
+            onThread: bool = False
+        ) -> tuple[bool, str]:
+
+        if not pol0 and not pol1:
+            return False, "IVCurve: must enable at least one pol"
+    
+        if not sis1 and not sis2:
+            return False, "IVCurve: must enable at least one SIS"
+       
+        if onThread:
+            threading.Thread(target = self._IVCurveSequence, args = (pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep), daemon = True).start()
+            return True, ""
+        else:
+            return self._IVCurveSequence(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep)
+        
+    def _IVCurveSequence(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            vjStart: float = None,
+            vjStop: float = None,
+            vjStep: float = None
+        ) -> tuple[bool, str]:
+        self.ivCurveResults = IVCurveResults()
+        msg = "I-V Curve: "
+        if pol0:
+            if sis1:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 1, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve01.assign(VjSet, VjRead, IjRead)
+                msg += f"pol0 sis1: {'success' if self.ivCurveResults.curve01.is_valid else 'fail'} "
+            if sis2:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 2, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve02.assign(VjSet, VjRead, IjRead)
+                msg += f"pol0 sis2: {'success' if self.ivCurveResults.curve02.is_valid else 'fail'} "
+        if pol1:
+            if sis1:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 1, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve11.assign(VjSet, VjRead, IjRead)
+                msg += f"pol1 sis1: {'success' if self.ivCurveResults.curve11.is_valid else 'fail'} "
+            if sis2:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 2, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve12.assign(VjSet, VjRead, IjRead)
+                msg += f"pol1 sis2: {'success' if self.ivCurveResults.curve12.is_valid else 'fail'} "
+        return True, msg

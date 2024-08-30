@@ -234,6 +234,8 @@ class NoiseTempActions():
                         atten = 0,
                         pHot = 10 ** (pHot / 10) / 1000,
                         pCold = 10 ** (pCold / 10) / 1000,
+                        tIFCold = 0,
+                        tIFHot = 0,
                         tAmbient = ambient,
                         noiseDiodeENR = warmIFSettings.diodeEnr
                     )   

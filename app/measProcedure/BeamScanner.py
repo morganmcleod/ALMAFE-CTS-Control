@@ -1,16 +1,12 @@
 from hardware.BeamScanner import motorController, pna
 from hardware.ReferenceSources import loReference
 from hardware.FEMC import cartAssembly, rfSrcDevice
-from hardware.WarmIFPlate import externalSwitch
-from hardware.NoiseTemperature import spectrumAnalyzer
-from Control.IFSystem.TemporaryB6v2 import IFSystem
+from hardware.IFSystem import ifSystem
 from app.measProcedure.MeasurementStatus import measurementStatus
 from Measure.BeamScanner.schemas import ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from DebugOptions import *
 import copy
-
-ifSystem = IFSystem(externalSwitch, spectrumAnalyzer)
 
 beamScanner = BeamScanner(
     motorController = motorController, 

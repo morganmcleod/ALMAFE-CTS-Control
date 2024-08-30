@@ -23,8 +23,7 @@ from .CalcDataInterface import CalcDataInterface, StabilityRecord
 
 from DebugOptions import *
 
-from typing import Any, Dict, Tuple
-from enum import Enum
+from typing import Tuple
 import concurrent.futures
 import logging
 import time
