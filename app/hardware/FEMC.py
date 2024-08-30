@@ -10,7 +10,7 @@ from DebugOptions import *
 
 CARTRIDGE_BAND = 6
 RF_SOURCE_PORT = 7
-RF_SOURCE_PA_POL = 0
+RF_SOURCE_PA_POL = 1
 NODE_ADDR = 0x13
 
 config = configparser.ConfigParser()

@@ -4,8 +4,7 @@ from INSTR.PNA.schemas import TriggerSource
 from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from INSTR.InputSwitch.Interface import InputSelect
-from Control.IFSystem.Interface import OutputSelect
+from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
 from AMB.LODevice import LODevice
 from Control.CartAssembly import CartAssembly
 from Control.RFAutoLevel import RFAutoLevel
@@ -43,7 +42,7 @@ class BeamScanner():
             loReference: SignalGenerator, 
             cartAssembly: CartAssembly,
             rfSrcDevice: LODevice,
-            ifSystem: IFSystem_Interface,
+            ifSystem: IFSystem_Interface,            
             measurementStatus: MeasurementStatus):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
