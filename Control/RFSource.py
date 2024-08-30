@@ -1,13 +1,16 @@
+from typing import Optional
+import yaml
+from app.database.CTSDB import CTSDB
 from AMB.LODevice import LODevice
 from AMB.AMBConnectionItf import AMBConnectionItf
 from INSTR.SignalGenerator.Interface import SignalGenInterface
-
-from typing import Optional
+from DBBand6Cart.WCAs import WCAs, WCA
 from DebugOptions import *
 
 class RFSource(LODevice):
 
     FREQ_FLOOG = 0.020
+    RFSRC_SETTINGS = "Settings_RFSource.yaml"
 
     def __init__(
             self, 
@@ -18,8 +21,42 @@ class RFSource(LODevice):
             paPol: int = 0                  # which polarization to operate for the RF source
         ):
         super().__init__(conn, nodeAddr, band, femcPort)
+        self.loadSettings()
         self.paPol = paPol
         self.setPAOutput(self.paPol, 0)
+
+    def loadSettings(self):
+        try:
+            with open(self.RFSRC_SETTINGS, "r") as f:
+                d = yaml.safe_load(f)
+                self.config = WCA.model_validate(d)
+                if self.config.serialNum:
+                    DB = WCAs(driver = CTSDB())
+                    configs = DB.read(serialNum = self.config.serialNum)
+                    if configs:
+                        self.setRFSourceConfig(configs[0].id)
+        
+        except:
+            self.config = WCA()
+            self.saveSettings()
+
+    def saveSettings(self):
+        with open(self.RFSRC_SETTINGS, "w") as f:
+            yaml.dump(self.config.model_dump(), f)
+
+    def setRFSourceConfig(self, configId:int) -> bool:
+        DB = WCAs(driver = CTSDB())
+        self.config = WCA()
+        if configId == 0:
+            return True
+        configs = DB.read(configId)
+        if not configs:
+            return False
+        self.config = configs[0]
+        self.saveSettings()
+
+    def getRFSourceConfig(self) -> WCA:
+        return self.config
 
     def connected(self) -> bool:
         return super().connected()

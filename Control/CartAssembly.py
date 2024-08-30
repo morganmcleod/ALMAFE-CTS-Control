@@ -6,10 +6,9 @@ from AMB.CCADevice import CCADevice
 
 from app.database.CTSDB import CTSDB
 from DBBand6Cart.CartConfigs import CartConfigs
-from DBBand6Cart.MixerParams import MixerParams
-from DBBand6Cart.PreampParams import PreampParams
-from DBBand6Cart.schemas.MixerParam import MixerParam
-from DBBand6Cart.schemas.PreampParam import PreampParam
+from DBBand6Cart.MixerParams import MixerParams, MixerParam
+from DBBand6Cart.PreampParams import PreampParams, PreampParam
+from DBBand6Cart.WCAs import WCAs, WCA
 
 from Control.PBAController import PBAController
 from INSTR.SignalGenerator.Interface import SignalGenInterface
@@ -27,10 +26,10 @@ class CartAssemblySettings(BaseModel):
     tolerance: float = 0.5   # uA
     sleep: float = 0.2
 
-
 class CartAssembly():
 
     CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
+    LO_SETTINGS = "Settings_LO.yaml"
 
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -70,7 +69,7 @@ class CartAssembly():
         try:
             with open(self.CARTASSEMBLY_SETTINGS, "r") as f:
                 d = yaml.safe_load(f)
-                self.settings = CartAssemblySettings.parse_obj(d)
+                self.settings = CartAssemblySettings.model_validate(d)
                 if self.settings.serialNum:
                     DB = CartConfigs(driver = CTSDB())
                     configs = DB.read(serialNum = self.settings.serialNum, latestOnly = True)
@@ -78,23 +77,36 @@ class CartAssembly():
                         self.setConfig(configs[0].id)
         except:
             self.settings = CartAssemblySettings()
-            self.saveSettings()
+        try:
+            with open(self.LO_SETTINGS, "r") as f:
+                d = yaml.safe_load(f)
+                self.wca = WCA.model_validate(d)
+                if self.wca.serialNum:
+                    DB = WCAs(driver = CTSDB())
+                    configs = DB.read(serialNum = self.wca.serialNum)
+                    if configs:
+                        self.setLOConfig(configs[0].id)
+        except:
+            self.wca = WCA()
+        self.saveSettings()
 
     def saveSettings(self):
         if not self.configId:
             self.settings.serialNum = ""
         with open(self.CARTASSEMBLY_SETTINGS, "w") as f:
-            yaml.dump(self.settings.dict(), f)
+            yaml.dump(self.settings.model_dump(), f)
+        with open(self.LO_SETTINGS, "w") as f:
+            yaml.dump(self.wca.model_dump(), f)
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
         self.reset()
         if configId == 0:
             return True
-        configRecords = DB.read(keyColdCart = configId)
-        if not configRecords:
+        configs = DB.read(keyColdCart = configId)
+        if not configs:
             return False
-        self.settings.serialNum = configRecords[0].serialNum
+        self.settings.serialNum = configs[0].serialNum
         
         self.keysPol0 = DB.readKeys(configId, pol = 0)
         self.keysPol1 = DB.readKeys(configId, pol = 1)
@@ -123,6 +135,20 @@ class CartAssembly():
 
     def getConfig(self) -> int:
         return self.configId if self.configId else 0
+    
+    def setLOConfig(self, configId:int) -> bool:
+        DB = WCAs(driver = CTSDB())
+        self.wca = WCA()
+        if configId == 0:
+            return True
+        configs = DB.read(configId)
+        if not configs:
+            return False
+        self.wca = configs[0]
+        self.saveSettings()
+
+    def getLOConfig(self) -> WCA:
+        return self.wca
 
     def setRecevierBias(self, FreqLO:float) -> bool:
         if not self.configId:
