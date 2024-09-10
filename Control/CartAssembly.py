@@ -26,6 +26,25 @@ class CartAssemblySettings(BaseModel):
     tolerance: float = 0.5   # uA
     sleep: float = 0.2
 
+class IVCurveResult(BaseModel):
+    VjSet: list[float] = []
+    VjRead: list[float] = []
+    IjRead: list[float] = []
+
+    def is_valid(self) -> bool:
+        return self.VjSet and self.VjRead and self.IjRead
+    
+    def assign(self, VjSet, VjRead, IjRead) -> None:
+        self.VjSet = VjSet
+        self.VjRead = VjRead
+        self.IjRead = IjRead
+
+class IVCurveResults(BaseModel):
+    curve01: IVCurveResult = IVCurveResult()
+    curve02: IVCurveResult = IVCurveResult()
+    curve11: IVCurveResult = IVCurveResult()
+    curve12: IVCurveResult = IVCurveResult()
+
 class CartAssembly():
 
     CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
@@ -62,6 +81,7 @@ class CartAssembly():
         self.preampParams02 = None
         self.preampParams11 = None
         self.preampParams12 = None
+        self.ivCurveResults = IVCurveResults()
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
@@ -315,12 +335,12 @@ class CartAssembly():
             return True, ""
 
         if onThread:
-            threading.Thread(target = self.__mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
+            threading.Thread(target = self._mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
             return True, ""
         else:
-            return self.__mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
+            return self._mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
 
-    def __mixerDefluxSequence(self, 
+    def _mixerDefluxSequence(self, 
             pol0: bool, 
             pol1: bool,
             iMagMax: float = 40.0, 
@@ -331,10 +351,64 @@ class CartAssembly():
         if pol0:
             self.loDevice.setPABias(0, 0)
             success0 = self.ccaDevice.mixerDeflux(0, iMagMax, iMagStep)
-            msg += f"pol0: {'success' if success0 else 'fail'}"
+            msg += f"pol0: {'success' if success0 else 'fail'} "
         if pol1:
             self.loDevice.setPABias(1, 0)
             success1 = self.ccaDevice.mixerDeflux(1, iMagMax, iMagStep)
-            msg += f"pol1: {'success' if success1 else 'fail'}"
+            msg += f"pol1: {'success' if success1 else 'fail'} "
 
-        return success0 & success1, msg
+        return success0 and success1, msg
+    
+    def IVCurve(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            vjStart: float = None,
+            vjStop: float = None,
+            vjStep: float = None,
+            onThread: bool = False
+        ) -> tuple[bool, str]:
+
+        if not pol0 and not pol1:
+            return False, "IVCurve: must enable at least one pol"
+    
+        if not sis1 and not sis2:
+            return False, "IVCurve: must enable at least one SIS"
+       
+        if onThread:
+            threading.Thread(target = self._mixerDefluxSequence, args = (pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep), daemon = True).start()
+            return True, ""
+        else:
+            return self._IVCurveSequence(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep)
+        
+    def _IVCurveSequence(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            vjStart: float = None,
+            vjStop: float = None,
+            vjStep: float = None
+        ) -> tuple[bool, str]:
+        self.ivCurveResults = IVCurveResults()
+        msg = "I-V Curve: "
+        if pol0:
+            if sis1:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 1, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve01.assign(VjSet, VjRead, IjRead)
+                msg += f"pol0 sis1: {'success' if self.ivCurveResults.curve01.is_valid else 'fail'} "
+            if sis2:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 2, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve02.assign(VjSet, VjRead, IjRead)
+                msg += f"pol0 sis2: {'success' if self.ivCurveResults.curve02.is_valid else 'fail'} "
+        if pol1:
+            if sis1:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 1, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve11.assign(VjSet, VjRead, IjRead)
+                msg += f"pol1 sis1: {'success' if self.ivCurveResults.curve11.is_valid else 'fail'} "
+            if sis2:
+                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 2, vjStart, vjStop, vjStep)
+                self.ivCurveResults.curve12.assign(VjSet, VjRead, IjRead)
+                msg += f"pol1 sis2: {'success' if self.ivCurveResults.curve12.is_valid else 'fail'} "
+        return True, msg
