@@ -126,11 +126,11 @@ class CartAssembly():
             self.mixerParams12 = DB.read(self.keysPol1.keyChip2)
         DB = PreampParams(driver = CTSDB())
         if self.keysPol0:
-            self.preampParams01: List[PreampParam] = DB.read(self.keysPol0.keyPreamp1)
-            self.preampParams02: List[PreampParam] = DB.read(self.keysPol0.keyPreamp2)
+            self.preampParams01 = DB.read(self.keysPol0.keyPreamp1)
+            self.preampParams02 = DB.read(self.keysPol0.keyPreamp2)
         if self.keysPol1:
-            self.preampParams11: List[PreampParam] = DB.read(self.keysPol1.keyPreamp1)
-            self.preampParams12: List[PreampParam] = DB.read(self.keysPol1.keyPreamp2)
+            self.preampParams11 = DB.read(self.keysPol1.keyPreamp1)
+            self.preampParams12 = DB.read(self.keysPol1.keyPreamp2)
         return True
 
     def getConfig(self) -> int:
