@@ -114,9 +114,9 @@ class CartAssembly():
         if not self.configId:
             self.settings.serialNum = ""
         with open(self.CARTASSEMBLY_SETTINGS, "w") as f:
-            yaml.dump(self.settings.model_dump(), f)
+            yaml.dump(self.settings.dict(), f)
         with open(self.LO_SETTINGS, "w") as f:
-            yaml.dump(self.wca.model_dump(), f)
+            yaml.dump(self.wca.dict(), f)
 
     def setConfig(self, configId:int) -> bool:
         DB = CartConfigs(driver = CTSDB())
