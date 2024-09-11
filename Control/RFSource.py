@@ -42,7 +42,7 @@ class RFSource(LODevice):
 
     def saveSettings(self):
         with open(self.RFSRC_SETTINGS, "w") as f:
-            yaml.dump(self.config.model_dump(), f)
+            yaml.dump(self.config.dict(), f)
 
     def setRFSourceConfig(self, configId:int) -> bool:
         DB = WCAs(driver = CTSDB())
