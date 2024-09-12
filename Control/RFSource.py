@@ -67,7 +67,7 @@ class RFSource(LODevice):
         if wcaFreq == 0:
             return False, "lockRF: frequency out of range"
         pllConfig = self.getPLLConfig()
-        rfReference.setFrequency((freqRF / pllConfig['coldMult'] - self.yarFREQ_FLOOG) / pllConfig['warmMult'])
+        rfReference.setFrequency((freqRF / pllConfig['coldMult'] - self.FREQ_FLOOG) / pllConfig['warmMult'])
         rfReference.setAmplitude(sigGenAmplitude)
         rfReference.setRFOutput(True)
         if not SIMULATE:
