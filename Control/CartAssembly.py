@@ -45,8 +45,26 @@ class IVCurveResults(BaseModel):
     curve11: IVCurveResult = IVCurveResult()
     curve12: IVCurveResult = IVCurveResult()
 
-class CartAssembly():
+class IJVsImagResult(BaseModel):
+    IMagSet: list[float] = []
+    IMagRead: list[float] = [] 
+    IJRead: list[float] = []
 
+    def is_valid(self) -> bool:
+        return self.IMagSet and self.IMagRead and self.IJRead
+    
+    def assign(self, IMagSet, IMagRead, IJRead) -> None:
+        self.IMagSet = IMagSet
+        self.IMagRead = IMagRead
+        self.IJRead = IJRead
+
+class IJVsImagResults(BaseModel):
+    curve01: IJVsImagResult = IJVsImagResult()
+    curve02: IJVsImagResult = IJVsImagResult()
+    curve11: IJVsImagResult = IJVsImagResult()
+    curve12: IJVsImagResult = IJVsImagResult()
+
+class CartAssembly():
     CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
     LO_SETTINGS = "Settings_LO.yaml"
 
@@ -82,6 +100,7 @@ class CartAssembly():
         self.preampParams11 = None
         self.preampParams12 = None
         self.ivCurveResults = IVCurveResults()
+        self.ijVsImagResults = IJVsImagResults()
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
@@ -411,4 +430,59 @@ class CartAssembly():
                 VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 2, vjStart, vjStop, vjStep)
                 self.ivCurveResults.curve12.assign(VjSet, VjRead, IjRead)
                 msg += f"pol1 sis2: {'success' if self.ivCurveResults.curve12.is_valid else 'fail'} "
+        return True, msg
+    
+    def mixerVsMagnetCurrent(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            iMagStart: float = None,
+            iMagStop: float = None,
+            iMagStep: float = None,
+            onThread: bool = False
+        ) -> tuple[bool, str]:
+        
+        if not pol0 and not pol1:
+            return False, "mixerVsMagnetCurrent: must enable at least one pol"
+    
+        if not sis1 and not sis2:
+            return False, "mixerVsMagnetCurrent: must enable at least one SIS"
+       
+        if onThread:
+            threading.Thread(target = self._mixerVsMagnetCurrentSequence, args = (pol0, pol1, sis1, sis2, iMagStart, iMagStop, iMagStep), daemon = True).start()
+            return True, ""
+        else:
+            return self._IVCurveSequence(pol0, pol1, sis1, sis2, iMagStart, iMagStop, iMagStep)
+        
+    def _mixerVsMagnetCurrentSequence(self,
+            pol0: bool = True,
+            pol1: bool = True, 
+            sis1: bool = True,
+            sis2: bool = True,
+            iMagStart: float = None,
+            iMagStop: float = None,
+            iMagStep: float = None
+        ) -> tuple[bool, str]:
+
+        self.ijVsImagResults = IJVsImagResults()
+        msg = "IJ vs IMAG: "
+        if pol0:
+            if sis1:
+                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(0, 1, iMagStart, iMagStop, iMagStep)
+                self.ijVsImagResults.curve01.assign(IMagSet, IMagRead, IjRead)
+                msg += f"pol0 sis1: {'success' if self.ijVsImagResults.curve01.is_valid else 'fail'} "
+            if sis2:
+                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(0, 2, iMagStart, iMagStop, iMagStep)
+                self.ijVsImagResults.curve02.assign(IMagSet, IMagRead, IjRead)
+                msg += f"pol0 sis2: {'success' if self.ijVsImagResults.curve02.is_valid else 'fail'} "
+        if pol1:
+            if sis1:
+                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(1, 1, iMagStart, iMagStop, iMagStep)
+                self.ijVsImagResults.curve11.assign(IMagSet, IMagRead, IjRead)
+                msg += f"pol1 sis1: {'success' if self.ijVsImagResults.curve11.is_valid else 'fail'} "
+            if sis2:
+                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(1, 2, iMagStart, iMagStop, iMagStep)
+                self.ijVsImagResults.curve12.assign(IMagSet, IMagRead, IjRead)
+                msg += f"pol1 sis2: {'success' if self.ijVsImagResults.curve12.is_valid else 'fail'} "
         return True, msg
