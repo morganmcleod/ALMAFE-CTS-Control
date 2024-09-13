@@ -24,14 +24,12 @@ def noise_temperature():
                 break
             
             coldLoad.startFill()
-            actor.checkColdLoad()
             actor.setLO(freqLO, setBias = True)
 
             records = None
             if settings.testSteps.noiseTemp or settings.testSteps.loWGIntegrity:
+                actor.checkColdLoad()
                 records = actor.measureNoiseTemp(cart_test.key, freqLO, receiver.isLocked(), freqIF = 0)
-
-            coldLoad.stopFill()
             
             if settings.testSteps.imageReject:
                 for freqIF in makeSteps(noiseTempSettings.ifStart, noiseTempSettings.ifStop, noiseTempSettings.ifStep):
