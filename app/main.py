@@ -1,3 +1,5 @@
+import asyncio
+
 # FastAPI and ASGI:
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -154,13 +156,15 @@ startupEvent = {'msg': 'API Startup'}
 async def websocket_actionPublisher(websocket: WebSocket):
     global startupEvent
     await manager.connect(websocket)
-    try:
-        if startupEvent:
-            await manager.send(startupEvent, websocket)
-            startupEvent = None
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /startup_ws")
+    while True:
+        try:
+            if startupEvent:
+                await manager.send(startupEvent, websocket)
+                startupEvent = None
+        except WebSocketDisconnect:
+            manager.disconnect(websocket)
+            logger.exception("WebSocketDisconnect: /startup_ws")
+        await asyncio.sleep(1);
 
 @app.get("/", tags=["API"], response_model = MessageResponse)
 async def get_Root(callback:str = None):
