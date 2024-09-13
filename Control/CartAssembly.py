@@ -377,7 +377,7 @@ class CartAssembly():
             return False, "IVCurve: must enable at least one SIS"
        
         if onThread:
-            threading.Thread(target = self._mixerDefluxSequence, args = (pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep), daemon = True).start()
+            threading.Thread(target = self._IVCurveSequence, args = (pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep), daemon = True).start()
             return True, ""
         else:
             return self._IVCurveSequence(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep)

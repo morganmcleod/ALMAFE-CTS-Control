@@ -64,10 +64,10 @@ async def get_MixerDeflux():
 
 @router.put("/ivcurve", response_model = MessageResponse)
 async def sis_IVCurve(pol0: bool = True, pol1: bool = True, sis1: bool = True, sis2: bool = True,
-                      VjLow: float = None, VjHigh: float = None, VjStep: float = None):
-    FEMC.cartAssembly.IVCurve(pol0, pol1, sis1, sis2, VjLow, VjHigh, VjStep, True)
+                      vjStart: float = None, vjStop: float = None, vjStep: float = None):
+    FEMC.cartAssembly.IVCurve(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep, True)
     return MessageResponse(message = "I-V Curve started", success = True)
 
 @router.get("/ivcurve", response_model = IVCurveResults)
 async def get_IVCurve():
-    return FEMC.CartAssembly.ivCurveResults
+    return FEMC.cartAssembly.ivCurveResults
