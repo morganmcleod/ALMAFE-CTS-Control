@@ -4,6 +4,11 @@ from .NTCommon import *
 def noise_temperature():
     logger = logging.getLogger("ALMAFE-CTS-Control")
     
+    next_pos = beamScanMotorController.getPosition()
+    next_pos.pol = -58.5
+    beamScanMotorController.setNextPos(next_pos)
+    beamScanMotorController.startMove()
+
     cart_test = measurementStatus.getMeasuring()
     receiver.setConfig(cart_test.configId)
 

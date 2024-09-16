@@ -1,10 +1,11 @@
+import yaml
 from fastapi import APIRouter
 from schemas.CCA import *
 from schemas.common import *
 from Control.schemas.DeviceInfo import DeviceInfo
+from AMB.schemas.MixerTests import *
 import hardware.FEMC as FEMC
 from app.schemas.Response import MessageResponse
-import yaml
 
 router = APIRouter(prefix="/cca")
 
@@ -116,3 +117,30 @@ async def get_Preset(index: int):
     with open(f"CCAPreset{index}.yaml", "r") as f:
         d = yaml.safe_load(f)
     return Preset.parse_obj(d)
+
+@router.put("/ivcurve", response_model = MessageResponse)
+async def sis_IVCurve(settings: IVCurveSettings):
+    FEMC.cartAssembly.startIVCurve(settings, onThread = True)
+    return MessageResponse(message = "I-V Curve started", success = True)
+
+@router.get("/ivcurve", response_model = IVCurveResults)
+async def get_IVCurve():
+    return FEMC.cartAssembly.ivCurveResults
+
+@router.put("/ij_vs_imag", response_model = MessageResponse)
+async def sis_ij_vs_imag(settings: IJVsImagSettings):
+    FEMC.cartAssembly.startIJVsIMag(settings, onThread = True)
+    return MessageResponse(message = "Critical current vs IMag started", success = True)
+
+@router.get("/ij_vs_imag", response_model = IJVsImagResults)
+async def get_ij_vs_imag():
+    return FEMC.cartAssembly.ijVsIMagResults
+
+@router.put("/mixerdeflux", response_model = MessageResponse)
+async def put_MixerDeflux(settings: DefluxSettings):
+    FEMC.cartAssembly.startDeflux(settings, onThread = True)
+    return MessageResponse(message = "Mixer deflux started", success = True)
+
+@router.get("/mixerdeflux", response_model = DefluxResults)
+async def get_MixerDeflux():
+    return FEMC.cartAssembly.defluxResults

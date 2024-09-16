@@ -1,22 +1,23 @@
+import time
+import logging
+import threading
+import yaml
+
 from pydantic import BaseModel
 from typing import List, Tuple
 from bisect import bisect_left
+
+from DebugOptions import *
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
-
+from AMB.schemas.MixerTests import *
 from app.database.CTSDB import CTSDB
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.MixerParams import MixerParams, MixerParam
 from DBBand6Cart.PreampParams import PreampParams, PreampParam
 from DBBand6Cart.WCAs import WCAs, WCA
-
-from Control.PBAController import PBAController
+from .PBAController import PBAController
 from INSTR.SignalGenerator.Interface import SignalGenInterface
-import time
-import logging
-import threading
-from DebugOptions import *
-import yaml
 
 class CartAssemblySettings(BaseModel):
     serialNum: str = ""
@@ -25,44 +26,6 @@ class CartAssemblySettings(BaseModel):
     max_iter: int = 15
     tolerance: float = 0.5   # uA
     sleep: float = 0.2
-
-class IVCurveResult(BaseModel):
-    VjSet: list[float] = []
-    VjRead: list[float] = []
-    IjRead: list[float] = []
-
-    def is_valid(self) -> bool:
-        return self.VjSet and self.VjRead and self.IjRead
-    
-    def assign(self, VjSet, VjRead, IjRead) -> None:
-        self.VjSet = VjSet
-        self.VjRead = VjRead
-        self.IjRead = IjRead
-
-class IVCurveResults(BaseModel):
-    curve01: IVCurveResult = IVCurveResult()
-    curve02: IVCurveResult = IVCurveResult()
-    curve11: IVCurveResult = IVCurveResult()
-    curve12: IVCurveResult = IVCurveResult()
-
-class IJVsImagResult(BaseModel):
-    IMagSet: list[float] = []
-    IMagRead: list[float] = [] 
-    IJRead: list[float] = []
-
-    def is_valid(self) -> bool:
-        return self.IMagSet and self.IMagRead and self.IJRead
-    
-    def assign(self, IMagSet, IMagRead, IJRead) -> None:
-        self.IMagSet = IMagSet
-        self.IMagRead = IMagRead
-        self.IJRead = IJRead
-
-class IJVsImagResults(BaseModel):
-    curve01: IJVsImagResult = IJVsImagResult()
-    curve02: IJVsImagResult = IJVsImagResult()
-    curve11: IJVsImagResult = IJVsImagResult()
-    curve12: IJVsImagResult = IJVsImagResult()
 
 class CartAssembly():
     CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
@@ -100,7 +63,8 @@ class CartAssembly():
         self.preampParams11 = None
         self.preampParams12 = None
         self.ivCurveResults = IVCurveResults()
-        self.ijVsImagResults = IJVsImagResults()
+        self.ijVsIMagResults = IJVsImagResults()
+        self.defluxResults = DefluxResults()
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
@@ -340,149 +304,28 @@ class CartAssembly():
         pll = self.loDevice.getLockInfo()
         return pll['isLocked']
 
-    def mixersDeflux(self, 
-            pol0: bool = True, 
-            pol1: bool = True, 
-            iMagMax: float = 40.0, 
-            iMagStep: float = 1.0, 
-            onThread: bool = False) -> tuple[bool, str]:
-        
-        if not pol0 and not pol1:
-            return False, "mixersDeflux: must enable at least one pol"
-       
-        if SIMULATE:
-            return True, ""
-
+    def startIVCurve(self, settings: IVCurveSettings, onThread: bool = False) -> None:
         if onThread:
-            threading.Thread(target = self._mixerDefluxSequence, args = (pol0, pol1, iMagMax, iMagStep), daemon = True).start()
-            return True, ""
+            threading.Thread(target = self.ccaDevice.IVCurve, args = (settings, self.ivCurveResults), daemon = True).start()
         else:
-            return self._mixerDefluxSequence(pol0, pol1, iMagMax, iMagStep)
-
-    def _mixerDefluxSequence(self, 
-            pol0: bool, 
-            pol1: bool,
-            iMagMax: float = 40.0, 
-            iMagStep: float = 1.0) -> tuple[bool, str]:
+            self.ivCurveResults = self.ccaDevice.IVCurve(settings)
     
-        msg = f"mixersDeflux: "
-        success0 = success1 = True
-        if pol0:
-            self.loDevice.setPABias(0, 0)
-            success0 = self.ccaDevice.mixerDeflux(0, iMagMax, iMagStep)
-            msg += f"pol0: {'success' if success0 else 'fail'} "
-        if pol1:
-            self.loDevice.setPABias(1, 0)
-            success1 = self.ccaDevice.mixerDeflux(1, iMagMax, iMagStep)
-            msg += f"pol1: {'success' if success1 else 'fail'} "
-
-        return success0 and success1, msg
-    
-    def IVCurve(self,
-            pol0: bool = True,
-            pol1: bool = True, 
-            sis1: bool = True,
-            sis2: bool = True,
-            vjStart: float = None,
-            vjStop: float = None,
-            vjStep: float = None,
-            onThread: bool = False
-        ) -> tuple[bool, str]:
-
-        if not pol0 and not pol1:
-            return False, "IVCurve: must enable at least one pol"
-    
-        if not sis1 and not sis2:
-            return False, "IVCurve: must enable at least one SIS"
-       
+    def startIJVsIMag(self, settings: IJVsImagSettings, onThread: bool = False) -> None:
+        if settings.enablePol0:
+            self.loDevice.setPAOutput(0, 0)
+        if settings.enablePol1:
+            self.loDevice.setPAOutput(1, 0)
         if onThread:
-            threading.Thread(target = self._IVCurveSequence, args = (pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep), daemon = True).start()
-            return True, ""
+            threading.Thread(target = self.ccaDevice.IJVsIMag, args = (settings, self.ijVsIMagResults), daemon = True).start()
         else:
-            return self._IVCurveSequence(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep)
-        
-    def _IVCurveSequence(self,
-            pol0: bool = True,
-            pol1: bool = True, 
-            sis1: bool = True,
-            sis2: bool = True,
-            vjStart: float = None,
-            vjStop: float = None,
-            vjStep: float = None
-        ) -> tuple[bool, str]:
-        self.ivCurveResults = IVCurveResults()
-        msg = "I-V Curve: "
-        if pol0:
-            if sis1:
-                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 1, vjStart, vjStop, vjStep)
-                self.ivCurveResults.curve01.assign(VjSet, VjRead, IjRead)
-                msg += f"pol0 sis1: {'success' if self.ivCurveResults.curve01.is_valid else 'fail'} "
-            if sis2:
-                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(0, 2, vjStart, vjStop, vjStep)
-                self.ivCurveResults.curve02.assign(VjSet, VjRead, IjRead)
-                msg += f"pol0 sis2: {'success' if self.ivCurveResults.curve02.is_valid else 'fail'} "
-        if pol1:
-            if sis1:
-                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 1, vjStart, vjStop, vjStep)
-                self.ivCurveResults.curve11.assign(VjSet, VjRead, IjRead)
-                msg += f"pol1 sis1: {'success' if self.ivCurveResults.curve11.is_valid else 'fail'} "
-            if sis2:
-                VjSet, VjRead, IjRead = self.ccaDevice.IVCurve(1, 2, vjStart, vjStop, vjStep)
-                self.ivCurveResults.curve12.assign(VjSet, VjRead, IjRead)
-                msg += f"pol1 sis2: {'success' if self.ivCurveResults.curve12.is_valid else 'fail'} "
-        return True, msg
-    
-    def mixerVsMagnetCurrent(self,
-            pol0: bool = True,
-            pol1: bool = True, 
-            sis1: bool = True,
-            sis2: bool = True,
-            iMagStart: float = None,
-            iMagStop: float = None,
-            iMagStep: float = None,
-            onThread: bool = False
-        ) -> tuple[bool, str]:
-        
-        if not pol0 and not pol1:
-            return False, "mixerVsMagnetCurrent: must enable at least one pol"
-    
-        if not sis1 and not sis2:
-            return False, "mixerVsMagnetCurrent: must enable at least one SIS"
-       
-        if onThread:
-            threading.Thread(target = self._mixerVsMagnetCurrentSequence, args = (pol0, pol1, sis1, sis2, iMagStart, iMagStop, iMagStep), daemon = True).start()
-            return True, ""
-        else:
-            return self._IVCurveSequence(pol0, pol1, sis1, sis2, iMagStart, iMagStop, iMagStep)
-        
-    def _mixerVsMagnetCurrentSequence(self,
-            pol0: bool = True,
-            pol1: bool = True, 
-            sis1: bool = True,
-            sis2: bool = True,
-            iMagStart: float = None,
-            iMagStop: float = None,
-            iMagStep: float = None
-        ) -> tuple[bool, str]:
+            self.ijVsIMagResults = self.ccaDevice.IJVsIMag(settings)
 
-        self.ijVsImagResults = IJVsImagResults()
-        msg = "IJ vs IMAG: "
-        if pol0:
-            if sis1:
-                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(0, 1, iMagStart, iMagStop, iMagStep)
-                self.ijVsImagResults.curve01.assign(IMagSet, IMagRead, IjRead)
-                msg += f"pol0 sis1: {'success' if self.ijVsImagResults.curve01.is_valid else 'fail'} "
-            if sis2:
-                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(0, 2, iMagStart, iMagStop, iMagStep)
-                self.ijVsImagResults.curve02.assign(IMagSet, IMagRead, IjRead)
-                msg += f"pol0 sis2: {'success' if self.ijVsImagResults.curve02.is_valid else 'fail'} "
-        if pol1:
-            if sis1:
-                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(1, 1, iMagStart, iMagStop, iMagStep)
-                self.ijVsImagResults.curve11.assign(IMagSet, IMagRead, IjRead)
-                msg += f"pol1 sis1: {'success' if self.ijVsImagResults.curve11.is_valid else 'fail'} "
-            if sis2:
-                IMagSet, IMagRead, IjRead = self.ccaDevice.mixerVsMagnetCurrent(1, 2, iMagStart, iMagStop, iMagStep)
-                self.ijVsImagResults.curve12.assign(IMagSet, IMagRead, IjRead)
-                msg += f"pol1 sis2: {'success' if self.ijVsImagResults.curve12.is_valid else 'fail'} "
-        return True, msg
+    def startDeflux(self, settings: DefluxSettings, onThread: bool = False) -> None:
+        if settings.enablePol0:
+            self.loDevice.setPAOutput(0, 0)
+        if settings.enablePol1:
+            self.loDevice.setPAOutput(1, 0)
+        if onThread:
+            threading.Thread(target = self.ccaDevice.mixersDeflux, args = (settings, self.defluxResults), daemon = True).start()
+        else:
+            self.defluxResults = self.ccaDevice.mixersDeflux(settings)

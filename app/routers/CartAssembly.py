@@ -4,8 +4,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import hardware.FEMC as FEMC
 from app.schemas.Response import MessageResponse
 from .ConnectionManager import ConnectionManager
-from AMB.CCADevice import DefluxStatus
-from Control.CartAssembly import IVCurveResults, IJVsImagResults
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix="/cartassy")
@@ -46,38 +44,3 @@ async def put_AutoLOPower(pol: int):
         return MessageResponse(message = f"Auto LO power failed pol={pol}", success = False)
     else:
         return MessageResponse(message = f"Setting auto LO power for pol={pol}...", success = True)
-
-@router.put("/mixersdeflux", response_model = MessageResponse)
-async def put_MixerDeflux(pol: int, iMagMax: float = 40.0, iMagStep: float = 1.0):
-    pol0 = True if pol in (-1, 0) else False
-    pol1 = True if pol in (-1, 1) else False
-    
-    if not FEMC.cartAssembly.mixersDeflux(pol0, pol1, iMagMax, iMagStep, onThread = True):
-        return MessageResponse(message = f"Mixers deflux failed for pol={pol}", success = False)
-    else:
-        return MessageResponse(message = f"Mixers deflux started for pol={pol}...", success = True)
-
-@router.get("/mixersdeflux", response_model = DefluxStatus)
-async def get_MixerDeflux():
-    return FEMC.cartAssembly.ccaDevice.defluxStatus
-
-
-@router.put("/ivcurve", response_model = MessageResponse)
-async def sis_IVCurve(pol0: bool = True, pol1: bool = True, sis1: bool = True, sis2: bool = True,
-                      vjStart: float = None, vjStop: float = None, vjStep: float = None):
-    FEMC.cartAssembly.IVCurve(pol0, pol1, sis1, sis2, vjStart, vjStop, vjStep, True)
-    return MessageResponse(message = "I-V Curve started", success = True)
-
-@router.get("/ivcurve", response_model = IVCurveResults)
-async def get_IVCurve():
-    return FEMC.cartAssembly.ivCurveResults
-
-@router.put("/ij_vs_imag", response_model = MessageResponse)
-async def sis_ij_vs_imag(pol0: bool = True, pol1: bool = True, sis1: bool = True, sis2: bool = True,
-                      iMagStart: float = None, iMagStop: float = None, iMagStep: float = None):
-    FEMC.cartAssembly.mixerVsMagnetCurrent(pol0, pol1, sis1, sis2, iMagStart, iMagStop, iMagStep, True)
-    return MessageResponse(message = "I-V Curve started", success = True)
-
-@router.get("/ij_vs_imag", response_model = IJVsImagResults)
-async def get_ij_vs_imag():
-    return FEMC.cartAssembly.ijVsImagResults

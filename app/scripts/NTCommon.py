@@ -7,6 +7,8 @@ from hardware.FEMC import cartAssembly as receiver, rfSrcDevice
 from hardware.NoiseTemperature import powerSupply, temperatureMonitor, chopper, coldLoad
 from hardware.PowerDetect import powerDetect
 from hardware.IFSystem import ifSystem
+from hardware.BeamScanner import motorController as beamScanMotorController
+from Measure.BeamScanner.schemas import Position
 from Measure.NoiseTemperature.NoiseTempActions import NoiseTempActions
 from Measure.Shared.makeSteps import makeSteps
 from DBBand6Cart.schemas.DUT_Type import DUT_Type
