@@ -87,7 +87,7 @@ async def getMixerParams(keyChip:int, callback:str = None):
 async def putMixerParams(keyChip: int, values: List[MixerParam], callback:str = None):
     DB = MixerParams(driver = CTSDB())
     if DB.create(keyChip, values):
-        return MessageResponse(message = f"Wrote mixerparams for chip {keyChip}", success = True)
+        return MessageResponse(message = f"Saved mixerparams for chip {keyChip}", success = True)
     else:
         return MessageResponse(message = f"Error writing mixerparams for chip {keyChip}", success = False)
 
@@ -103,7 +103,7 @@ async def getPreampParams(keyPreamp:int, callback:str = None):
 async def putPreampParams(keyPreamp:int, values: List[PreampParam], callback:str = None):
     DB = PreampParams(driver = CTSDB())
     if DB.create(keyPreamp, values):
-        return MessageResponse(message = f"Wrote preampparams for amplifier {keyPreamp}", success = True)
+        return MessageResponse(message = f"Saved preampparams for amplifier {keyPreamp}", success = True)
     else:
         return MessageResponse(message = f"Error writing preampparams for amplifier {keyPreamp}", success = False)    
 
