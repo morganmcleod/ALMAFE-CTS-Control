@@ -10,5 +10,4 @@ class DataDisplay():
         self.specAnPowerHistory = None
         self.currentNoiseTemp = [None, None]
         self.yFactorHistory = []
-
-
+        self.stabilityHistory = []

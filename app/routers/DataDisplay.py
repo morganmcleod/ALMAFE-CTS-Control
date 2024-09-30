@@ -98,3 +98,22 @@ async def websocket_yfactor(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /yfactor_ws")
+
+@router.websocket("/stability/timeseries_ws")
+async def websocket_amp_timeseries_push(websocket: WebSocket):
+    await manager.connect(websocket)
+    lastMsg = None
+    try:
+        while True:
+            if not dataDisplay.stabilityHistory:
+                lastMsg = None
+            else:
+                record = dataDisplay.stabilityHistory[-1]
+                if record != lastMsg:
+                    lastMsg = record
+                    toSend = jsonable_encoder(record)
+                    await manager.send(toSend, websocket) 
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /amp/timeseries_ws")

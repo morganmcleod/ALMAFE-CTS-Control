@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 class Settings(BaseModel):
-    sampleRate: float = 50      # samples/sec
+    sampleRate: float = 20      # samples/sec
     sensorAmbient: int = 7
     attenuateIF: int = 3
     targetLevel: float = -10    # dBm
@@ -26,3 +26,8 @@ class TimeSeriesInfo(BaseModel):
     dataStatus: str
     timeSeriesPlot: int = None
     allanPlot: int = None
+
+class StabilitySample(BaseModel):
+    timeStamp: datetime
+    amplitude: float
+    temperature: float

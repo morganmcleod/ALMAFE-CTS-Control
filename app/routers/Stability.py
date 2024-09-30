@@ -13,69 +13,11 @@ from app.schemas.Stability import StabilityPlot
 from DBBand6Cart.AmplitudeStability import AmplitudeStability as AmplitudeStability_DB
 from DBBand6Cart.PhaseStability import PhaseStability as PhaseStability_DB
 from DBBand6Cart.TestResultPlots import TestResultPlots
-from .ConnectionManager import ConnectionManager
 from app.schemas.Response import MessageResponse, ListResponse, prepareListResponse
-import asyncio
 import logging
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
-
 router = APIRouter(prefix="/stability")
-manager = ConnectionManager()
-
-@router.websocket("/amp/timeseries_ws")
-async def websocket_amp_timeseries_push(websocket: WebSocket):
-    await manager.connect(websocket)
-    lastMessageId = None
-    lastTimeStamp = None
-    try:
-        while True:
-            doSend = False
-            ts = amplitudeStablilty.getTimeSeries(latestOnly = True)
-            if ts.tsId != lastMessageId:
-                lastMessageId = ts.tsId
-                doSend = True
-            elif ts.timeStamps and ts.timeStamps[0] != lastTimeStamp:
-                lastTimeStamp = ts.timeStamps[0]
-                doSend = True
-            if doSend:
-                ts = jsonable_encoder(ts)
-                await manager.send(ts, websocket)                
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /amp/timeseries_ws")
-
-@router.websocket("/phase/timeseries_ws")
-async def websocket_phase_timeseries_push(websocket: WebSocket):
-    await manager.connect(websocket)
-    lastMessageId = None
-    lastTimeStamp = None
-    try:
-        while True:
-            doSend = False
-            ts = phaseStability.getTimeSeries(latestOnly = True)
-            if ts.tsId != lastMessageId:
-                lastMessageId = ts.tsId
-                doSend = True
-            elif ts.timeStamps and ts.timeStamps[0] != lastTimeStamp:
-                lastTimeStamp = ts.timeStamps[0]
-                doSend = True
-            if doSend:
-                ts = jsonable_encoder(ts)
-                await manager.send(ts, websocket)                
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /phase/timeseries_ws")
-
-@router.get("/amp/timeseries", response_model = TimeSeries)
-async def get_TimeSeries(first: int, last: Optional[int] = -1, targetLength: Optional[int] = None):
-    return amplitudeStablilty.getTimeSeries(first, last, targetLength = targetLength)
-
-@router.get("/phase/timeseries", response_model = TimeSeries)
-async def get_TimeSeries(first: int, last: Optional[int] = -1, targetLength: Optional[int] = None):
-    return phaseStability.getTimeSeries(first, last, targetLength = targetLength)
 
 @router.get("/amp/settings", response_model = Settings)
 async def get_Settings():

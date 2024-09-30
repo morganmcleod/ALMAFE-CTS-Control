@@ -1,5 +1,5 @@
 from .Interface import PowerDetect_Interface, DeviceInfo, DetectMode, Units
-from INSTR.DMM.HP34401 import HP34401, Function, AutoZero
+from INSTR.DMM.HP34401 import HP34401, Function, AutoZero, TriggerSource
 from DebugOptions import *
 
 class PDVoltMeter(PowerDetect_Interface):
@@ -13,9 +13,17 @@ class PDVoltMeter(PowerDetect_Interface):
         self._units = Units.VOLTS
     
     def configure(self, **kwargs) -> None:
-        self.voltMeter.configureMeasurement(Function.DC_VOLTAGE)
+        self.voltMeter.configureMeasurement(
+            Function.DC_VOLTAGE, 
+            autoRange = False, 
+            manualRange = 0.1
+        )
         self.voltMeter.configureAutoZero(AutoZero.OFF)
         self.voltMeter.configureAveraging(Function.DC_VOLTAGE, 1)
+        sample_count = kwargs.get('sample_count', 1)
+        if sample_count > 1:
+            self.voltMeter.inst.write(f"SAMP:COUN {sample_count};")
+        self.voltMeter.configureTrigger(TriggerSource.IMMEDIATE)
     
     @property
     def device_info(self) -> DeviceInfo:
@@ -42,8 +50,8 @@ class PDVoltMeter(PowerDetect_Interface):
     def units(self, units: Units) -> None:
         self._units = units
 
-    def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
-        return self.voltMeter.readSinglePoint()
+    def read(self, **kwargs) -> list[float]:
+        return self.voltMeter.read()
         
     def zero(self) -> None:
         pass

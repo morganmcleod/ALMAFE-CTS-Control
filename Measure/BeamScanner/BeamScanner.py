@@ -135,7 +135,10 @@ class BeamScanner():
             self.keyCartTest = cartTestsDb.create(cartTest)
         else:
             self.keyCartTest = 1
-
+        
+        self.measurementStatus.setComplete(False)
+        self.measurementStatus.setStatusMessage("Started")
+        
         self.stopNow = False
         self.scanStatus = ScanStatus()
         # make this not None for now, so client will display that measurement has started:
@@ -237,6 +240,7 @@ class BeamScanner():
                 self.scanStatus.activeScan = None
         self.scanStatus.scanComplete = True
         self.scanStatus.measurementComplete = True
+        self.measurementStatus.setMeasuring(None)
 
     def __runOneScan(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         try:
@@ -348,7 +352,7 @@ class BeamScanner():
                     return (False, "User Stop")
 
                 # go to start of this raster:
-                startPos = nextPos = Position(
+                startPos = Position(
                     x = self.measurementSpec.scanStart.x, 
                     y = self.yPos, 
                     pol = self.scanAngle
@@ -384,7 +388,7 @@ class BeamScanner():
 
                 # configure external triggering:
                 self.mc.setXYSpeed(self.XY_SPEED_SCANNING)
-                moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
+                moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), endPos)
                 success, msg = self.__configurePNARaster(scan, subScan, moveTimeout)
                 if not success:
                     self.__logBPError(
@@ -447,12 +451,13 @@ class BeamScanner():
         moveTimeout = self.mc.estimateMoveTime(self.mc.getPosition(), nextPos)
         self.mc.setNextPos(nextPos)
         self.mc.startMove(withTrigger, moveTimeout)
-        moveStatus = self.mc.waitForMove()
+        moveStatus = self.mc.waitForMove(timeout = moveTimeout + 0.5)
+        actualPos = self.mc.getPosition(cached = False)
         self.mc.stopMove()
         if self.stopNow:
             return (False, "__moveScanner: User Stop")
         else:
-            return (not moveStatus.isError(), "__moveScanner: " + moveStatus.getText())
+            return (not moveStatus.isError(), f"__moveScanner: {moveStatus.getText()} nextPos: {nextPos.getText()} actual: {actualPos.getText()}")
 
     def __measureCenterPower(self, scan:ScanListItem, subScan:SubScan, scanComplete:bool = False) -> Tuple[bool, str]:
         success, msg = self.__moveToBeamCenter(scan, subScan)

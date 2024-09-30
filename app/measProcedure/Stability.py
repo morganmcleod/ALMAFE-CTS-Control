@@ -8,6 +8,7 @@ from hardware.IFSystem import ifSystem
 from Control.PowerDetect.PDPNA import PDPNA
 from Control.PowerDetect.PDVoltMeter import PDVoltMeter
 from app.measProcedure.MeasurementStatus import measurementStatus
+from app.measProcedure.DataDisplay import dataDisplay
 from Measure.Stability.MeasureStablility import MeasureStability
 from Measure.Stability.CalcDataAmplitudeStability import CalcDataAmplitudeStability
 from Measure.Stability.CalcDataPhaseStability import CalcDataPhaseStability
@@ -27,7 +28,8 @@ amplitudeStablilty = MeasureStability(
     tempMonitor = temperatureMonitor,
     rfSrcDevice = None,
     measurementStatus = measurementStatus,
-    calcDataInterface = calcDataAmplitudeStability
+    calcDataInterface = calcDataAmplitudeStability,
+    dataDisplay = dataDisplay
 )
 
 pdPNA = PDPNA(pna)
@@ -42,5 +44,6 @@ phaseStability = MeasureStability(
     tempMonitor = temperatureMonitor,
     rfSrcDevice = rfSrcDevice,
     measurementStatus = measurementStatus,
-    calcDataInterface = calcDataPhaseStability
+    calcDataInterface = calcDataPhaseStability,
+    dataDisplay = dataDisplay
 )
