@@ -17,10 +17,10 @@ if SIMULATE:
 else:
     powerSupply = PowerSupply("GPIB0::5::INSTR")
 
-if SIMULATE:
+# if SIMULATE:
     coldLoad = AMI1720Simulator()
-else:
-    coldLoad = AMI1720("TCPIP0::10.1.1.5::7180::SOCKET")
+# else:
+    # coldLoad = AMI1720("TCPIP0::10.1.1.5::7180::SOCKET")
 
 chopper = Chopper(simulate = SIMULATE)
 

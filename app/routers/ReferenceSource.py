@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request
-from hardware.ReferenceSources import loReference, rfReference
+import hardware.ReferenceSources 
+loReference = hardware.ReferenceSources.loReference
+rfReference = hardware.ReferenceSources.rfReference
 from schemas.ReferenceSource import ReferenceSourceStatus
 from Control.schemas.DeviceInfo import DeviceInfo
 from app.schemas.Response import MessageResponse

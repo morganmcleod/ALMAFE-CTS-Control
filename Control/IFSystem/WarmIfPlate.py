@@ -10,11 +10,11 @@ class IFSystem(IFSystem_Interface):
         self.reset()
 
     def reset(self) -> None:
-        self.warmIFPlate.outputSwitch.setValue(OutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+        self.warmIFPlate.outputSwitch.setValue(WIFOutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
         self.warmIFPlate.inputSwitch.selected = InputSelect.POL0_USB
         self.warmIFPlate.yigFilter.setFrequency(0.0)
         self.warmIFPlate.attenuator.setValue(20.0)
-        self.outputSelect = OutputSelect.NONE
+        self.outputSelect = OutputSelect.POWER_DETECT
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -55,7 +55,7 @@ class IFSystem(IFSystem_Interface):
     
     @property
     def frequency(self) -> float:
-        return self.warmIFPlate.yigFilter.getFrequency
+        return self.warmIFPlate.yigFilter.getFrequency()
     
     @frequency.setter
     def frequency(self, freq_GHz: float):

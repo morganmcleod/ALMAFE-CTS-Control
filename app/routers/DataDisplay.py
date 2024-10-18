@@ -1,8 +1,11 @@
 import asyncio
 import logging
+from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
-from app.measProcedure.DataDisplay import dataDisplay
+import measProcedure.DataDisplay
+dataDisplay = measProcedure.DataDisplay.dataDisplay
+from AMB.schemas.MixerTests import IVCurveResult, MagnetOptResult, DefluxResult
 from .ConnectionManager import ConnectionManager
 
 manager = ConnectionManager()
@@ -116,4 +119,137 @@ async def websocket_amp_timeseries_push(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /amp/timeseries_ws")
+        logger.exception("WebSocketDisconnect: /stability/timeseries_ws")
+
+@router.websocket("/mixertests/iv_curves_ws")
+async def websocket_iv_curves(websocket: WebSocket):
+    # these are local static-like variables that retain their values between calls:
+    try:
+        lastTimeStamp = websocket_iv_curves.lastTimeStamp
+        nextSendIndex = websocket_iv_curves.nextSendIndex
+    except:
+        lastTimeStamp = websocket_iv_curves.lastTimeStamp = [None, None, None, None]
+        nextSendIndex = websocket_iv_curves.nextSendIndex = [0, 0, 0, 0]
+
+    await manager.connect(websocket)
+    try:
+        while True:
+            # cycle through the four mixers:
+            curveIndex = 0
+            while curveIndex < 4:
+                # check for available data:
+                curve = dataDisplay.ivCurveResults.curves[curveIndex]
+                if len(curve) == 0:
+                    curveIndex += 1
+                # check if we already sent a curve having the same timestamp:
+                elif curve.timeStamp != lastTimeStamp[curveIndex]:
+                    # is there new data to send?
+                    if len(curve) > nextSendIndex[curveIndex]:
+                        if nextSendIndex[curveIndex] == 0:
+                            # send an empty result to clear any prevous trace:
+                            toSend = IVCurveResult(pol = curve.pol, sis = curve.sis, timeStamp=datetime.now())
+                            await manager.send(jsonable_encoder(toSend), websocket)
+                        # send the new data:
+                        toSend = curve.copy_from_index(nextSendIndex[curveIndex])
+                        await manager.send(jsonable_encoder(toSend), websocket)
+                    if curve.finished:
+                        # save the timestamp so we don't send this one again:
+                        lastTimeStamp[curveIndex] = curve.timeStamp
+                        nextSendIndex[curveIndex] = 0
+                        # for I-V curves we are only ever sending one at a time. 
+                        # So go the next curve only when this one's finished:
+                        curveIndex += 1
+                    else:
+                        # save the next index to send on next iteration:
+                        nextSendIndex[curveIndex] = len(curve)
+                await asyncio.sleep(0.2)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /mixertests/iv_curves_ws")
+
+
+@router.websocket("/mixertests/magnet_opt_ws")
+async def websocket_magnet_opt(websocket: WebSocket):
+    # these are local static-like variables that retain their values between calls:
+    try:
+        lastTimeStamp = websocket_magnet_opt.lastTimeStamp
+        nextSendIndex = websocket_magnet_opt.nextSendIndex
+    except:
+        lastTimeStamp = websocket_magnet_opt.lastTimeStamp = [None, None, None, None]
+        nextSendIndex = websocket_magnet_opt.nextSendIndex = [0, 0, 0, 0]
+    await manager.connect(websocket)
+    try:
+        while True:
+            # cycle through the four mixers:
+            curveIndex = 0
+            while curveIndex < 4:
+                curve = dataDisplay.magnetOptResults.curves[curveIndex]
+                # check if we already sent a curve having the same timestamp:
+                if curve.timeStamp != lastTimeStamp[curveIndex]:
+                    # is there new data to send?                    
+                    if len(curve) > nextSendIndex[curveIndex]:
+                        if nextSendIndex[curveIndex] == 0:
+                            # send an empty result to clear any prevous trace:
+                            toSend = MagnetOptResult(pol = curve.pol, sis = curve.sis, timeStamp = datetime.now())
+                            await manager.send(jsonable_encoder(toSend), websocket)
+                        # send the new data:
+                        toSend = curve.copy_from_index(nextSendIndex[curveIndex])
+                        await manager.send(jsonable_encoder(toSend), websocket)
+                    if curve.finished:
+                        # save the timestamp so we don't send this one again:
+                        lastTimeStamp[curveIndex] = curve.timeStamp
+                        nextSendIndex[curveIndex] = 0                        
+                    else:
+                        # save the next index to send on next iteration:
+                        nextSendIndex[curveIndex] = len(curve)
+                # for magnet optimization we are sending all the curves simultaneously. 
+                # So go to the next curve after each pass:
+                curveIndex += 1
+            await asyncio.sleep(0.2)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /mixertests/magnet_opt_ws")
+
+@router.websocket("/mixertests/mixer_deflux_ws")
+async def websocket_mixer_deflux(websocket: WebSocket):
+    # these are local static-like variables that retain their values between calls:
+    try:
+        lastTimeStamp = websocket_mixer_deflux.lastTimeStamp
+        nextSendIndex = websocket_mixer_deflux.nextSendIndex
+    except:
+        lastTimeStamp = websocket_mixer_deflux.lastTimeStamp = [None, None]
+        nextSendIndex = websocket_mixer_deflux.nextSendIndex = [0, 0]        
+    await manager.connect(websocket)
+    try:
+        while True:
+            # cycle through the two polarizations:
+            curveIndex = 0
+            while curveIndex < 2:
+                curve = dataDisplay.defluxResults.curves[curveIndex]
+                # check if we already sent a curve having the same timestamp:
+                if curve.timeStamp != lastTimeStamp[curveIndex]:
+                    # is there new data to send?
+                    if len(curve) > nextSendIndex[curveIndex]:
+                        if nextSendIndex[curveIndex] == 0:
+                            # send an empty result to clear any prevous trace:
+                            toSend = DefluxResult(pol = curve.pol, timeStamp = datetime.now())
+                            await manager.send(jsonable_encoder(toSend), websocket)
+                        # send the new data:
+                        toSend = curve.copy_from_index(nextSendIndex[curveIndex])
+                        await manager.send(jsonable_encoder(toSend), websocket)
+                    if curve.finished:
+                        # save the timestamp so we don't send this one again:
+                        lastTimeStamp[curveIndex] = curve.timeStamp
+                        nextSendIndex[curveIndex] = 0                        
+                    else:
+                        # save the next index to send on next iteration:
+                        nextSendIndex[curveIndex] = len(curve)
+                 # for mixers deflux we are sending all the curves simultaneously. 
+                 # So go to the next curve after each pass:
+                curveIndex += 1
+            await asyncio.sleep(1)
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.exception("WebSocketDisconnect: /mixertests/mixer_deflux_ws")

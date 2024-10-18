@@ -3,6 +3,7 @@ from enum import Enum
 from INSTR.PowerMeter.schemas import StdErrConfig
 from INSTR.Chopper.Interface import ChopperState
 from Control.IFSystem.Interface import InputSelect
+from Measure.Shared.SelectPolarization import SelectPolarization
 
 class ChopperMode(Enum):
     SPIN = "SPIN"
@@ -11,20 +12,6 @@ class ChopperMode(Enum):
 class BackEndMode(Enum):
     IF_PLATE = "IF_PLATE"
     SPEC_AN = "SPEC_AN"
-
-class SelectPolarization(Enum):
-    POL0 = "POL0"
-    POL1 = "POL1"
-    BOTH = "BOTH"
-
-    def testPol(self, pol: int):        
-        if self == SelectPolarization.BOTH:
-            return True
-        if self == SelectPolarization.POL0 and pol == 0:
-            return True
-        if self == SelectPolarization.POL1 and pol == 1:
-            return True
-        return False
     
 class TestSteps(BaseModel):
     zeroPM: bool = True

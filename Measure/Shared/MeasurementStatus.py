@@ -1,5 +1,4 @@
 from DBBand6Cart.CartTests import CartTest
-from Util.Singleton import Singleton
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -13,7 +12,7 @@ class MeasurementStatusModel(BaseModel):
     error: bool = False
     stopNow: bool = False
 
-class MeasurementStatus(Singleton):
+class MeasurementStatus():
     def __init__(self):
         self.model = MeasurementStatusModel()
 

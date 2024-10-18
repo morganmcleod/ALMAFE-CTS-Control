@@ -5,6 +5,29 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+# logging:
+import logging
+LOG_TO_FILE = True
+LOG_FILE = 'ALMAFE-CTS-Control.log'
+LOG_LEVEL = logging.INFO
+
+logger = logging.getLogger("ALMAFE-CTS-Control")
+logger.setLevel(LOG_LEVEL)
+if LOG_TO_FILE:
+    handler = logging.FileHandler(LOG_FILE)
+else:
+    handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(fmt = '%(asctime)s %(levelname)s:%(message)s'))
+logger.addHandler(handler)
+
+logger2 = logging.getLogger("ALMAFE-AMBDeviceLibrary")
+logger2.setLevel(LOG_LEVEL)
+logger2.addHandler(handler)
+
+logger3 = logging.getLogger("ALMAFE-Instr")
+logger3.setLevel(LOG_LEVEL)
+logger3.addHandler(handler)
+
 # Imports for this app:
 from schemas.Response import MessageResponse, VersionResponse, prepareResponse
 from ALMAFE.common.GitVersion import gitVersion, gitBranch
@@ -27,13 +50,11 @@ from app.routers.ReferenceSource import router as rfRefRouter
 from app.routers.BeamScanner import router as beamScanRouter
 from app.routers.IFSystem import router as ifSystemRouter
 from app.routers.DataDisplay import router as dataDisplayRouter
+from app.routers.MixerTests import router as mixerTestsRouter
 from app.routers.ConnectionManager import ConnectionManager
 
 
-# logging:
-import logging
-LOG_TO_FILE = True
-LOG_FILE = 'ALMAFE-CTS-Control.log'
+
 
 # globals:
 tags_metadata = [
@@ -80,6 +101,10 @@ tags_metadata = [
     {
         "name": "Measure",
         "description": "start and stop measurements"
+    },
+    {
+        "name": "Mixer tests",
+        "description": "I-V curves, magnet optimization, mixers deflux"
     },
     {
         "name": "Noise temp",
@@ -135,6 +160,7 @@ app.include_router(noiseTempRouter, tags=["Noise temp"])
 app.include_router(stabilityRouter, tags=["Stability"])
 app.include_router(ifSystemRouter, tags=["IF system"])
 app.include_router(dataDisplayRouter, tags=["Data display"])
+app.include_router(mixerTestsRouter, tags=["Mixer tests"])
 
 API_VERSION = "0.0.1"
 
@@ -164,7 +190,7 @@ async def websocket_actionPublisher(websocket: WebSocket):
         except WebSocketDisconnect:
             manager.disconnect(websocket)
             logger.exception("WebSocketDisconnect: /startup_ws")
-        await asyncio.sleep(1);
+        await asyncio.sleep(1)
 
 @app.get("/", tags=["API"], response_model = MessageResponse)
 async def get_Root(callback:str = None):
@@ -192,19 +218,5 @@ async def get_API_Version(callback:str = None):
     return prepareResponse(result, callback)
 
 if __name__ == "__main__":
-    logger = logging.getLogger("ALMAFE-CTS-Control")
-    logger.setLevel(logging.INFO)
-    if LOG_TO_FILE:
-        handler = logging.FileHandler(LOG_FILE)
-    else:
-        handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(fmt = '%(asctime)s %(levelname)s:%(message)s'))
-    logger.addHandler(handler)
-
-    logger2 = logging.getLogger("ALMAFE-AMBDeviceLibrary")
-    logger2.setLevel(logging.INFO)
-    logger2.addHandler(handler)
-
     logger.info("---- ALMAFE-CTS-Control start ----")
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

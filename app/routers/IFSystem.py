@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter
-from app.hardware.IFSystem import ifSystem
+import hardware.IFSystem
+ifSystem = hardware.IFSystem.ifSystem
 from Control.schemas.DeviceInfo import DeviceInfo
 from Control.IFSystem.Interface import InputSelect
 from schemas.common import SingleFloat, SingleInt

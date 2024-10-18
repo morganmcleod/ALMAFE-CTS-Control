@@ -1,19 +1,29 @@
+import sys
 import logging
 from typing import Optional
 from socket import getfqdn
 import concurrent.futures
-from app.scripts.BiasOptimization import bias_optimization
-from app.scripts.NoiseTemperature import noise_temperature
-from app.scripts.YFactor import y_factor
 from app.database.CTSDB import CTSDB
-from app.measProcedure.MeasurementStatus import measurementStatus
-from app.measProcedure.BeamScanner import beamScanner
-from app.measProcedure.Stability import amplitudeStablilty, phaseStability
+import app.measProcedure.MeasurementStatus
+measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
+import app.measProcedure.BeamScanner
+beamScanner = app.measProcedure.BeamScanner.beamScanner
+import app.measProcedure.Stability
+amplitudeStablilty = app.measProcedure.Stability.amplitudeStablilty
+phaseStability = app.measProcedure.Stability.phaseStability
 from DBBand6Cart.CartTests import CartTest, CartTests
 from DBBand6Cart.TestTypes import TestTypeIds
 from DebugOptions import *
 
 class ScriptRunner():
+    BIAS_OPT_MODULE = "app.scripts.BiasOptimization"
+    IV_CURVES_MODULE = "app.scripts.IVCurves"
+    MAGNET_OPT_MODULE = "app.scripts.MagnetOptimization"
+    DEFLUX_MODULE = "app.scripts.MixerDeflux"
+    NOISE_TEMP_MODULE = "app.scripts.NoiseTemperature"
+    Y_FACTOR_MODULE = "app.scripts.YFactor"
+    ENTRY_FUNCTION = "main"
+
     def __init__(self) -> None:
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
@@ -30,39 +40,48 @@ class ScriptRunner():
             self.logger.error(msg)
             return False, msg
 
+        try:
+            testType = TestTypeIds(cartTest.fkTestType)
+        except:
+            msg = f"Test type {cartTest.fkTestType} is not supported"
+            self.logger.error(msg)
+            return False, msg
+
         cartTestsDb = CartTests(driver = CTSDB())        
 
         cartTest.testSysName = getfqdn()
-        if cartTest.fkTestType == TestTypeIds.BEAM_PATTERN.value:
+        if testType == TestTypeIds.BEAM_PATTERN:
             cartTest.key = beamScanner.start(cartTest)
             measurementStatus.setMeasuring(cartTest)
             return True, "Beam scans started."
 
-        elif cartTest.fkTestType in (TestTypeIds.NOISE_TEMP.value, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE):
+        elif testType in (TestTypeIds.NOISE_TEMP, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE):
             testSteps = kwargs.get('testSteps', None)
 
             if testSteps:
                 # if we are measuring noise temperature then make that the master CartTests record
                 if testSteps.noiseTemp or self.testSteps.imageReject:
-                    cartTest.fkTestType = TestTypeIds.NOISE_TEMP.value
+                    testType = TestTypeIds.NOISE_TEMP
                 # if not noise temp but LO WG integrity, make that the master record:
                 elif testSteps.loWGIntegrity:
-                    cartTest.fkTestType = TestTypeIds.LO_WG_INTEGRITY.value
+                    testType = TestTypeIds.LO_WG_INTEGRITY
                 # if only measuring warm IF noise:
                 elif testSteps.warmIF:
-                    cartTest.fkTestType = TestTypeIds.IF_PLATE_NOISE.value
+                    testType = TestTypeIds.IF_PLATE_NOISE
 
             if SIMULATE:
                 cartTest.key = 1
             else:
                 cartTest.key = cartTestsDb.create(cartTest)
             measurementStatus.setMeasuring(cartTest)
-            self.futures = []
-            self.futures.append(self.executor.submit(noise_temperature))            
-            return True, f"{TestTypeIds(cartTest.fkTestType).name} started."
+            success, msg = self._run_script(self.NOISE_TEMP_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
 
-        elif cartTest.fkTestType == TestTypeIds.OPTIMUM_BIAS.value:
-            cartTest.fkTestType = TestTypeIds.NOISE_TEMP.value
+        elif testType == TestTypeIds.OPTIMUM_BIAS:
+            testType = TestTypeIds.NOISE_TEMP
 
             if SIMULATE:
                 cartTest.key = 1
@@ -70,30 +89,64 @@ class ScriptRunner():
                 cartTest.key = cartTestsDb.create(cartTest)
 
             measurementStatus.setMeasuring(cartTest)
-            self.futures = []
-            self.futures.append(self.executor.submit(bias_optimization))            
-            return True, f"{TestTypeIds(cartTest.fkTestType).name} started."
+            success, msg = self._run_script(self.BIAS_OPT_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
         
-        elif cartTest.fkTestType == TestTypeIds.Y_FACTOR.value:
+        elif testType == TestTypeIds.Y_FACTOR:
             cartTest.key = 0
             cartTest.description = "Y-factor"
             measurementStatus.setMeasuring(cartTest)
-            self.futures = []
-            self.futures.append(self.executor.submit(y_factor))            
-            return True, f"{TestTypeIds(cartTest.fkTestType).name} started."
+            success, msg = self._run_script(self.BIAS_OPT_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
 
-        elif cartTest.fkTestType == TestTypeIds.AMP_STABILITY.value:
+        elif testType == TestTypeIds.AMP_STABILITY:
             cartTest.key = amplitudeStablilty.start(cartTest)
             measurementStatus.setMeasuring(cartTest)
             return True, "Amplitude stability started"
         
-        elif cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
+        elif testType == TestTypeIds.PHASE_STABILITY:
             cartTest.key = phaseStability.start(cartTest)
             measurementStatus.setMeasuring(cartTest)
             return True, "Phase stability started"
         
+        elif testType == TestTypeIds.IV_CURVES:
+            cartTest.key = 0
+            cartTest.description = "I-V Curves"
+            measurementStatus.setMeasuring(cartTest)
+            success, msg = self._run_script(self.IV_CURVES_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
+
+        elif testType == TestTypeIds.MAGNET_OPTIMIZATION:
+            cartTest.key = 0
+            cartTest.description = "Magnet Optimization"
+            measurementStatus.setMeasuring(cartTest)
+            success, msg = self._run_script(self.MAGNET_OPT_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
+
+        elif testType == TestTypeIds.MIXER_DEFLUX:
+            cartTest.key = 0
+            cartTest.description = "Mixer Deflux"
+            measurementStatus.setMeasuring(cartTest)
+            success, msg = self._run_script(self.DEFLUX_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
+
         else:
-            msg = f"Nothing to do for test type {cartTest.fkTestType}."
+            msg = f"Nothing to do for test type {testType}."
             self.logger.error(msg)
             return False
 
@@ -106,13 +159,23 @@ class ScriptRunner():
         
         testType = TestTypeIds(cartTest.fkTestType)
 
-        if testType == TestTypeIds.BEAM_PATTERN:
+        if testType in (
+                TestTypeIds.NOISE_TEMP, 
+                TestTypeIds.LO_WG_INTEGRITY, 
+                TestTypeIds.IF_PLATE_NOISE, 
+                TestTypeIds.Y_FACTOR, 
+                TestTypeIds.OPTIMUM_BIAS,
+                TestTypeIds.IV_CURVES,
+                TestTypeIds.MAGNET_OPTIMIZATION,
+                TestTypeIds.MIXER_DEFLUX,
+                TestTypeIds.IV_CURVES
+            ):
+            measurementStatus.stopMeasuring()
+            return True, f"{TestTypeIds(testType).name} stopped."
+        elif testType == TestTypeIds.BEAM_PATTERN:
             beamScanner.stop()
             measurementStatus.stopMeasuring()
             return True, "Beam scans stopped."
-        elif testType in (TestTypeIds.NOISE_TEMP, TestTypeIds.LO_WG_INTEGRITY, TestTypeIds.IF_PLATE_NOISE, TestTypeIds.Y_FACTOR, TestTypeIds.OPTIMUM_BIAS):
-            measurementStatus.stopMeasuring()
-            return True, f"{TestTypeIds(testType).name} stopped."
         elif testType == TestTypeIds.AMP_STABILITY:
             amplitudeStablilty.stop()
             measurementStatus.stopMeasuring()
@@ -125,3 +188,20 @@ class ScriptRunner():
             msg = f"Nothing to do for test type {testType}."
             self.logger.error(msg)
             return False, msg
+        
+    def _run_script(self, module_name:str, function:str = 'main') -> tuple[bool, str]:
+        try:
+            concurrent.futures.wait(self.futures)
+            if module_name in sys.modules:
+                del sys.modules[module_name]
+        except:
+            pass
+        try:
+            __import__(module_name)
+            module = sys.modules[module_name]
+            fun = getattr(module, function)
+            self.futures = []
+            self.futures.append(self.executor.submit(fun))
+            return True, ""
+        except:
+            return False, f"Could not run function '{function} in module {module_name}"

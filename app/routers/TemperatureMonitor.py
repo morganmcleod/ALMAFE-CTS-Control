@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter
-from app.hardware.NoiseTemperature import temperatureMonitor
+import hardware.NoiseTemperature
+temperatureMonitor = hardware.NoiseTemperature.temperatureMonitor
 from INSTR.TemperatureMonitor.schemas import Temperatures, DESCRIPTIONS
 from Control.schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *

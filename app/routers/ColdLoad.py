@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter
-from app.hardware.NoiseTemperature import coldLoad
+import hardware.NoiseTemperature
+coldLoad = hardware.NoiseTemperature.coldLoad
 from INSTR.ColdLoad.ColdLoadBase import ColdLoadState
 from Control.schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *
@@ -10,16 +11,16 @@ router = APIRouter(prefix="/coldload")
 
 @router.get("/device_info", response_model = DeviceInfo)
 async def get_DeviceInfo_ColdLoad():
-    if SIMULATE:
-        return DeviceInfo(
-            name = 'Cold load controller',
-            resource = 'simulated',
-            connected = True
-        )
-    else:
+    try:
         return DeviceInfo(
             name = 'Cold load controller',
             resource = coldLoad.inst.resource,
+            connected = coldLoad.connected()
+        )
+    except:
+        return DeviceInfo(
+            name = 'Cold load controller',
+            resource = 'simulated',
             connected = coldLoad.connected()
         )
 

@@ -4,10 +4,14 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.schemas.Response import MessageResponse
 from Control.schemas.DeviceInfo import DeviceInfo
 from .LO import router as loRouter
-from hardware.FEMC import rfSrcDevice
-from hardware.IFSystem import ifSystem
-from hardware.PowerDetect import powerDetect
-from hardware.BeamScanner import pna
+import hardware.FEMC
+rfSrcDevice = hardware.FEMC.rfSrcDevice
+import hardware.IFSystem
+ifSystem = hardware.IFSystem.ifSystem
+import hardware.PowerDetect
+powerDetect = hardware.PowerDetect.powerDetect
+import hardware.BeamScanner
+pna = hardware.BeamScanner.pna
 from Control.IFSystem.Interface import OutputSelect
 from Control.PowerDetect.PDPNA import PDPNA
 from Control.RFAutoLevel import RFAutoLevel

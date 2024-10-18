@@ -9,7 +9,7 @@ from datetime import datetime
 
 class ColdLoadCalibration():
 
-    COLDLLOAD_SPECAN_SETTINGS_FILE = "Settings_ColdLoadSpecAn.yaml"
+    COLDLLOAD_SPECAN_SETTINGS_FILE = "Settings/Settings_ColdLoadSpecAn.yaml"
 
     def __init__(self,
             spectrumAnalyzer: SpectrumAnalyzer,

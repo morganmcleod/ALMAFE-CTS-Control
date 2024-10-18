@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter
 from Control.schemas.DeviceInfo import DeviceInfo
-from hardware.PowerDetect import spectrumAnalyzer
+import hardware.PowerDetect
 from DebugOptions import *
 
 logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -16,8 +16,4 @@ async def get_DeviceInfo_SpecAn():
             connected = True
         )
     else:
-        return DeviceInfo(
-            name = 'spectrum analyzer',
-            resource = spectrumAnalyzer.inst.resource,
-            connected = spectrumAnalyzer.connected()
-        )
+        return DeviceInfo.model_validate(hardware.PowerDetect.spectrumAnalyzer.deviceInfo)

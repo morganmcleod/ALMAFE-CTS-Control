@@ -10,7 +10,9 @@ from DBBand6Cart.MixerParams import MixerParam, MixerParams
 from DBBand6Cart.PreampParams import PreampParam, PreampParams
 from DBBand6Cart.WCAs import WCAs, WCA
 from typing import Optional, List
-from hardware.FEMC import cartAssembly, rfSrcDevice
+import hardware.FEMC
+cartAssembly = hardware.FEMC.cartAssembly
+rfSrcDevice = hardware.FEMC.rfSrcDevice
 
 @router.get("/isconnected")
 async def get_IsConnected():

@@ -3,7 +3,8 @@ from typing import Optional
 from DBBand6Cart.CartTests import CartTest
 from app.schemas.Response import KeyResponse, MessageResponse
 from Measure.Shared.MeasurementStatus import MeasurementStatusModel
-from app.measProcedure.ScriptRunner import scriptRunner
+import measProcedure.ScriptRunner
+scriptRunner = measProcedure.ScriptRunner.scriptRunner
 from DebugOptions import *
 
 router = APIRouter(prefix="/measure")

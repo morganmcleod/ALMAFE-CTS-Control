@@ -1,14 +1,14 @@
 
-from hardware.FEMC import cartAssembly, rfSrcDevice
-from hardware.ReferenceSources import loReference
-from hardware.NoiseTemperature import temperatureMonitor
-from hardware.Stability import voltMeter
-from hardware.BeamScanner import pna
-from hardware.IFSystem import ifSystem
+import hardware.FEMC
+import hardware.ReferenceSources 
+import hardware.NoiseTemperature
+import hardware.Stability
+import hardware.BeamScanner
+import hardware.IFSystem
+import app.measProcedure.MeasurementStatus
+import measProcedure.DataDisplay
 from Control.PowerDetect.PDPNA import PDPNA
 from Control.PowerDetect.PDVoltMeter import PDVoltMeter
-from app.measProcedure.MeasurementStatus import measurementStatus
-from app.measProcedure.DataDisplay import dataDisplay
 from Measure.Stability.MeasureStablility import MeasureStability
 from Measure.Stability.CalcDataAmplitudeStability import CalcDataAmplitudeStability
 from Measure.Stability.CalcDataPhaseStability import CalcDataPhaseStability
@@ -16,34 +16,34 @@ from app.database.CTSDB import CTSDB
 from DebugOptions import *
 
 
-pdVoltMeter = PDVoltMeter(voltMeter)
+pdVoltMeter = PDVoltMeter(hardware.Stability.voltMeter)
 calcDataAmplitudeStability = CalcDataAmplitudeStability(driver = CTSDB())
 
 amplitudeStablilty = MeasureStability(
     mode = 'AMPLITUDE',
-    loReference = loReference,
-    cartAssembly = cartAssembly,
-    ifSystem = ifSystem,
+    loReference = hardware.ReferenceSources.loReference,
+    cartAssembly = hardware.FEMC.cartAssembly,
+    ifSystem = hardware.IFSystem,
     powerDetect = pdVoltMeter,
-    tempMonitor = temperatureMonitor,
+    tempMonitor = hardware.NoiseTemperature.temperatureMonitor,
     rfSrcDevice = None,
-    measurementStatus = measurementStatus,
+    measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus(),
     calcDataInterface = calcDataAmplitudeStability,
-    dataDisplay = dataDisplay
+    dataDisplay = measProcedure.DataDisplay.dataDisplay
 )
 
-pdPNA = PDPNA(pna)
+pdPNA = PDPNA(hardware.BeamScanner.pna)
 calcDataPhaseStability = CalcDataPhaseStability(driver = CTSDB())
 
 phaseStability = MeasureStability(
     mode = 'PHASE',
-    loReference = loReference,
-    cartAssembly = cartAssembly,
-    ifSystem = ifSystem,
+    loReference = hardware.ReferenceSources.loReference,
+    cartAssembly = hardware.FEMC.cartAssembly,
+    ifSystem = hardware.IFSystem,
     powerDetect = pdPNA,
-    tempMonitor = temperatureMonitor,
-    rfSrcDevice = rfSrcDevice,
-    measurementStatus = measurementStatus,
+    tempMonitor = hardware.NoiseTemperature.temperatureMonitor,
+    rfSrcDevice = hardware.FEMC.rfSrcDevice,
+    measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus(),
     calcDataInterface = calcDataPhaseStability,
-    dataDisplay = dataDisplay
+    dataDisplay = measProcedure.DataDisplay.dataDisplay
 )

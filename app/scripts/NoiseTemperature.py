@@ -1,8 +1,9 @@
 import logging
-from .NTCommon import *
+from .Imports.NoiseTemperature import *
 
-def noise_temperature():
+def main():
     logger = logging.getLogger("ALMAFE-CTS-Control")
+    settings = settingsContainer.commonSettings
     
     next_pos = beamScanMotorController.getPosition()
     next_pos.pol = -58.5

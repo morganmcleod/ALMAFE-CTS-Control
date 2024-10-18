@@ -17,7 +17,7 @@ class IFAutoLevelSettings(BaseModel):
     sleep: float = 0.25
 
 class IFAutoLevel():
-    SETTINGS_FILE = "Settings_IFAutoLevel.yaml"
+    SETTINGS_FILE = "Settings/Settings_IFAutoLevel.yaml"
 
     def __init__(self, 
             ifSystem: IFSystem_Interface, 

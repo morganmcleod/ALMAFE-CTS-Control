@@ -2,7 +2,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Response
 from fastapi.encoders import jsonable_encoder
 from typing import List, Tuple, Optional
 from schemas.common import SingleBool, SingleFloat
-from app.measProcedure.Stability import amplitudeStablilty, phaseStability
+import measProcedure.Stability
+amplitudeStablilty = measProcedure.Stability.amplitudeStablilty
+phaseStability = measProcedure.Stability.phaseStability
 from AmpPhaseDataLib.Constants import DataSource, PlotEl, SpecLines
 from AmpPhaseDataLib.TimeSeriesAPI import TimeSeriesAPI
 from AmpPhasePlotLib.PlotAPI import PlotAPI

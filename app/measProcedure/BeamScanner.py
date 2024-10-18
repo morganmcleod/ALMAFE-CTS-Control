@@ -1,21 +1,21 @@
-from hardware.BeamScanner import motorController, pna
-from hardware.ReferenceSources import loReference
-from hardware.FEMC import cartAssembly, rfSrcDevice
-from hardware.IFSystem import ifSystem
-from app.measProcedure.MeasurementStatus import measurementStatus
+import hardware.BeamScanner
+import hardware.ReferenceSources
+import hardware.FEMC
+import hardware.IFSystem
+import app.measProcedure.MeasurementStatus
 from Measure.BeamScanner.schemas import ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from DebugOptions import *
 import copy
 
 beamScanner = BeamScanner(
-    motorController = motorController, 
-    pna = pna, 
-    loReference = loReference, 
-    cartAssembly = cartAssembly, 
-    rfSrcDevice = rfSrcDevice, 
-    ifSystem = ifSystem,
-    measurementStatus = measurementStatus
+    motorController = hardware.BeamScanner.motorController, 
+    pna = hardware.BeamScanner.pna, 
+    loReference = hardware.ReferenceSources.loReference, 
+    cartAssembly = hardware.FEMC.cartAssembly, 
+    rfSrcDevice = hardware.FEMC.rfSrcDevice, 
+    ifSystem = hardware.IFSystem.ifSystem,
+    measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
 )
 
 if TESTING:

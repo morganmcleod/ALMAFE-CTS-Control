@@ -19,6 +19,10 @@ class PDPowerMeter(PowerDetect_Interface):
             self.units = units
         fast_mode = kwargs.get('fast_mode', False)        
         self.powerMeter.setFastMode(fast_mode)
+        averaging = kwargs.get('averaging', False)
+        if averaging:
+            self.powerMeter.enableAveraging()
+        self.powerMeter.initContinuous()
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -55,6 +59,7 @@ class PDPowerMeter(PowerDetect_Interface):
             return self.powerMeter.autoRead()
         else:
             averaging = kwargs.get('averaging', 1)
+            self.powerMeter.initContinuous()
             return self.powerMeter.read(averaging = averaging)
     
     def zero(self) -> None:

@@ -15,7 +15,7 @@ class RFAutoLevelSettings(BaseModel):
     sleep: float = 0.2
 
 class RFAutoLevel():
-    SETTINGS_FILE = "Settings_RFAutoLevel.yaml"
+    SETTINGS_FILE = "Settings/Settings_RFAutoLevel.yaml"
 
     def __init__(self,
             ifSystem: IFSystem_Interface,

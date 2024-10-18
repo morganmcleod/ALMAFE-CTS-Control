@@ -8,7 +8,7 @@ def CTSDB():
     try:
         return CTSDB.CTSDB
     except:
-        CTSDB.CTSDB = DriverMySQL(loadConfiguration('ALMAFE-CTS-Database.ini', 'dbBand6Cart'))
+        CTSDB.CTSDB = DriverMySQL(loadConfiguration('ALMAFE-CTS-Control.ini', 'dbBand6Cart'))
         # https://stackoverflow.com/questions/11821976/cursor-fetchone-returns-none-but-row-in-the-database-exists
         CTSDB.CTSDB.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
         return CTSDB.CTSDB

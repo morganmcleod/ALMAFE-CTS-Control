@@ -1,6 +1,8 @@
 from fastapi import APIRouter
-from app.hardware.NoiseTemperature import coldLoad
-from app.measProcedure.NoiseTemperature import settingsContainer as nt_settings
+import hardware.NoiseTemperature
+coldLoad = hardware.NoiseTemperature.coldLoad
+import measProcedure.NoiseTemperature 
+nt_settings = measProcedure.NoiseTemperature.settingsContainer
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings
 from INSTR.ColdLoad.AMI1720 import FillMode
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings

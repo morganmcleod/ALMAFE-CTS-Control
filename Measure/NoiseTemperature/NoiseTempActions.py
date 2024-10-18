@@ -17,9 +17,10 @@ from Control.RFAutoLevel import RFAutoLevel
 from Measure.Shared.MeasurementStatus import MeasurementStatus
 from Measure.Shared.DataDisplay import DataDisplay
 from Measure.Shared.makeSteps import makeSteps
+from Measure.Shared.SelectPolarization import SelectPolarization
 from Measure.NoiseTemperature.SettingsContainer import SettingsContainer
 from .schemas import CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSettings, ChopperPowers, \
-    SelectPolarization, SpecAnPowers, YFactorSample, BiasOptSettings
+    SpecAnPowers, YFactorSample, BiasOptSettings
 from DBBand6Cart.schemas.WarmIFNoise import WarmIFNoise
 from DBBand6Cart.schemas.NoiseTempRawDatum import NoiseTempRawDatum
 from DBBand6Cart.schemas.DUT_Type import DUT_Type

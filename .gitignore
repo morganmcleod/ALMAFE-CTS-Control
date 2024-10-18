@@ -1,6 +1,6 @@
 *.pyc
 .vscode
-ALMAFE-CTS-Database.ini
+ALMAFE-CTS-Control.ini
 *.log
 AmpPhaseDataLib.ini
 AmpPhaseDataLib.sqlite

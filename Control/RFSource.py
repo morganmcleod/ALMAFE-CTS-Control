@@ -10,7 +10,7 @@ from DebugOptions import *
 class RFSource(LODevice):
 
     FREQ_FLOOG = 0.020
-    RFSRC_SETTINGS = "Settings_RFSource.yaml"
+    RFSRC_SETTINGS = "Settings/Settings_RFSource.yaml"
 
     def __init__(
             self, 

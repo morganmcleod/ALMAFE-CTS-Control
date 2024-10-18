@@ -31,7 +31,7 @@ import yaml
 
 class BeamScanner():
 
-    MEASUREMENT_SETTINGS_FILE = "Settings_BeamScanner.yaml"
+    MEASUREMENT_SETTINGS_FILE = "Settings/Settings_BeamScanner.yaml"
     XY_SPEED_POSITIONING = 40       # mm/sec
     XY_SPEED_SCANNING = 20          # mm/sec
     POL_SPEED = 10                  # deg/sec

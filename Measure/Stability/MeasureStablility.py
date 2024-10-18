@@ -35,8 +35,8 @@ import yaml
 
 class MeasureStability():
 
-    AMP_STABILITY_SETTINGS_FILE = "Settings_AmpStability.yaml"
-    PHASE_STABILITY_SETTINGS_FILE = "Settings_PhaseStability.yaml"    
+    AMP_STABILITY_SETTINGS_FILE = "Settings/Settings_AmpStability.yaml"
+    PHASE_STABILITY_SETTINGS_FILE = "Settings/Settings_PhaseStability.yaml"    
 
     def __init__(self,
             mode: str,      # 'AMPLITUDE' or 'PHASE'

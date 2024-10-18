@@ -1,3 +1,4 @@
+from AMB.schemas.MixerTests import IVCurveResults, MagnetOptResults, DefluxResults
 
 class DataDisplay():
 
@@ -11,3 +12,6 @@ class DataDisplay():
         self.currentNoiseTemp = [None, None]
         self.yFactorHistory = []
         self.stabilityHistory = []
+        self.ivCurveResults = IVCurveResults()
+        self.magnetOptResults = MagnetOptResults()
+        self.defluxResults = DefluxResults()

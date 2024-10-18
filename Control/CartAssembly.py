@@ -28,8 +28,8 @@ class CartAssemblySettings(BaseModel):
     sleep: float = 0.2
 
 class CartAssembly():
-    CARTASSEMBLY_SETTINGS = "Settings_CartAssembly.yaml"
-    LO_SETTINGS = "Settings_LO.yaml"
+    CARTASSEMBLY_SETTINGS = "Settings/Settings_CartAssembly.yaml"
+    LO_SETTINGS = "Settings/Settings_LO.yaml"
 
     def __init__(self, ccaDevice: CCADevice, loDevice: LODevice):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -62,9 +62,6 @@ class CartAssembly():
         self.preampParams02 = None
         self.preampParams11 = None
         self.preampParams12 = None
-        self.ivCurveResults = IVCurveResults()
-        self.ijVsIMagResults = IJVsImagResults()
-        self.defluxResults = DefluxResults()
         self.freqLOGHz = 0
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
@@ -153,39 +150,40 @@ class CartAssembly():
     def getLOConfig(self) -> WCA:
         return self.wca
 
-    def setRecevierBias(self, FreqLO:float) -> bool:
+    def setRecevierBias(self, FreqLO:float, magnetOnly: bool = False) -> bool:
         if not self.configId:
             return False
         if self.mixerParams01:
             self.mixerParam01 = self.__interpolateMixerParams(FreqLO, self.mixerParams01)
-            self.ccaDevice.setSIS(0, 1, self.mixerParam01.VJ, self.mixerParam01.IMAG)
+            self.ccaDevice.setSIS(0, 1, None if magnetOnly else self.mixerParam01.VJ, self.mixerParam01.IMAG)
         if self.mixerParams02:
             self.mixerParam02 = self.__interpolateMixerParams(FreqLO, self.mixerParams02)
-            self.ccaDevice.setSIS(0, 2, self.mixerParam02.VJ, self.mixerParam02.IMAG)
+            self.ccaDevice.setSIS(0, 2, None if magnetOnly else self.mixerParam02.VJ, self.mixerParam02.IMAG)
         if self.mixerParams11:
             self.mixerParam11 = self.__interpolateMixerParams(FreqLO, self.mixerParams11)
-            self.ccaDevice.setSIS(1, 1, self.mixerParam11.VJ, self.mixerParam11.IMAG)
+            self.ccaDevice.setSIS(1, 1, None if magnetOnly else self.mixerParam11.VJ, self.mixerParam11.IMAG)
         if self.mixerParams12:
             self.mixerParam12 = self.__interpolateMixerParams(FreqLO, self.mixerParams12)
-            self.ccaDevice.setSIS(1, 2, self.mixerParam12.VJ, self.mixerParam12.IMAG)
+            self.ccaDevice.setSIS(1, 2, None if magnetOnly else self.mixerParam12.VJ, self.mixerParam12.IMAG)
         
-        if self.preampParams01:
-            pp = self.preampParams01[0]
-            self.ccaDevice.setLNA(0, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+        if not magnetOnly:
+            if self.preampParams01:
+                pp = self.preampParams01[0]
+                self.ccaDevice.setLNA(0, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                            pp.ID1, pp.ID2, pp.ID3)
+            if self.preampParams02:
+                pp = self.preampParams02[0]
+                self.ccaDevice.setLNA(0, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
                                         pp.ID1, pp.ID2, pp.ID3)
-        if self.preampParams02:
-            pp = self.preampParams02[0]
-            self.ccaDevice.setLNA(0, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                    pp.ID1, pp.ID2, pp.ID3)
-        if self.preampParams11:
-            pp = self.preampParams11[0]
-            self.ccaDevice.setLNA(1, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                        pp.ID1, pp.ID2, pp.ID3)
-        if self.preampParams12:
-            pp = self.preampParams12[0]
-            self.ccaDevice.setLNA(1, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
-                                        pp.ID1, pp.ID2, pp.ID3)                                    
-        self.ccaDevice.setLNAEnable(True)
+            if self.preampParams11:
+                pp = self.preampParams11[0]
+                self.ccaDevice.setLNA(1, 1, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                            pp.ID1, pp.ID2, pp.ID3)
+            if self.preampParams12:
+                pp = self.preampParams12[0]
+                self.ccaDevice.setLNA(1, 2, pp.VD1, pp.VD2, pp.VD3, 0, 0, 0,
+                                            pp.ID1, pp.ID2, pp.ID3)                                    
+            self.ccaDevice.setLNAEnable(True)
         return True
 
     def autoLOPower(self, pol0: bool = True, pol1: bool = True, onThread: bool = False, targetIJ = None) -> tuple[bool, str]:
@@ -303,29 +301,3 @@ class CartAssembly():
     def isLocked(self) -> bool:
         pll = self.loDevice.getLockInfo()
         return pll['isLocked']
-
-    def startIVCurve(self, settings: IVCurveSettings, onThread: bool = False) -> None:
-        if onThread:
-            threading.Thread(target = self.ccaDevice.IVCurve, args = (settings, self.ivCurveResults), daemon = True).start()
-        else:
-            self.ivCurveResults = self.ccaDevice.IVCurve(settings)
-    
-    def startIJVsIMag(self, settings: IJVsImagSettings, onThread: bool = False) -> None:
-        if settings.enablePol0:
-            self.loDevice.setPAOutput(0, 0)
-        if settings.enablePol1:
-            self.loDevice.setPAOutput(1, 0)
-        if onThread:
-            threading.Thread(target = self.ccaDevice.IJVsIMag, args = (settings, self.ijVsIMagResults), daemon = True).start()
-        else:
-            self.ijVsIMagResults = self.ccaDevice.IJVsIMag(settings)
-
-    def startDeflux(self, settings: DefluxSettings, onThread: bool = False) -> None:
-        if settings.enablePol0:
-            self.loDevice.setPAOutput(0, 0)
-        if settings.enablePol1:
-            self.loDevice.setPAOutput(1, 0)
-        if onThread:
-            threading.Thread(target = self.ccaDevice.mixersDeflux, args = (settings, self.defluxResults), daemon = True).start()
-        else:
-            self.defluxResults = self.ccaDevice.mixersDeflux(settings)

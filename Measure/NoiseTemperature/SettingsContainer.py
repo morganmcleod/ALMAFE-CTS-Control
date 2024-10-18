@@ -3,14 +3,14 @@ from Measure.NoiseTemperature.schemas import *
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 
 class SettingsContainer():
-    COMMON_SETTINGS_FILE = "Settings_NTCommon.yaml"
-    WARM_IF_SETTINGS_FILE = "Settings_WarmIF.yaml"
-    NOISE_TEMP_SETTINGS_FILE = "Settings_NoiseTemp.yaml"
-    LO_WG_INTEGRITY_SETTINGS_FILE = "Settings_LOWGIntegrity.yaml"
-    BIAS_OPT_SETTINGS_FILE = "Settings_BiasOpt.yaml"
-    YFACTOR_SETTINGS_FILE = "Settings_YFactor.yaml"
-    NT_SPECAN_SETTINGS_FILE = "Settings_NTSpecAn.yaml"
-    IR_SPECAN_SETTINGS_FILE = "Settings_IRSpecAn.yaml"
+    COMMON_SETTINGS_FILE = "Settings/Settings_NTCommon.yaml"
+    WARM_IF_SETTINGS_FILE = "Settings/Settings_WarmIF.yaml"
+    NOISE_TEMP_SETTINGS_FILE = "Settings/Settings_NoiseTemp.yaml"
+    LO_WG_INTEGRITY_SETTINGS_FILE = "Settings/Settings_LOWGIntegrity.yaml"
+    BIAS_OPT_SETTINGS_FILE = "Settings/Settings_BiasOpt.yaml"
+    YFACTOR_SETTINGS_FILE = "Settings/Settings_YFactor.yaml"
+    NT_SPECAN_SETTINGS_FILE = "Settings/Settings_NTSpecAn.yaml"
+    IR_SPECAN_SETTINGS_FILE = "Settings/Settings_IRSpecAn.yaml"
 
     def __init__(self):
         self.setDefaultTestSteps()
@@ -35,8 +35,7 @@ class SettingsContainer():
             self.setDefaultsCommon()
 
     def setDefaultsCommon(self):
-        backEndMode = self.commonSettings.backEndMode
-        self.commonSettings = CommonSettings(backEndMode = backEndMode)
+        self.commonSettings = CommonSettings()
         self.saveSettingsCommon()
 
     def saveSettingsCommon(self):
