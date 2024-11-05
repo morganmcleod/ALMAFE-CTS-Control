@@ -38,7 +38,7 @@ class IFSystem(IFSystem_Interface):
         self.warmIFPlate.inputSwitch.selected = inputSelect
         
     def set_pol_sideband(self, pol: int = 0, sideband: int | str = 'USB') -> None:
-        self.warmIFPlate.set_pol_sideband(pol, sideband)
+        self.warmIFPlate.inputSwitch.select_pol_sideband(pol, sideband)
 
     @property
     def output_select(self) -> OutputSelect:

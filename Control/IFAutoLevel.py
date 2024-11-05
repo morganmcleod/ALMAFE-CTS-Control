@@ -13,7 +13,7 @@ class IFAutoLevelSettings(BaseModel):
     min_atten: int = 0
     max_atten: int = 121
     max_iter: int = 15
-    tolerance: float = 0.5   # dB
+    tolerance: float = 0.75   # dB
     sleep: float = 0.25
 
 class IFAutoLevel():
@@ -60,7 +60,7 @@ class IFAutoLevel():
         self.controller.reset()
         self.controller.setpoint = targetLevel
 
-        self.powerDetect.configure(units = 'DBM')
+        self.powerDetect.configure(units = 'dBm')
         self.ifSystem.input_select = inputSelect
         self.chopper.stop()
         self.chopper.gotoHot()       

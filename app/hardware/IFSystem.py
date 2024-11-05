@@ -17,7 +17,7 @@ else:
     from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch
     from INSTR.WarmIFPlate.YIGFilter import YIGFilter
     from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-    from Control.IFSystem.WarmIfPlate import IFSystem
+    from Control.IFSystem.WarmIFPlate import IFSystem
     import hardware.NoiseTemperature
 
     

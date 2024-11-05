@@ -152,7 +152,7 @@ class NoiseTempActions():
         if self.powerDetect.detect_mode != DetectMode.METER:
             return True, "zeroPowerMeter: nothing to do"
 
-        self.powerDetect.configure(units = 'DBM', fast_mode = False)
+        self.powerDetect.configure(units = 'dBm', fast_mode = False)
         self.ifSystem.output_select = OutputSelect.LOAD
         self.powerDetect.zero()
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
@@ -197,7 +197,7 @@ class NoiseTempActions():
                     pHot = self.powerDetect.read(mode = 'auto')
                     self.powerSupply.setOutputEnable(False)
                     time.sleep(0.25)
-                    pHot = self.powerDetect.read(mode = 'auto')
+                    pCold = self.powerDetect.read(mode = 'auto')
                     ambient, err = self.tempMonitor.readSingle(self.settings.commonSettings.sensorAmbient)
                     record = WarmIFNoise(
                         fkCartTest = fkCartTest,
@@ -262,7 +262,7 @@ class NoiseTempActions():
         self.measurementStatus.setStatusMessage("Y-factor starte")
         self.measurementStatus.setComplete(False)
         self.chopper.spin(self.settings.commonSettings.chopperSpeed)
-        self.powerDetect.configure(units = 'DBM', fast_mode = False)
+        self.powerDetect.configure(units = 'dBm', fast_mode = False)
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
         self.ifSystem.input_select = yFactorSettings.inputSelect
         self.ifSystem.frequency = 6.0
@@ -280,7 +280,13 @@ class NoiseTempActions():
             cycleEnd = cycleStart + sampleInterval
             state = self.chopper.getState()
             power = self.powerDetect.read()
-            chopperPowers.append(ChopperPowers(inputName = self.ifSystem.input_select.value, chopperState = state, power = power))
+            chopperPowers.append(
+                ChopperPowers(
+                    inputName = self.ifSystem.input_select.value, 
+                    chopperState = state, 
+                    power = power
+                )
+            )
             calcIter -= 1
             if calcIter == 0:
                 self._calculateYFactor(chopperPowers, retainSamples)
@@ -324,12 +330,24 @@ class NoiseTempActions():
                 self.chopper.open()
             if not self.measurementStatus.stopNow():                
                 _, amps = self.powerDetect.read()
-                chopperPowers.append(ChopperPowers(inputName = self.ifSystem.input_select.name, chopperState = ChopperState.OPEN, power = mean(amps)))
+                chopperPowers.append(
+                    ChopperPowers(
+                        inputName = self.ifSystem.input_select.name, 
+                        chopperState = ChopperState.OPEN, 
+                        power = mean(amps)
+                    )
+                )
             if not self.measurementStatus.stopNow():                
                 self.chopper.close()
             if not self.measurementStatus.stopNow():
                 _, amps = self.powerDetect.read()
-                chopperPowers.append(ChopperPowers(inputName = self.ifSystem.input_select.name, chopperState = ChopperState.CLOSED, power = mean(amps)))
+                chopperPowers.append(
+                    ChopperPowers(
+                        inputName = self.ifSystem.input_select.name, 
+                        chopperState = ChopperState.CLOSED, 
+                        power = mean(amps)
+                    )
+                )
             if not self.measurementStatus.stopNow():
                 self._calculateYFactor(chopperPowers, retainSamples)                
                 if len(chopperPowers) > retainSamples:
@@ -424,8 +442,7 @@ class NoiseTempActions():
                     time.sleep(0.5)
                     self.dataDisplay.chopperPowerHistory = []
                     samplesHot = []
-                    samplesCold = []
-                    chopperPower = ChopperPowers(inputName = self.ifSystem.input_select.value)
+                    samplesCold = []                    
                     record = records.get((pol, freqIF), None)
                     if not record:
                         record = self._initRawDatum(fkCartTest, freqLO, loIsLocked, freqIF, pol)
@@ -435,10 +452,13 @@ class NoiseTempActions():
                     
                     done = False
                     while not done:
-                        cycleEnd = time.time() + sampleInterval            
-                        chopperPower.chopperState = self.chopper.getState()
-                        chopperPower.power = self.powerDetect.read()            
-                        self.dataDisplay.chopperPowerHistory.append(chopperPower)            
+                        cycleEnd = time.time() + sampleInterval
+                        chopperPower = ChopperPowers(
+                            inputName = self.ifSystem.input_select.name,
+                            chopperState = self.chopper.getState(),
+                            power = self.powerDetect.read()
+                        )
+                        self.dataDisplay.chopperPowerHistory.append(chopperPower)
                         if chopperPower.chopperState == ChopperState.OPEN:
                             if openIsHot:
                                 samplesHot.append(chopperPower.power)
@@ -584,7 +604,7 @@ class NoiseTempActions():
             records: dict[tuple[int, float], NoiseTempRawDatum]) -> None:
 
         self.measurementStatus.setStatusMessage(f"Measure image rejection LO={freqLO:.2f} GHz, IF={freqIF:.2f} GHz...")
-        self.powerDetect.configure(units = 'DBM', fast_mode = False)
+        self.powerDetect.configure(units = 'dBm', fast_mode = False)
 
         for pol in (0, 1):
             if selectPol.testPol(pol):

@@ -15,10 +15,13 @@ from Measure.Shared.SelectPolarization import SelectPolarization
 from DBBand6Cart.schemas.DUT_Type import DUT_Type
 from DBBand6Cart.NoiseTempRawData import NoiseTempRawData
 from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
+from Control.PowerDetect.Interface import DetectMode
 
 settingsContainer = measProcedure.NoiseTemperature.settingsContainer
 measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
 receiver = hardware.FEMC.cartAssembly
+ifSystem = hardware.IFSystem.ifSystem
+powerDetect = hardware.PowerDetect.powerDetect
 coldLoad = hardware.NoiseTemperature.coldLoad
 beamScanMotorController = hardware.BeamScanner.motorController
 

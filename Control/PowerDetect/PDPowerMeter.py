@@ -58,8 +58,7 @@ class PDPowerMeter(PowerDetect_Interface):
         if mode == 'auto':
             return self.powerMeter.autoRead()
         else:
-            averaging = kwargs.get('averaging', 1)
-            self.powerMeter.initContinuous()
+            averaging = kwargs.get('averaging', 1)            
             return self.powerMeter.read(averaging = averaging)
     
     def zero(self) -> None:
