@@ -4,7 +4,7 @@ from datetime import datetime
 
 class Settings(BaseModel):
     sampleRate: float = 20      # samples/sec
-    sensorAmbient: int = 7
+    sensorAmbient: int = 5
     attenuateIF: int = 3
     targetLevel: float = -10    # dBm
     delayAfterLock: float = 10  # minutes
@@ -26,8 +26,10 @@ class TimeSeriesInfo(BaseModel):
     dataStatus: str
     timeSeriesPlot: int = None
     allanPlot: int = None
+    tau0Seconds: float = 0.05
 
 class StabilitySample(BaseModel):
+    key: int = None
     timeStamp: datetime
-    amplitude: float
+    amp_or_phase: float
     temperature: float

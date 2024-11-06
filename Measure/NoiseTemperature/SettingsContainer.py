@@ -1,5 +1,5 @@
 import yaml
-from Measure.NoiseTemperature.schemas import *
+from .schemas import *
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 
 class SettingsContainer():

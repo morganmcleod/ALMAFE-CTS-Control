@@ -34,7 +34,7 @@ class RFSource(LODevice):
                     DB = WCAs(driver = CTSDB())
                     configs = DB.read(serialNum = self.config.serialNum)
                     if configs:
-                        self.setRFSourceConfig(configs[0].id)
+                        self.setRFSourceConfig(configs[0].key)
         
         except:
             self.config = WCA()
@@ -48,12 +48,15 @@ class RFSource(LODevice):
         DB = WCAs(driver = CTSDB())
         self.config = WCA()
         if configId == 0:
+            self.saveSettings()
             return True
         configs = DB.read(configId)
         if not configs:
             return False
         self.config = configs[0]
         self.saveSettings()
+        self.setPABias(0, gateVoltage = self.config.VGp0)
+        self.setPABias(1, gateVoltage = self.config.VGp1)
 
     def getRFSourceConfig(self) -> WCA:
         return self.config

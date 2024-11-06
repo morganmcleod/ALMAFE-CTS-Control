@@ -81,7 +81,8 @@ class NoiseTempActions():
         self.measurementStatus.setComplete(True)
         self.measurementStatus.setMeasuring(None)
         self.measurementStatus.setStatusMessage("Finished")
-
+        self.powerDetect.reset()
+        
     def checkColdLoad(self) -> tuple[bool, str]:
         shouldPause, msg = self.coldLoadController.shouldPause(enablePause = self.settings.commonSettings.pauseForColdLoad)
         while shouldPause and not self.measurementStatus.stopNow():
@@ -129,8 +130,7 @@ class NoiseTempActions():
 
     def setIF(self, freqIF: float = 0, ifAutoLevel: bool = True) -> tuple[bool, str]:
 
-        if self.powerDetect.detect_mode == DetectMode.SPEC_AN:
-            self.ifSystem.frequency = freqIF
+        self.ifSystem.frequency = freqIF
 
         success, msg = (True, "")
         if ifAutoLevel:

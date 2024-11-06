@@ -12,7 +12,8 @@ from Control.IFSystem.Interface import IFSystem_Interface
 from Control.PowerDetect.PDPNA import PDPNA
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from ..Shared.MeasurementStatus import MeasurementStatus
-from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.CartTests import CartTest
+from app.database.CTSDB import CartTestsDB
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
 from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
@@ -130,7 +131,7 @@ class BeamScanner():
             return Rasters()
         
     def start(self, cartTest: CartTest) -> int:
-        cartTestsDb = CartTests(driver = CTSDB())
+        cartTestsDb = CartTestsDB()
         if not SIMULATE:
             self.keyCartTest = cartTestsDb.create(cartTest)
         else:

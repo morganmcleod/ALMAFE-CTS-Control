@@ -11,7 +11,8 @@ beamScanner = app.measProcedure.BeamScanner.beamScanner
 import app.measProcedure.Stability
 amplitudeStablilty = app.measProcedure.Stability.amplitudeStablilty
 phaseStability = app.measProcedure.Stability.phaseStability
-from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.CartTests import CartTest
+from app.database.CTSDB import CartTestsDB
 from DBBand6Cart.TestTypes import TestTypeIds
 from DebugOptions import *
 
@@ -47,7 +48,7 @@ class ScriptRunner():
             self.logger.error(msg)
             return False, msg
 
-        cartTestsDb = CartTests(driver = CTSDB())        
+        cartTestsDb = CartTestsDB()
 
         cartTest.testSysName = getfqdn()
         if testType == TestTypeIds.BEAM_PATTERN:

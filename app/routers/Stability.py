@@ -1,19 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Response
-from fastapi.encoders import jsonable_encoder
-from typing import List, Tuple, Optional
-from schemas.common import SingleBool, SingleFloat
-import measProcedure.Stability
-amplitudeStablilty = measProcedure.Stability.amplitudeStablilty
-phaseStability = measProcedure.Stability.phaseStability
-from AmpPhaseDataLib.Constants import DataSource, PlotEl, SpecLines
-from AmpPhaseDataLib.TimeSeriesAPI import TimeSeriesAPI
-from AmpPhasePlotLib.PlotAPI import PlotAPI
+from fastapi import APIRouter, Response
+import app.measProcedure.Stability
+amplitudeStablilty = app.measProcedure.Stability.amplitudeStablilty
+phaseStability = app.measProcedure.Stability.phaseStability
+settingsContainer = app.measProcedure.Stability.settingsContainer
 from Measure.Stability.schemas import Settings
-from AmpPhaseDataLib.TimeSeries import TimeSeries
 from app.database.CTSDB import CTSDB
-from app.schemas.Stability import StabilityPlot
-from DBBand6Cart.AmplitudeStability import AmplitudeStability as AmplitudeStability_DB
-from DBBand6Cart.PhaseStability import PhaseStability as PhaseStability_DB
 from DBBand6Cart.TestResultPlots import TestResultPlots
 from app.schemas.Response import MessageResponse, ListResponse, prepareListResponse
 import logging
@@ -23,32 +14,32 @@ router = APIRouter(prefix="/stability")
 
 @router.get("/amp/settings", response_model = Settings)
 async def get_Settings():
-    return amplitudeStablilty.settings
+    return settingsContainer.ampStability
 
 @router.post("/amp/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
-    amplitudeStablilty.settings = settings
-    amplitudeStablilty.saveSettings()
+    settingsContainer.ampStability = settings
+    settingsContainer.saveSettingsAmpStability()
     return MessageResponse(message = "Updated amplitude stability settings.", success = True)
 
 @router.post("/amp/settings/reset", response_model = MessageResponse)
 async def reset_settings():
-    amplitudeStablilty.defaultSettings()
+    settingsContainer.defaultSettingsAmpStability()
     return MessageResponse(message = "Reset amplitude stability settings to defaults.", success = True)
 
 @router.get("/phase/settings", response_model = Settings)
 async def get_Settings():
-    return phaseStability.settings
+    return settingsContainer.phaseStability
 
 @router.post("/phase/settings", response_model = MessageResponse)
 async def post_Settings(settings: Settings):
-    phaseStability.settings = settings
-    phaseStability.saveSettings()
+    settingsContainer.phaseStability = settings
+    settingsContainer.saveSettingsPhaseStability()
     return MessageResponse(message = "Updated phase stability settings.", success = True)
 
 @router.post("/phase/settings/reset", response_model = MessageResponse)
 async def reset_settings():
-    phaseStability.defaultSettings()
+    settingsContainer.defaultSettingsPhaseStability()
     return MessageResponse(message = "Reset phase stability settings to defaults.", success = True)
 
 @router.get("/amp/timeseries/list", response_model = ListResponse)

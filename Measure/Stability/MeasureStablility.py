@@ -6,7 +6,8 @@ from Control.CartAssembly import CartAssembly
 from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
 from Control.PowerDetect.Interface import PowerDetect_Interface
 from Control.RFAutoLevel import RFAutoLevel
-from DBBand6Cart.CartTests import CartTest, CartTests
+from DBBand6Cart.CartTests import CartTest
+from app.database.CTSDB import CartTestsDB
 from DBBand6Cart.TestResults import DataStatus, TestResult, TestResults
 from DBBand6Cart.TestResultPlots import TestResultPlot, TestResultPlots
 from DBBand6Cart.schemas.TestType import TestTypeIds
@@ -19,9 +20,9 @@ from AMB.LODevice import LODevice
 from ..Shared.makeSteps import makeSteps
 from ..Shared.MeasurementStatus import MeasurementStatus
 from ..Shared.DataDisplay import DataDisplay
-from .schemas import TimeSeriesInfo, Settings, StabilitySample
+from .schemas import TimeSeriesInfo, StabilitySample
+from .SettingsContainer import SettingsContainer
 from .CalcDataInterface import CalcDataInterface, StabilityRecord
-
 
 from DebugOptions import *
 
@@ -31,12 +32,8 @@ import logging
 import time
 from datetime import datetime
 from math import floor
-import yaml
 
 class MeasureStability():
-
-    AMP_STABILITY_SETTINGS_FILE = "Settings/Settings_AmpStability.yaml"
-    PHASE_STABILITY_SETTINGS_FILE = "Settings/Settings_PhaseStability.yaml"    
 
     def __init__(self,
             mode: str,      # 'AMPLITUDE' or 'PHASE'
@@ -48,7 +45,8 @@ class MeasureStability():
             rfSrcDevice: LODevice,              # for phase stability only            
             measurementStatus: MeasurementStatus,
             calcDataInterface: CalcDataInterface,
-            dataDisplay: DataDisplay
+            dataDisplay: DataDisplay,
+            settingsContainer: SettingsContainer
         ):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -67,12 +65,12 @@ class MeasureStability():
         self.timeSeriesAPI = None   # these must be created in the worker thread because SQLite
         self.plotAPI = None         #        
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
+        self.settingsContainer = settingsContainer
         self.settings = None
         self.signalIF = 10          # only used for phase stability
         branch = gitBranch()
         commit = gitVersion(branch = branch)
         self.swVersion = branch + ":" + commit[0:7]
-        self.loadSettings()
         self._reset()
 
     def _reset(self):
@@ -86,6 +84,7 @@ class MeasureStability():
         self.testResult = None
         self.dataDisplay.reset()
         startTime = datetime.now()
+        self.settings = None
         if self.mode == 'PHASE':
             self.units = Units.DEG
             self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
@@ -95,37 +94,14 @@ class MeasureStability():
             self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
             self.timeSeries2 = None
 
-    def loadSettings(self):
-        try:
-            if self.mode == 'AMPLITUDE':
-                with open(self.AMP_STABILITY_SETTINGS_FILE, "r") as f:
-                    d = yaml.safe_load(f)
-                    self.settings = Settings.parse_obj(d)
-            elif self.mode == 'PHASE':
-                with open(self.PHASE_STABILITY_SETTINGS_FILE, "r") as f:
-                    d = yaml.safe_load(f)
-                    self.settings = Settings.parse_obj(d)
-        except:
-            self.defaultSettings()
-
-    def defaultSettings(self):
-        self.settings = Settings()
-        if self.mode == 'PHASE':
-            self.settings.sampleRate = 5
-            self.settings.attenuateIF = 22
-        self.saveSettings()
-
-    def saveSettings(self):
-        if self.mode == 'AMPLITUDE':
-            with open(self.AMP_STABILITY_SETTINGS_FILE, "w") as f:
-                yaml.dump(self.settings.dict(), f)
-        elif self.mode == 'PHASE':
-            with open(self.PHASE_STABILITY_SETTINGS_FILE, "w") as f:
-                yaml.dump(self.settings.dict(), f)
-
     def start(self, cartTest: CartTest) -> int:
         self._reset()
-        cartTestsDb = CartTests(driver = CTSDB())
+        if self.mode == 'PHASE':
+            self.settings = self.settingsContainer.phaseStability
+        else:
+            self.settings = self.settingsContainer.ampStability
+
+        cartTestsDb = CartTestsDB()
         self.cartTest = cartTest
         if not SIMULATE:
             self.cartTest.key = cartTestsDb.create(cartTest)
@@ -288,7 +264,6 @@ class MeasureStability():
         self.measurementStatus.setStatusMessage("Measuring...")
         self.measurementStatus.setChildKey(self.timeSeries.tsId)
 
-        sampleInterval = 1 / self.settings.sampleRate
         self.dataDisplay.stabilityHistory = []
         done = False        
         timeStart = time.time()
@@ -296,11 +271,17 @@ class MeasureStability():
         ### phase stability
         if self.mode == 'PHASE':
             while not done:
-                temperature, err = self.tempMonitor.readSingle(self.settings.sensorAmbient)
+                temperature, _ = self.tempMonitor.readSingle(self.settings.sensorAmbient)
                 amp, phase = self.powerDetect.read(amp_phase = True)
                 timeStamp = datetime.now()
                 self.timeSeries.appendData(phase, temperature, timeStamps = timeStamp)
                 self.timeSeries2.appendData(amp, temperature, timeStamps = timeStamp)
+                self.dataDisplay.stabilityHistory.append(StabilitySample(
+                    key = self.timeSeries.tsId,
+                    timeStamp = datetime.now(),
+                    amp_or_phase = phase,
+                    temperature = temperature                        
+                ))
                 if self.stopNow:
                     done = self.finished = True
                     msg = "User stop"
@@ -311,17 +292,18 @@ class MeasureStability():
             self.powerDetect.configure(sample_count = 20)
             while not done:
                 try:
+                    temperature, _ = self.tempMonitor.readSingle(self.settings.sensorAmbient)
                     newAmps = self.powerDetect.read()
-                    temp, _ = self.tempMonitor.readSingle(self.settings.sensorAmbient)
                     self.timeSeries.appendData(
                         newAmps, 
-                        [temp for i in range(len(newAmps))], 
+                        [temperature for i in range(len(newAmps))], 
                         timeStamps = [datetime.now() for i in range(len(newAmps))]
                     )
                     self.dataDisplay.stabilityHistory.append(StabilitySample(
+                        key = self.timeSeries.tsId,
                         timeStamp = datetime.now(),
-                        amplitude = newAmps[-1],
-                        temperature = temp                        
+                        amp_or_phase = newAmps[-1],
+                        temperature = temperature                        
                     ))
                 except TypeError as e:
                     pass
@@ -348,7 +330,8 @@ class MeasureStability():
                 pol = pol,
                 sideband = sideband,
                 timeStamp = datetime.now(),
-                dataStatus = DataStatus.PROCESSED.name
+                dataStatus = DataStatus.PROCESSED.name,
+                tau0Seconds = self.timeSeries.tau0Seconds
             )
             self.timeSeriesList.append(self.timeSeriesInfo)
         return success, msg

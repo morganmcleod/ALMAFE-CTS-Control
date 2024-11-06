@@ -10,7 +10,6 @@ from DebugOptions import *
 
 CARTRIDGE_BAND = 6
 RF_SOURCE_PORT = 7
-RF_SOURCE_PA_POL = 1
 NODE_ADDR = 0x13
 
 config = configparser.ConfigParser()
@@ -32,7 +31,14 @@ loDevice.setYTOLimits(12.22, 14.77)
 
 cartAssembly = CartAssembly(ccaDevice, loDevice)
 
-rfSrcDevice = RFSource(conn, nodeAddr = NODE_ADDR, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT, paPol = RF_SOURCE_PA_POL)
+# load the rf source polarization channel to use from config:
+config = configparser.ConfigParser()
+config.read('ALMAFE-CTS-Control.ini')
+try:
+    paPol = int(config['RFSourceDevice']['RF_SOURCE_PA_POL'])
+except:
+    paPol = 0
+rfSrcDevice = RFSource(conn, nodeAddr = NODE_ADDR, band = CARTRIDGE_BAND, femcPort = RF_SOURCE_PORT, paPol = paPol)
 ccaDevice.setFeMode(feMode)
 rfSrcDevice.setBandPower(RF_SOURCE_PORT, True)
 rfSrcDevice.setYTOLimits(11.6, 15.43)

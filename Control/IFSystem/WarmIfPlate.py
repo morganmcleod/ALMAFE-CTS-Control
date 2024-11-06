@@ -14,7 +14,7 @@ class IFSystem(IFSystem_Interface):
         self.warmIFPlate.inputSwitch.selected = InputSelect.POL0_USB
         self.warmIFPlate.yigFilter.setFrequency(0.0)
         self.warmIFPlate.attenuator.setValue(20.0)
-        self.outputSelect = OutputSelect.POWER_DETECT
+        self.output_select = OutputSelect.POWER_DETECT
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -49,7 +49,7 @@ class IFSystem(IFSystem_Interface):
         if outputSelect == OutputSelect.POWER_DETECT:
             self.warmIFPlate.outputSwitch.setValue(WIFOutputSelect.POWER_METER, LoadSelect.THROUGH, PadSelect.PAD_OUT)
         elif outputSelect == OutputSelect.PNA_INTERFACE:
-            self.warmIFPlate.outputSwitch.setValue(OutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
+            self.warmIFPlate.outputSwitch.setValue(WIFOutputSelect.SQUARE_LAW, LoadSelect.THROUGH, PadSelect.PAD_OUT)
         elif outputSelect == OutputSelect.LOAD:
             self.warmIFPlate.outputSwitch.setValue(WIFOutputSelect.POWER_METER, LoadSelect.LOAD, PadSelect.PAD_OUT)
     

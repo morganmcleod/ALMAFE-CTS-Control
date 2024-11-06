@@ -7,9 +7,12 @@ from pydantic import BaseModel
 from Control.IFSystem.Interface import IFSystem_Interface, InputSelect
 from Control.PowerDetect.Interface import PowerDetect_Interface, DetectMode
 from INSTR.Chopper.Interface import Chopper_Interface
-from Control.PBAController import PBAController
+from simple_pid import PID
 
 class IFAutoLevelSettings(BaseModel):
+    Kp: float = 1
+    Ki: float = 0
+    Kd: float = 0
     min_atten: int = 0
     max_atten: int = 121
     max_iter: int = 15
@@ -28,12 +31,6 @@ class IFAutoLevel():
         self.powerDetect = powerDetect
         self.chopper = chopper
         self.loadSettings()
-        self.controller = PBAController(
-            tolerance = self.settings.tolerance,
-            output_limits = (self.settings.min_atten, self.settings.max_atten),
-            min_resolution = 1,
-            max_iter = self.settings.max_iter
-        )
 
     def loadSettings(self):
         try:
@@ -50,48 +47,47 @@ class IFAutoLevel():
 
     def autoLevel(self, 
             targetLevel: float, 
-            inputSelect: InputSelect = InputSelect.POL0_USB) -> tuple[bool, str]:
+            inputSelect: InputSelect = InputSelect.POL0_USB
+        ) -> tuple[bool, str]:
         
         if self.powerDetect.detect_mode == DetectMode.SPEC_AN:
             # nothing to do in this mode
             return True, ""
 
-        self.loadSettings()
-        self.controller.reset()
-        self.controller.setpoint = targetLevel
-
         self.powerDetect.configure(units = 'dBm')
         self.ifSystem.input_select = inputSelect
         self.chopper.stop()
-        self.chopper.gotoHot()       
-        
-        setValue = int(self.settings.max_atten - floor(self.controller.output))
-        self.ifSystem.attenuation = setValue
-        time.sleep(self.settings.sleep)
-        amp = self.powerDetect.read(averaging = 10)
+        self.chopper.gotoHot()
+
+        self.loadSettings()
+        output = self.ifSystem.attenuation
+        pid = PID(-self.settings.Kp, -self.settings.Ki, -self.settings.Kd, starting_output = output)
+        pid.setpoint = targetLevel
+        pid.output_limits = (self.settings.min_atten, self.settings.max_atten)
+        pid.sample_time = self.settings.sleep - 0.1
 
         done = error = False
         msg = ""
 
+        amp = self.powerDetect.read(averaging = 10)
         if not amp:
             error = True
-        
+
+        iter = 0
         while not done and not error: 
-            self.logger.info(f"IF autoLevel: iter={self.controller.iter} amp={amp:.1f} dBm setValue={setValue} dB")
-            setValue = setValue = int(self.settings.max_atten - floor(self.controller.process(amp)))
-            if self.controller.done and not self.controller.fail:
-                msg = f"IF autoLevel: success iter={self.controller.iter} amp={amp:.1f} dBm setValue={setValue} dB"
+            self.logger.info(f"IF autoLevel: iter={iter}, amp={amp:.1f} dBm, atten={int(round(output))} dB")
+            output = pid(amp)
+            self.ifSystem.attenuation = int(round(output))
+            time.sleep(self.settings.sleep)
+            amp = self.powerDetect.read(averaging = 10)
+            
+            iter += 1
+            if targetLevel - self.settings.tolerance <= amp <= targetLevel + self.settings.tolerance:
                 done = True
-            elif self.controller.fail:
-                msg = f"IF autoLevel: fail iter={self.controller.iter} max_iter={self.settings.max_iter} setValue={setValue} dB"
+                msg = f"IF autoLevel SUCCESS: iter={iter}, amp={amp:.1f} dBm, atten={int(round(output))} dB"
+            elif iter > self.settings.max_iter:
                 error = True
-            else:
-                self.ifSystem.attenuation = setValue
-                time.sleep(0.25)
-                amp = self.powerDetect.read(averaging = 10)
-                if amp is None:
-                    error = True
-                    msg = f"IF autoLevel: powerDetect.read error at iter={self.controller.iter}."
+                msg = f"IF autoLevel FAIL: iter={iter}, amp={amp:.1f} dBm, atten={int(round(output))} dB"
 
         if error:
             self.logger.error(msg)

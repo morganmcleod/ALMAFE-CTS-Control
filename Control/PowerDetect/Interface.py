@@ -15,6 +15,10 @@ class PowerDetect_Interface(ABC):
     def configure(self, **kwargs) -> None:
         pass
     
+    @abstractmethod
+    def reset(self) -> None:
+        pass
+
     @property
     @abstractmethod    
     def device_info(self) -> DeviceInfo:
