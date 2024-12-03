@@ -1,6 +1,12 @@
+import configparser
 from DebugOptions import *
-IF_SYSTEM_B6V2 = False
 
+config = configparser.ConfigParser()
+config.read('ALMAFE-CTS-Control.ini')
+try:
+    IF_SYSTEM_B6V2 = config['IFSystem']['IFSystem'] == 'B6V2'
+except:
+    IF_SYSTEM_B6V2 = False
 
 if IF_SYSTEM_B6V2:
     # IF system temporary B6v2

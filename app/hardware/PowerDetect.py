@@ -1,8 +1,15 @@
+import configparser
 from DebugOptions import *
 from Control.PowerDetect.IFPowerImpl import IFPowerImpl
 from INSTR.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
 
-POWER_DETECT_B6V2 = False
+config = configparser.ConfigParser()
+config.read('ALMAFE-CTS-Control.ini')
+try:
+    POWER_DETECT_B6V2 = config['PowerDetect']['PowerDetect'] == 'B6V2'
+except:
+    POWER_DETECT_B6V2 = False
+
 if POWER_DETECT_B6V2:
     from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer    
     from Control.PowerDetect.PDSpecAn import PDSpecAn

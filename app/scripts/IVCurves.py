@@ -7,7 +7,7 @@ def main():
     
     cart_test = measurementStatus.getMeasuring()
     serialNum = receiver.settings.serialNum
-    receiver.setConfig(cart_test.configId)
+    receiver.setCartConfig(cart_test.configId)
 
     actor.start(settingsContainer)
 
