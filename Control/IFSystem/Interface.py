@@ -54,6 +54,14 @@ class IFSystem_Interface(ABC):
         pass
 
     @property
+    def bandwidth(self) -> float:
+        return 0.1
+    
+    @bandwidth.setter
+    def bandwidth(self, bw_GHz: float):
+        pass
+
+    @property
     @abstractmethod
     def attenuation(self) -> float:
         pass

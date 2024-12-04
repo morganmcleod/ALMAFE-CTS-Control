@@ -14,8 +14,8 @@ def main():
     chopper = Chopper()
     cal = ColdLoadCalibration(specAn, tempMon)
     cal.start(
-        bandLeftGHz = 9.95,
-        bandRightGHz = 10.05,
+        center_GHz = 10,
+        span_GHz = 0.1,
         ambSensorNum = 6   
     )
 

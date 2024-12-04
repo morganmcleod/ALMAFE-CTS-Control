@@ -45,8 +45,8 @@ class ColdLoadCalibration():
             yaml.dump(self.specAnSettings.dict(), f)
     
     def start(self, 
-            bandLeftGHz: float = 9.95, 
-            bandRightGHz: float = 10.05,
+            center_GHz: float = 10,
+            span_GHz: float = 0.1,
             ambSensorNum: int = 7):
         
         self.ambSensorNum = ambSensorNum
@@ -54,7 +54,7 @@ class ColdLoadCalibration():
         self.wb = Workbook()
         self.ws = self.wb.active
         self.ws.append(['TS', 'Annotation', 'TAmbient', 'Power'])
-        self.spectrumAnalyzer.configWideBand(bandLeftGHz, bandRightGHz, self.specAnSettings.sweepPoints)
+        self.spectrumAnalyzer.configWideBand(center_GHz, span_GHz, self.specAnSettings.sweepPoints)
         self.worker = threading.Thread(target = self.__measureLoop, daemon = True)
         self.worker.start()
 
@@ -73,10 +73,11 @@ class ColdLoadCalibration():
         while not self.stopNow:
             if not self.paused:
                 time.sleep(0.5)
-                self.power, success, msg = self.spectrumAnalyzer.measureWideBand()
+                success, msg = self.spectrumAnalyzer.measureWideBand()                
                 if not success:
                     print(msg)
                 else:
+                    self.power = self.spectrumAnalyzer.markerY
                     try:
                         self.tAmb, tErr = self.temperatureMonitor.readSingle(self.ambSensorNum)
                     except:

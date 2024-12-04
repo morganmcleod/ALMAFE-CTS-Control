@@ -12,7 +12,8 @@ def main():
     actor.start(settingsContainer)
 
     if settings.measureIFPower:
-        ifSystem.frequency = 6.0
+        ifSystem.frequency = 10
+        ifSystem.bandwidth = 1
         ifSystem.attenuation = 20.0
         ifSystem.output_select = OutputSelect.POWER_DETECT
 
@@ -23,7 +24,7 @@ def main():
                 break
             
             dataDisplay.ivCurveResults.reset()
-            actor.setLO(freqLO, settings.lockLO, settings.loPumped)            
+            actor.setLO(freqLO, settings.lockLO, settings.loPumped)
             actor.measureIVCurve(settings, ifPowerImpl, resultsTarget = dataDisplay.ivCurveResults)
     
     else:

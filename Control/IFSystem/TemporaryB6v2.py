@@ -1,6 +1,6 @@
 from .Interface import IFSystem_Interface, InputSelect, OutputSelect, DeviceInfo
 from INSTR.InputSwitch.ExternalSwitch import ExternalSwitch
-from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer
+from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer, SpectrumAnalyzerSettings
 from DebugOptions import *
 
 class IFSystem(IFSystem_Interface):
@@ -16,7 +16,9 @@ class IFSystem(IFSystem_Interface):
         self.externalSwitch.selected = InputSelect.POL0_USB
         self._output_select = OutputSelect.POWER_DETECT
         self.freqCenter = 0
-        self.freqSpan = 0.0001
+        self.freqSpan = 0.001
+        self.spectrumAnalyzer.configureAll(SpectrumAnalyzerSettings())
+        self.spectrumAnalyzer.configFreqStartStop(2.0e9, 22.0e9)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -68,7 +70,19 @@ class IFSystem(IFSystem_Interface):
     def frequency(self, freq_GHz: float):
         self.freqCenter = freq_GHz
         if self.freqCenter > 0:
-            self.spectrumAnalyzer.configNarrowBand(self.freqCenter, self.freqSpan)
+            self.spectrumAnalyzer.configWideBand(self.freqCenter, self.freqSpan)
+        else:
+            self.spectrumAnalyzer.endNarrowBand()
+
+    @property
+    def bandwidth(self) -> float:
+        return self.freqSpan
+    
+    @bandwidth.setter
+    def bandwidth(self, bw_GHz: float):
+        self.freqSpan = bw_GHz
+        if self.freqCenter > 0:
+            self.spectrumAnalyzer.configWideBand(self.freqCenter, self.freqSpan)
         else:
             self.spectrumAnalyzer.endNarrowBand()
 

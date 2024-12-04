@@ -51,23 +51,7 @@ class PDSpecAn(PowerDetect_Interface):
         return Units.DBM
 
     def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
-        averaging = kwargs.get('averaging', 1)
-        delay = kwargs.get('delay', 1)
-        if self.spectrumAnalyzer.narrowBand:
-            success, msg = self.spectrumAnalyzer.measureNarrowBand(averaging, delay)
-            if success:
-                return self.spectrumAnalyzer.markerY
-            self.logger.error(msg)
-            return 0
-        else:            
-            success, msg = self.spectrumAnalyzer.configAveraging(averaging)
-            if not success:
-                self.logger.error(msg)
-            success, msg = self.spectrumAnalyzer.readTrace()
-            if success:
-                return self.spectrumAnalyzer.traceX, self.spectrumAnalyzer.traceY
-            self.logger.error(msg)
-            return [], []
+        return self.spectrumAnalyzer.read(delay = 0.5, **kwargs)
 
     def zero(self) -> None:
         pass
