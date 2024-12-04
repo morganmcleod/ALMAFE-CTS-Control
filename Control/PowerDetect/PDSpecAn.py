@@ -51,7 +51,8 @@ class PDSpecAn(PowerDetect_Interface):
         return Units.DBM
 
     def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
-        return self.spectrumAnalyzer.read(delay = 0.5, **kwargs)
+        sweepTime = self.spectrumAnalyzer.readSweepTime()
+        return self.spectrumAnalyzer.read(delay = sweepTime * 1.25, **kwargs)
 
     def zero(self) -> None:
         pass
