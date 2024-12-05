@@ -10,7 +10,7 @@ def main():
     beamScanMotorController.startMove()
 
     cart_test = measurementStatus.getMeasuring()
-    receiver.setConfig(cart_test.configId)
+    receiver.setCartConfig(cart_test.configId)
 
     coldLoad.startFill()
     noiseTempSettings = settingsContainer.loWgIntegritySettings if settingsContainer.testSteps.loWGIntegrity else settingsContainer.noiseTempSettings

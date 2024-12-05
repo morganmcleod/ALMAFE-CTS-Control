@@ -6,7 +6,7 @@ def main():
     actor.ntSpecAnSettings = settingsContainer.ntSpecAnSettings
     
     cart_test = measurementStatus.getMeasuring()
-    receiver.setConfig(cart_test.configId)
+    receiver.setCartConfig(cart_test.configId)
 
     coldLoad.startFill()
 

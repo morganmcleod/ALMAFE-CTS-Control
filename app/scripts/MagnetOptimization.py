@@ -6,7 +6,7 @@ def main():
     settings = settingsContainer.magnetOptSettings
     
     cart_test = measurementStatus.getMeasuring()
-    receiver.setConfig(cart_test.configId)
+    receiver.setCartConfig(cart_test.configId)
 
     actor.start(settingsContainer)
 
