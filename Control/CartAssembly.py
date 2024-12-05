@@ -26,6 +26,7 @@ class CartAssemblySettings(BaseModel):
     max_iter: int = 15
     tolerance: float = 0.5   # uA
     sleep: float = 0.2
+    freqLOGHz: float = 0
     loConfig: WCA = WCA()
 
 class CartAssembly():
@@ -61,8 +62,7 @@ class CartAssembly():
         self.preampParams01 = None
         self.preampParams02 = None
         self.preampParams11 = None
-        self.preampParams12 = None
-        self.freqLOGHz = 0
+        self.preampParams12 = None        
         self.autoLOPol = None   # not used internally, but observed by CartAssembly API        
 
     def loadSettings(self):
@@ -75,6 +75,7 @@ class CartAssembly():
                     configs = DB.read(serialNum = self.settings.serialNum, latestOnly = True)
                     if configs:                    
                         self.setCartConfig(configs[0].key)
+                    self.setRecevierBias(self.settings.freqLOGHz)
         except Exception as e:
             self.settings = CartAssemblySettings()
             self.saveSettings()
@@ -145,6 +146,8 @@ class CartAssembly():
     def setRecevierBias(self, FreqLO:float, magnetOnly: bool = False) -> bool:
         if not self.configId:
             return False
+        self.settings.freqLOGHz = FreqLO
+        self.saveSettings()
         if self.mixerParams01:
             self.mixerParam01 = self.__interpolateMixerParams(FreqLO, self.mixerParams01)
             self.ccaDevice.setSIS(0, 1, None if magnetOnly else self.mixerParam01.VJ, self.mixerParam01.IMAG)

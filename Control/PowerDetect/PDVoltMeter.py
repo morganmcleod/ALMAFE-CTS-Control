@@ -11,6 +11,7 @@ class PDVoltMeter(PowerDetect_Interface):
     def reset(self):
         self._detect_mode = DetectMode.VOLT_METER
         self._units = Units.VOLTS
+        self._last_read = None
     
     def configure(self, **kwargs) -> None:
         self.voltMeter.configureMeasurement(
@@ -51,7 +52,12 @@ class PDVoltMeter(PowerDetect_Interface):
         self._units = units
 
     def read(self, **kwargs) -> list[float]:
-        return self.voltMeter.read()
+        self._last_read = self.voltMeter.read()
+        return self._last_read
         
+    @property
+    def last_read(self) -> list[float]:
+        return self._last_read
+    
     def zero(self) -> None:
         pass

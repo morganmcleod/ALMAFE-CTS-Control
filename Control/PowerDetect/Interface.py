@@ -38,6 +38,11 @@ class PowerDetect_Interface(ABC):
     def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
         pass
 
+    @property
+    @abstractmethod
+    def last_read(self) -> float | tuple[list[float], list[float]]:
+        pass
+
     @abstractmethod
     def zero(self) -> None:
         pass

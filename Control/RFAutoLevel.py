@@ -47,8 +47,13 @@ class RFAutoLevel():
             yaml.dump(self.settings.dict(), f)
 
     def autoLevel(self, 
-                freqIF: float, 
-                targetLevel: float) -> tuple[bool, str]:
+            freqIF: float, 
+            targetLevel: float,
+            powerDetect: PowerDetect_Interface = None
+        ) -> tuple[bool, str]:
+
+        if not powerDetect:
+            powerDetect = self.powerDetect
 
         self.loadSettings()
         self.controller.reset()
@@ -57,7 +62,7 @@ class RFAutoLevel():
         
         self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, self.controller.output)
         time.sleep(self.settings.sleep)
-        amp = self.powerDetect.read()
+        amp = powerDetect.read()
         
         done = error = False
         msg = ""
@@ -77,7 +82,7 @@ class RFAutoLevel():
             else:
                 self.rfSrcDevice.setPAOutput(self.rfSrcDevice.paPol, setValue)
                 time.sleep(self.settings.sleep)
-                amp = self.powerDetect.read(averaging = 1, delay = 0)
+                amp = powerDetect.read(averaging = 1, delay = 0)
                 if amp is None:
                     error = True
                     msg = f"RF autoLevel: powerDetect.read error at iter={self.controller.iter}."
@@ -88,3 +93,7 @@ class RFAutoLevel():
         elif msg:
             self.logger.info(msg)
             return True, ""
+
+    @property
+    def last_read(self) -> float:
+        return self.powerDetect.last_read

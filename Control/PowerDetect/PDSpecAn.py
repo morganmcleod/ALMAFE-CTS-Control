@@ -11,7 +11,8 @@ class PDSpecAn(PowerDetect_Interface):
         self.reset()
     
     def reset(self):
-        self.spectrumAnalyzer.reset()        
+        self.spectrumAnalyzer.reset()
+        self._last_read = None
     
     def configure(self, **kwargs) -> None:
         config = kwargs.get('config', None)
@@ -52,7 +53,12 @@ class PDSpecAn(PowerDetect_Interface):
 
     def read(self, **kwargs) -> float | tuple[list[float], list[float]]:
         sweepTime = self.spectrumAnalyzer.readSweepTime()
-        return self.spectrumAnalyzer.read(delay = sweepTime * 1.25, **kwargs)
+        self._last_read = self.spectrumAnalyzer.read(delay = sweepTime * 1.25, **kwargs)
+        return self._last_read
+
+    @property
+    def last_read(self) -> float | tuple[list[float], list[float]]:
+        return self._last_read
 
     def zero(self) -> None:
         pass

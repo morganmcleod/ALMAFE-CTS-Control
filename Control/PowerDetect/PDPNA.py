@@ -13,7 +13,8 @@ class PDPNA(PowerDetect_Interface):
 
     def reset(self):
         self._detect_mode = DetectMode.PNA
-    
+        self._last_read = None
+        
     def configure(self, **kwargs) -> None:
         self.pna.reset()
         try:
@@ -49,12 +50,16 @@ class PDPNA(PowerDetect_Interface):
     def units(self) -> Units:
         return Units.DB
 
-    def read(self, **kwargs) -> float | tuple[float, float] | tuple[list[float], list[float]]:
-        amp, phase = self.pna.getAmpPhase()
+    def read(self, **kwargs) -> float | tuple[float, float]:
+        self._last_read, phase = self.pna.getAmpPhase()
         if kwargs.get('amp_phase', False):
-            return amp, phase
+            return self._last_read, phase
         else:
-            return amp
+            return self._last_read
+
+    @property
+    def last_read(self) -> float | tuple[float, float]:
+        return self._last_read
 
     def zero(self) -> None:
         pass

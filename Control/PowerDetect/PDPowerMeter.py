@@ -12,6 +12,7 @@ class PDPowerMeter(PowerDetect_Interface):
         self.powerMeter.reset()
         self._fast_mode = False
         self._units = Units.DBM
+        self._last_read = None
 
     def configure(self, **kwargs) -> None:
         units = kwargs.get('units', None)
@@ -56,10 +57,15 @@ class PDPowerMeter(PowerDetect_Interface):
     def read(self, **kwargs) -> float:
         mode = kwargs.get('mode', None)
         if mode == 'auto':
-            return self.powerMeter.autoRead()
+            self._last_read = self.powerMeter.autoRead()
         else:
             averaging = kwargs.get('averaging', 1)            
-            return self.powerMeter.read(averaging = averaging)
+            self._last_read = self.powerMeter.read(averaging = averaging)
+        return self._last_read
     
+    @property
+    def last_read(self) -> float:
+        return self._last_read
+
     def zero(self) -> None:
         self.powerMeter.zero()
