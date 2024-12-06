@@ -38,7 +38,7 @@ async def websocket_rf_power(websocket: WebSocket):
             if rfAutoLevel.last_read != lastValue:
                 lastValue = rfAutoLevel.last_read
                 await manager.send(lastValue, websocket)            
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.01)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /power_ws")

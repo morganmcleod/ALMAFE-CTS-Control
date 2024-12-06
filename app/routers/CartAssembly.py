@@ -9,19 +9,6 @@ logger = logging.getLogger("ALMAFE-CTS-Control")
 router = APIRouter(prefix="/cartassy")
 manager = ConnectionManager()
 
-@router.websocket("/sis/current_ws")
-async def websocket_sis_current(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            if FEMC.cartAssembly.autoLOPol is not None:
-                sis = FEMC.ccaDevice.getSIS(pol = FEMC.cartAssembly.autoLOPol, sis=1, averaging=2, nDigits = 1, takeAbs = True)
-                await manager.send(sis, websocket)
-            await asyncio.sleep(0.1)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /cartassy/sis/current_ws")
-
 @router.websocket("/auto_lo/current_ws")
 async def websocket_sis_current(websocket: WebSocket):
     await manager.connect(websocket)
@@ -30,7 +17,7 @@ async def websocket_sis_current(websocket: WebSocket):
             if FEMC.cartAssembly.autoLOPol is not None:
                 sis = FEMC.ccaDevice.getSIS(pol = FEMC.cartAssembly.autoLOPol, sis=1, averaging=2, nDigits = 1, takeAbs = True)
                 await manager.send(sis, websocket)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.exception("WebSocketDisconnect: /cartassy/auto_lo/current_ws")
