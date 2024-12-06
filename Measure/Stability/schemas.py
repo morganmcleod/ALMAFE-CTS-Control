@@ -26,6 +26,7 @@ class TimeSeriesInfo(BaseModel):
     dataStatus: str
     timeSeriesPlot: int = None
     allanPlot: int = None
+    correctionVoltagePlot: int = None
     tau0Seconds: float = 0.05
 
 class StabilitySample(BaseModel):

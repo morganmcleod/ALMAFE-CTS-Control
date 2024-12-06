@@ -88,7 +88,7 @@ class MeasureStability():
         if self.mode == 'PHASE':
             self.units = Units.DEG
             self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
-            self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = Units.DB)
+            self.timeSeries2 = TimeSeries(startTime = startTime, dataUnits = Units.VOLTS)
         else:
             self.units = self.powerDetect.units
             self.timeSeries = TimeSeries(startTime = startTime, dataUnits = self.units)
@@ -273,9 +273,10 @@ class MeasureStability():
             while not done:
                 temperature, _ = self.tempMonitor.readSingle(self.settings.sensorAmbient)
                 amp, phase = self.powerDetect.read(amp_phase = True)
+                pll = self.rfSrcDevice.getPLL()
                 timeStamp = datetime.now()
                 self.timeSeries.appendData(phase, temperature, timeStamps = timeStamp)
-                self.timeSeries2.appendData(amp, temperature, timeStamps = timeStamp)
+                self.timeSeries2.appendData(pll['corrV'], pll['temperature'], timeStamps = timeStamp)
                 self.dataDisplay.stabilityHistory.append(StabilitySample(
                     key = self.timeSeries.tsId,
                     timeStamp = datetime.now(),
@@ -366,6 +367,15 @@ class MeasureStability():
                 PlotEl.Y_AXIS_LABEL : StabilityUnits.AVAR_TAU.value.format(round(self.timeSeries.tau0Seconds, 2))
             }
             success = self.plotAPI.plotAmplitudeStability(self.timeSeries.tsId, None, plotEls)
+            calculatedTraces = self.plotAPI.getCalcTrace()
+            if success:
+                plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
+                if plotId:
+                    self.plotIds.append(plotId)
+                    self.timeSeriesInfo.allanPlot = plotId
+                else:
+                    success = False
+                    msg = "MeasureStability.__plotOneLO: Error creating TestResultPlot record."
         
         elif self.cartTest.fkTestType == TestTypeIds.PHASE_STABILITY.value:
             plotDescription = f"Phase stability LO={freqLO} Pol{pol} {sideband}"
@@ -376,14 +386,28 @@ class MeasureStability():
                 PlotEl.SPEC2_NAME : "CTS test limit"
             }
             success = self.plotAPI.plotPhaseStability(self.timeSeries.tsId, None, plotEls)
+            calculatedTraces = self.plotAPI.getCalcTrace()
+            if success:
+                plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
+                if plotId:
+                    self.plotIds.append(plotId)
+                    self.timeSeriesInfo.allanPlot = plotId
+
+            plotDescription = f"Correction voltage LO={freqLO} Pol{pol} {sideband}"
+            plotEls = {
+                PlotEl.TITLE : "Correction voltage"
+            }
+            success2 = self.plotAPI.plotTimeSeries(self.timeSeries2, None, plotEls)
+            if success2:
+                plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
+                if plotId:
+                    self.plotIds.append(plotId)
+                    self.timeSeriesInfo.correctionVoltagePlot = plotId
         
         else:
             raise ValueError(f"Unsupported fkTestType: {self.cartTest.fkTestType}")
         
-        if not success:
-            msg = "MeasureStability.__plotOneLO: Error plotting stability"
-        else:
-            result = self.plotAPI.getCalcTrace()            
+        if calculatedTraces:
             records = [StabilityRecord(
                 fkCartTest = self.cartTest.key,
                 fkRawData = self.timeSeries.tsId,
@@ -395,16 +419,8 @@ class MeasureStability():
                 time = x,
                 allan = y,
                 errorBar = e
-            ) for x, y, e in zip(result['x'], result['y'], result['yError'])]
+            ) for x, y, e in zip(calculatedTraces['x'], calculatedTraces['y'], calculatedTraces['yError'])]
             self.DB.create(records)
-        
-            plotId = self.DB_TRPlot.create(TestResultPlot(plotBinary = self.plotAPI.imageData, description = plotDescription))
-            if plotId:
-                self.plotIds.append(plotId)
-                self.timeSeriesInfo.allanPlot = plotId
-            else:
-                success = False
-                msg = "MeasureStability.__plotOneLO: Error creating TestResultPlot record."
 
         self.timeSeries.reset()
         if self.timeSeries2:
