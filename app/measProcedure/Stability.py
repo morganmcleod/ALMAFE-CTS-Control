@@ -22,7 +22,6 @@ pdVoltMeter = PDVoltMeter(hardware.Stability.voltMeter)
 calcDataAmplitudeStability = CalcDataAmplitudeStability(driver = CTSDB())
 
 amplitudeStablilty = MeasureStability(
-    mode = 'AMPLITUDE',
     loReference = hardware.ReferenceSources.loReference,
     cartAssembly = hardware.FEMC.cartAssembly,
     ifSystem = hardware.IFSystem.ifSystem,
@@ -39,7 +38,6 @@ pdPNA = PDPNA(hardware.BeamScanner.pna)
 calcDataPhaseStability = CalcDataPhaseStability(driver = CTSDB())
 
 phaseStability = MeasureStability(
-    mode = 'PHASE',
     loReference = hardware.ReferenceSources.loReference,
     cartAssembly = hardware.FEMC.cartAssembly,
     ifSystem = hardware.IFSystem.ifSystem,

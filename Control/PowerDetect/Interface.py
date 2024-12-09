@@ -4,6 +4,7 @@ from ALMAFE.basic.Units import Units
 from Control.schemas.DeviceInfo import DeviceInfo
 
 class DetectMode(Enum):
+    DEFAULT = 'DEFAULT'
     METER = 'METER'
     SPEC_AN = 'SPEC_AN'
     PNA = 'PNA'

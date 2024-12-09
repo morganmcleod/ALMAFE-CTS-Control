@@ -18,9 +18,10 @@ from Measure.Shared.MeasurementStatus import MeasurementStatus
 from Measure.Shared.DataDisplay import DataDisplay
 from Measure.Shared.makeSteps import makeSteps
 from Measure.Shared.SelectPolarization import SelectPolarization
+from Measure.Shared.Sampler import Sampler
 from Measure.NoiseTemperature.SettingsContainer import SettingsContainer
 from .schemas import CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSettings, ChopperPowers, \
-    SpecAnPowers, YFactorSample, BiasOptSettings
+    SpecAnPowers, YFactorSample, BiasOptSettings, YFactorPowers
 from DBBand6Cart.schemas.WarmIFNoise import WarmIFNoise
 from DBBand6Cart.schemas.NoiseTempRawDatum import NoiseTempRawDatum
 from DBBand6Cart.schemas.DUT_Type import DUT_Type
@@ -247,58 +248,64 @@ class NoiseTempActions():
         return records
     
 #### Y-FACTOR #####################################################
-    
+
     def measureYFactor(self, yFactorSettings: YFactorSettings) -> None:
 
-        if self.powerDetect.detect_mode == DetectMode.METER:
+        self.dataDisplay.yFactorHistory = []
+        self.dataDisplay.yFactorPowers = []
+
+        if self.powerDetect.detect_mode == DetectMode.METER or yFactorSettings.detectMode == DetectMode.METER:
             return self._measureYFactor_SINGLE(yFactorSettings)
-        elif self.powerDetect.detect_mode == DetectMode.SPEC_AN:
+        elif self.powerDetect.detect_mode == DetectMode.SPEC_AN or yFactorSettings.detectMode == DetectMode.SPEC_AN:
             return self._measureYFactor_SWEEP(yFactorSettings)
         else:
             return None
         
     def _measureYFactor_SINGLE(self, yFactorSettings: YFactorSettings) -> None:
 
-        self.measurementStatus.setStatusMessage("Y-factor starte")
+        self.measurementStatus.setStatusMessage("Y-factor started")
         self.measurementStatus.setComplete(False)
         self.chopper.spin(self.settings.commonSettings.chopperSpeed)
-        self.powerDetect.configure(units = 'dBm', fast_mode = False)
+        self.powerDetect.configure(units = 'dBm', fast_mode = True)
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
         self.ifSystem.input_select = yFactorSettings.inputSelect
-        self.ifSystem.frequency = 6.0
-        self.ifSystem.attenuation = 22.0
 
-        sampleInterval = 1 / self.settings.commonSettings.sampleRate
-        calcIter = self.settings.commonSettings.powerMeterConfig.minS
-        retainSamples = calcIter * 2
-
-        self.dataDisplay.yFactorHistory = []
         chopperPowers = []
 
-        while not self.measurementStatus.stopNow():
-            cycleStart = time.time()
-            cycleEnd = cycleStart + sampleInterval
+        def read():
             state = self.chopper.getState()
             power = self.powerDetect.read()
             chopperPowers.append(
                 ChopperPowers(
-                    inputName = self.ifSystem.input_select.value, 
+                    inputName = self.ifSystem.input_select.name, 
                     chopperState = state, 
                     power = power
                 )
             )
-            calcIter -= 1
-            if calcIter == 0:
-                self._calculateYFactor(chopperPowers, retainSamples)
-                calcIter = self.settings.commonSettings.powerMeterConfig.minS
-            now = time.time()
-            if now < cycleEnd:
-                time.sleep(cycleEnd - now)
-            elif len(chopperPowers) > retainSamples:
-                chopperPowers = chopperPowers[-retainSamples:]
+
+        sampling_interval = 1 / self.settings.commonSettings.sampleRate
+        calculate_countdown = self.settings.commonSettings.powerMeterConfig.minS
+        retain_samples = calculate_countdown * 2
+        sampler = Sampler(sampling_interval, read)
+        sampler.start()
+
+        done = False
+        while not done:
+            if self.measurementStatus.stopNow():
+                done = True
+            else:
+                calculate_countdown -= 1
+                if calculate_countdown == 0:
+                    self._calculateYFactor(chopperPowers, retain_samples)
+                    calculate_countdown = self.settings.commonSettings.powerMeterConfig.minS
+                if len(chopperPowers) > retain_samples:
+                    chopperPowers = chopperPowers[-retain_samples:]
+                time.sleep(sampling_interval)
         
+        sampler.stop()
         self.chopper.stop()
         self.chopper.gotoHot()
+        self.powerDetect.configure(fast_mode = False)
         self.measurementStatus.setStatusMessage("Y-factor stopped")
         self.measurementStatus.setComplete(True)
         self.finished = True
@@ -322,7 +329,6 @@ class NoiseTempActions():
             sweepPoints = sweepPoints)
         
         retainSamples = 20
-        self.dataDisplay.yFactorHistory = []
         chopperPowers = []
 
         while not self.measurementStatus.stopNow():
@@ -370,9 +376,8 @@ class NoiseTempActions():
 
         if len(pHot) < 2 or len(pCold) < 2:
             return
-        pHot = mean(pHot)
-        pCold = mean(pCold)
-        Y = pHot - pCold
+
+        Y = mean(pHot) - mean(pCold)
         Ylinear = 10 ** (Y / 10)
         tAmb, tErr = self.tempMonitor.readSingle(self.settings.commonSettings.sensorAmbient)
         if tErr or tAmb < 1:
@@ -381,6 +386,13 @@ class NoiseTempActions():
         self.dataDisplay.yFactorHistory.append(YFactorSample(Y = Y, TRx = TRx))
         if len(self.dataDisplay.yFactorHistory) > retainSamples:
             self.dataDisplay.yFactorHistory = self.dataDisplay.yFactorHistory[-retainSamples:]
+        self.dataDisplay.yFactorPowers += [
+            YFactorPowers(
+                inputName = self.ifSystem.input_select.name,
+                pHot = h,
+                pCold = c
+            ) for h, c in zip(pHot, pCold)
+        ]
 
 #### NOISE TEMPERATURE #####################################
     

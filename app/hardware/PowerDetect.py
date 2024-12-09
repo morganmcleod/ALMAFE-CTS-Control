@@ -1,8 +1,19 @@
 import configparser
 from DebugOptions import *
 from Control.PowerDetect.IFPowerImpl import IFPowerImpl
+from Control.PowerDetect.PDPowerMeter import PDPowerMeter
 from INSTR.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
+from INSTR.PowerMeter.KeysightE441X import PowerMeter
+from INSTR.PowerMeter.Simulator import PowerMeterSimulator
 
+# always instantiate powerMeter and pdPowerMeter:
+if SIMULATE:
+    powerMeter = PowerMeterSimulator()
+else:
+    powerMeter = PowerMeter("GPIB0::13::INSTR")
+pdPowerMeter = PDPowerMeter(powerMeter)
+
+# load power detect setting
 config = configparser.ConfigParser()
 config.read('ALMAFE-CTS-Control.ini')
 try:
@@ -11,6 +22,7 @@ except:
     POWER_DETECT_B6V2 = False
 
 if POWER_DETECT_B6V2:
+    # B6v2 powerDetect is spectrrum analyzer
     from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer    
     from Control.PowerDetect.PDSpecAn import PDSpecAn
     if SIMULATE:
@@ -19,16 +31,11 @@ if POWER_DETECT_B6V2:
         spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.10::inst0::INSTR")
     powerDetect = PDSpecAn(spectrumAnalyzer)
 
-else:
-    from INSTR.PowerMeter.KeysightE441X import PowerMeter
+else:    
+    # B6v1 powerDetect is power meter
     from INSTR.PowerMeter.Simulator import PowerMeterSimulator
-    from Control.PowerDetect.PDPowerMeter import PDPowerMeter
     spectrumAnalyzer = SpectrumAnalyzerSimulator()
-    if SIMULATE:
-        powerMeter = PowerMeterSimulator()
-    else:
-        powerMeter = PowerMeter("GPIB0::13::INSTR")
-    powerDetect = PDPowerMeter(powerMeter)
+    powerDetect = pdPowerMeter
 
-# this implements the interface required by CCADevice for power detection during I-V curves:
+# instantiate the interface required by CCADevice for power detection during I-V curves:
 ifPowerImpl = IFPowerImpl(powerDetect)

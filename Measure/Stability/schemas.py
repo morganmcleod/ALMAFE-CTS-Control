@@ -27,6 +27,7 @@ class TimeSeriesInfo(BaseModel):
     timeSeriesPlot: int = None
     allanPlot: int = None
     correctionVoltagePlot: int = None
+    spectrumPlot: int = None
     tau0Seconds: float = 0.05
 
 class StabilitySample(BaseModel):

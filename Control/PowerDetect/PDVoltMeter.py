@@ -19,13 +19,11 @@ class PDVoltMeter(PowerDetect_Interface):
             autoRange = False, 
             manualRange = 0.1
         )
+        self.voltMeter.configureTrigger(TriggerSource.IMMEDIATE)
         self.voltMeter.configureAutoZero(AutoZero.OFF)
         self.voltMeter.configureAveraging(Function.DC_VOLTAGE, 1)
-        sample_count = kwargs.get('sample_count', 1)
-        if sample_count > 1:
-            self.voltMeter.inst.write(f"SAMP:COUN {sample_count};")
-        self.voltMeter.configureTrigger(TriggerSource.IMMEDIATE)
-    
+        self.voltMeter.inst.write(f"SAMP:COUN INFINITE;")
+            
     @property
     def device_info(self) -> DeviceInfo:
         if SIMULATE:

@@ -3,6 +3,7 @@ from enum import Enum
 from INSTR.PowerMeter.schemas import StdErrConfig
 from INSTR.Chopper.Interface import ChopperState
 from Control.IFSystem.Interface import InputSelect
+from Control.PowerDetect.Interface import DetectMode
 from Measure.Shared.SelectPolarization import SelectPolarization
 
 class ChopperMode(Enum):
@@ -29,7 +30,7 @@ class CommonSettings(BaseModel):
     imageRejectSBTarget_PM: float = -15.0   # dBm
     imageRejectSBTarget_SA: float = -30.0   # dBm
     chopperSpeed: float = 0.5               # rev/sec
-    sampleRate: float = 50                  # samples/sec
+    sampleRate: float = 20                  # samples/sec
     sensorAmbient: int = 7
     tColdEff: float = 80
     sigGenAmplitude: float = 10.0
@@ -72,13 +73,20 @@ class BiasOptSettings(BaseModel):
 
 class YFactorSettings(BaseModel):
     inputSelect: InputSelect = InputSelect.POL0_USB
+    detectMode: DetectMode = DetectMode.DEFAULT
     ifStart: float = 5
     ifStop: float = 10
+    attenuation: float = 20
 
 class ChopperPowers(BaseModel):
     inputName: str
     chopperState: ChopperState = ChopperState.TRANSITION
     power: float = 0
+
+class YFactorPowers(BaseModel):
+    inputName: str
+    pHot: float
+    pCold: float
 
 class SpecAnPowers(BaseModel):
     pol: int

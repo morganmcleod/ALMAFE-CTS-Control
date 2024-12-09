@@ -32,7 +32,7 @@ class SettingsContainer():
 
     def defaultSettingsPhaseStability(self):
         self.phaseStability = Settings()
-        self.phaseStability.sampleRate = 5
+        self.phaseStability.sampleRate = 1
         self.phaseStability.attenuateIF = 22
         self.saveSettingsPhaseStability()
 

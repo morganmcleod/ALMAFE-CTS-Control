@@ -30,7 +30,7 @@ class SettingsContainer():
         try:
             with open(self.COMMON_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.commonSettings = CommonSettings.parse_obj(d)
+                self.commonSettings = CommonSettings.model_validate(d)
         except:
             self.setDefaultsCommon()
 
@@ -40,13 +40,13 @@ class SettingsContainer():
 
     def saveSettingsCommon(self):
         with open(self.COMMON_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.commonSettings.dict(), f)
+            yaml.dump(self.commonSettings.model_dump(), f)
 
     def loadSettingsWarmIF(self):
         try:
             with open(self.WARM_IF_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.warmIFSettings = WarmIFSettings.parse_obj(d)
+                self.warmIFSettings = WarmIFSettings.model_validate(d)
         except:
             self.setDefaultsWarmIF()
 
@@ -56,13 +56,13 @@ class SettingsContainer():
 
     def saveSettingsWarmIF(self):
         with open(self.WARM_IF_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.warmIFSettings.dict(), f)
+            yaml.dump(self.warmIFSettings.model_dump(), f)
 
     def loadSettingsNoiseTemp(self):
         try:
             with open(self.NOISE_TEMP_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.noiseTempSettings = NoiseTempSettings.parse_obj(d)
+                self.noiseTempSettings = NoiseTempSettings.model_validate(d)
         except:
             self.setDefaultsNoiseTemp()
 
@@ -72,13 +72,13 @@ class SettingsContainer():
 
     def saveSettingsNoiseTemp(self):
         with open(self.NOISE_TEMP_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.noiseTempSettings.dict(), f)
+            yaml.dump(self.noiseTempSettings.model_dump(), f)
         
     def loadSettingsLOWGIntegrity(self):
         try:
             with open(self.LO_WG_INTEGRITY_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.loWgIntegritySettings = NoiseTempSettings.parse_obj(d)
+                self.loWgIntegritySettings = NoiseTempSettings.model_validate(d)
         except:
             self.setDefaultsLOWGIntegrity()
 
@@ -88,13 +88,13 @@ class SettingsContainer():
 
     def saveSettingsLOWGIntegrity(self):
         with open(self.LO_WG_INTEGRITY_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.loWgIntegritySettings.dict(), f)
+            yaml.dump(self.loWgIntegritySettings.model_dump(), f)
 
     def loadSettingsBiasOpt(self):
         try:
             with open(self.BIAS_OPT_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.biasOptSettings = BiasOptSettings.parse_obj(d)
+                self.biasOptSettings = BiasOptSettings.model_validate(d)
         except:
             self.setDefaultsBiasOpt()
 
@@ -104,13 +104,13 @@ class SettingsContainer():
 
     def saveSettingsBiasOpt(self):
         with open(self.BIAS_OPT_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.biasOptSettings.dict(), f)
+            yaml.dump(self.biasOptSettings.model_dump(), f)
 
     def loadSettingsYFactor(self):
         try:
             with open(self.YFACTOR_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.yFactorSettings = YFactorSettings.parse_obj(d)
+                self.yFactorSettings = YFactorSettings.model_validate(d)
         except:
             self.setDefaultsYFactor()
 
@@ -120,13 +120,13 @@ class SettingsContainer():
 
     def saveSettingsYFactor(self):
         with open(self.YFACTOR_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.yFactorSettings.dict(), f)
+            yaml.dump(self.yFactorSettings.model_dump(), f)
 
     def loadSettingsNTSpecAn(self):
         try:
             with open(self.NT_SPECAN_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.ntSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
+                self.ntSpecAnSettings = SpectrumAnalyzerSettings.model_validate(d)
         except:
             self.setDefaultsNTSpecAn()
 
@@ -136,13 +136,13 @@ class SettingsContainer():
 
     def saveSettingsNTSpecAn(self):
         with open(self.NT_SPECAN_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.ntSpecAnSettings.dict(), f)
+            yaml.dump(self.ntSpecAnSettings.model_dump(), f)
 
     def loadSettingsIRSpecAn(self):
         try:
             with open(self.IR_SPECAN_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
-                self.irSpecAnSettings = SpectrumAnalyzerSettings.parse_obj(d)
+                self.irSpecAnSettings = SpectrumAnalyzerSettings.model_validate(d)
         except:
             self.setDefaultsIRSpecAn()
 
@@ -152,4 +152,4 @@ class SettingsContainer():
 
     def saveSettingsIRSpecAn(self):
         with open(self.IR_SPECAN_SETTINGS_FILE, "w") as f:
-            yaml.dump(self.irSpecAnSettings.dict(), f)
+            yaml.dump(self.irSpecAnSettings.model_dump(), f)

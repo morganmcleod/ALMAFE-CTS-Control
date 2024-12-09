@@ -22,6 +22,7 @@ measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
 receiver = hardware.FEMC.cartAssembly
 ifSystem = hardware.IFSystem.ifSystem
 powerDetect = hardware.PowerDetect.powerDetect
+pdPowerMeter = hardware.PowerDetect.pdPowerMeter
 coldLoad = hardware.NoiseTemperature.coldLoad
 beamScanMotorController = hardware.BeamScanner.motorController
 

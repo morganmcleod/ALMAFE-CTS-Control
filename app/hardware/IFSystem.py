@@ -25,7 +25,6 @@ else:
     from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
     from Control.IFSystem.WarmIFPlate import IFSystem
     import hardware.NoiseTemperature
-
     
     warmIFPlate = WarmIFPlate(
         Attenuator(resource = "GPIB0::28::INSTR", simulate = SIMULATE),

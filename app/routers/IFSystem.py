@@ -22,7 +22,7 @@ async def get_input_select():
 @router.post('/input_select', response_model = MessageResponse)
 async def set_input_select(value: str):
     try:
-        ifSystem.input_select = InputSelect(value)
+        ifSystem.input_select = InputSelect(int(value))
         return MessageResponse(message = f"IF System input_select set to {value}", success = True)
     except:
         return MessageResponse(message = f"Invalid value for input_select: {value}", success = False)

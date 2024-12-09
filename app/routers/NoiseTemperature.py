@@ -1,13 +1,23 @@
-from fastapi import APIRouter
+from openpyxl import Workbook
+from io import BytesIO
+from datetime import datetime
+from fastapi import APIRouter, Response
 import hardware.NoiseTemperature
 coldLoad = hardware.NoiseTemperature.coldLoad
+import hardware.IFSystem
+ifSystem = hardware.IFSystem.ifSystem
+import hardware.PowerDetect
+powerDetect = hardware.PowerDetect.powerDetect
 import measProcedure.NoiseTemperature 
 nt_settings = measProcedure.NoiseTemperature.settingsContainer
-from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings
+import measProcedure.DataDisplay
+dataDisplay = measProcedure.DataDisplay.dataDisplay
+from Control.PowerDetect.Interface import DetectMode
+from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSettings
 from INSTR.ColdLoad.AMI1720 import FillMode
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 from schemas.common import SingleFloat
-from app.schemas.Response import MessageResponse
+from app.schemas.Response import ListResponse, MessageResponse, prepareListResponse
 
 router = APIRouter(prefix="/noisetemp")
 
@@ -84,6 +94,52 @@ async def put_NtSettings(settings: NoiseTempSettings):
 async def reset_lowgsettings():
     nt_settings.setDefaultsLOWGIntegrity()
     return MessageResponse(message = "Reset LO WG settings to defaults", success = True)
+
+@router.get("/yfactorsettings", response_model = YFactorSettings)
+async def get_YfactorSettings():
+    return nt_settings.yFactorSettings
+
+@router.post("/yfactorsettings",  response_model = MessageResponse)
+async def put_YfactorSettings(settings: YFactorSettings):
+    nt_settings.yFactorSettings = settings
+    nt_settings.saveSettingsYFactor()
+    ifSystem.input_select = settings.inputSelect
+    ifSystem.attenuation = settings.attenuation
+    if powerDetect.detect_mode == DetectMode.METER or settings.detectMode == DetectMode.METER:
+        ifSystem.frequency = settings.ifStart
+        ifSystem.bandwidth = 0
+    elif powerDetect.detect_mode == DetectMode.SPEC_AN or settings.detectMode == DetectMode.SPEC_AN:
+        ifSystem.frequency = (settings.ifStop - settings.ifStart) / 2
+        ifSystem.bandwidth = settings.ifStop - settings.ifStart
+    return MessageResponse(message = "Updated Y-factor settings", success = True)
+
+@router.post("/yfactorsettings/reset",  response_model = MessageResponse)
+async def reset_YfactorSettings():
+    nt_settings.setDefaultsYFactor()
+    return MessageResponse(message = "Reset Y-factor settings to defaults", success = True)
+
+@router.get("/yfactor/history", response_model = ListResponse)
+async def get_YFactorHistory():
+    return prepareListResponse(dataDisplay.yFactorPowers)
+
+@router.get("/yfactor/excel", response_class = Response)
+async def get_YFactorExcel(name: str):
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['inputName', 'pHot', 'pCold'])
+    for item in dataDisplay.yFactorPowers:
+        ws.append([item.inputName, item.pHot, item.pCold])
+    buffer = BytesIO()
+    wb.save(buffer)
+    response = Response(buffer.getvalue(), media_type = "application/vnd.ms-excel")
+    response.headers["Content-Disposition"] = f"attachment; filename={name}_{datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}.xlsx"
+    return response
+
+
+@router.post("/yfactor/history/clear",  response_model = MessageResponse)
+async def clear_YFactorHistory():
+    dataDisplay.yFactorPowers = []
+    return MessageResponse(message = "Cleared Y-factor history", success = True)
 
 @router.get("/specan/settings_nt", response_model = SpectrumAnalyzerSettings)
 async def get_SANTSettings():
