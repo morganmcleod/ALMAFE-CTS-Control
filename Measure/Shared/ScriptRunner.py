@@ -100,7 +100,7 @@ class ScriptRunner():
             cartTest.key = 0
             cartTest.description = "Y-factor"
             measurementStatus.setMeasuring(cartTest)
-            success, msg = self._run_script(self.BIAS_OPT_MODULE)
+            success, msg = self._run_script(self.Y_FACTOR_MODULE)
             if success:
                 return True, f"{testType.name} started."
             else:

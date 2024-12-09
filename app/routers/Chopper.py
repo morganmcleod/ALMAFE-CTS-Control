@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+from app.schemas.Response import MessageResponse
+
 from Control.schemas.DeviceInfo import DeviceInfo
 import hardware.NoiseTemperature 
 chopper = hardware.NoiseTemperature.chopper
@@ -33,3 +35,24 @@ async def get_ChopperState():
         return ChopperState.SPINNING
     else:
         return chopper.getState()
+
+@router.put("/state", response_model = MessageResponse)
+async def put_ChopperState(state: int):
+    try:
+        _state = ChopperState(state)
+    except:
+        return MessageResponse(message = f"Invalid chopper state: {state}", success = False)
+    if not SIMULATE:
+        if _state == ChopperState.OPEN:
+            if chopper.openIsHot:
+                chopper.gotoHot()
+            else:
+                chopper.gotoCold()
+        elif _state == ChopperState.CLOSED:
+            if chopper.openIsHot:
+                chopper.gotoCold()
+            else:
+                chopper.gotoHot()
+        elif _state == ChopperState.SPINNING:
+            chopper.spin()
+    return MessageResponse(message = f"Set chopper state to {_state.name}", success = True)
