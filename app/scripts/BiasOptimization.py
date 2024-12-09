@@ -13,7 +13,7 @@ def main():
     actor.start(settingsContainer.noiseTempSettings)
 
     if settingsContainer.testSteps.warmIF:
-        warmIFSettings = actor.loadSettingsWarmIF()
+        warmIFSettings = settingsContainer.loadSettingsWarmIF()
         records = actor.measureIFSysNoise(cart_test.key, warmIFSettings)
         DB = WarmIFNoiseData(driver = CTSDB())
         DB.create(records)

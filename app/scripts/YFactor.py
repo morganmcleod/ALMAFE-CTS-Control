@@ -3,4 +3,4 @@ from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
 
 def main():
     actor.ntSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, enableInternalPreamp = True)
-    actor.measureYFactor(settings.yFactorSettings)
+    actor.measureYFactor(settingsContainer.yFactorSettings)

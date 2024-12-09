@@ -327,7 +327,7 @@ class NoiseTempActions():
 
         while not self.measurementStatus.stopNow():
             if not self.measurementStatus.stopNow():
-                self.chopper.open()
+                self.chopper.gotoHot()
             if not self.measurementStatus.stopNow():                
                 _, amps = self.powerDetect.read()
                 chopperPowers.append(
@@ -338,7 +338,7 @@ class NoiseTempActions():
                     )
                 )
             if not self.measurementStatus.stopNow():                
-                self.chopper.close()
+                self.chopper.gotoCold()
             if not self.measurementStatus.stopNow():
                 _, amps = self.powerDetect.read()
                 chopperPowers.append(
