@@ -316,6 +316,7 @@ class NoiseTempActions():
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
         self.ifSystem.input_select = yFactorSettings.inputSelect
         self.chopper.stop()
+        self.chopper.gotoCold()
         
         if yFactorSettings.ifStart == yFactorSettings.ifStop:
             sweepPoints = 1
@@ -328,37 +329,46 @@ class NoiseTempActions():
             stopGHz = yFactorSettings.ifStop,
             sweepPoints = sweepPoints)
         
-        retainSamples = 20
+        retain_samples = 20
         chopperPowers = []
 
-        while not self.measurementStatus.stopNow():
-            if not self.measurementStatus.stopNow():
-                self.chopper.gotoHot()
-            if not self.measurementStatus.stopNow():                
-                _, amps = self.powerDetect.read()
-                chopperPowers.append(
-                    ChopperPowers(
-                        inputName = self.ifSystem.input_select.name, 
-                        chopperState = ChopperState.OPEN, 
-                        power = mean(amps)
-                    )
+        def read():
+            self.chopper.gotoHot()
+            chopperPowers.append(
+                ChopperPowers(
+                    inputName = self.ifSystem.input_select.name, 
+                    chopperState = ChopperState.OPEN, 
+                    power = self.powerDetect.read()
                 )
-            if not self.measurementStatus.stopNow():                
-                self.chopper.gotoCold()
-            if not self.measurementStatus.stopNow():
-                _, amps = self.powerDetect.read()
-                chopperPowers.append(
-                    ChopperPowers(
-                        inputName = self.ifSystem.input_select.name, 
-                        chopperState = ChopperState.CLOSED, 
-                        power = mean(amps)
-                    )
+            )
+            self.chopper.gotoCold()
+            chopperPowers.append(
+                ChopperPowers(
+                    inputName = self.ifSystem.input_select.name, 
+                    chopperState = ChopperState.CLOSED, 
+                    power = self.powerDetect.read()
                 )
-            if not self.measurementStatus.stopNow():
-                self._calculateYFactor(chopperPowers, retainSamples)                
-                if len(chopperPowers) > retainSamples:
-                    chopperPowers = chopperPowers[-retainSamples:]
+            )
 
+        timeStart = time.time()
+        read()
+        sampling_interval = (time.time() - timeStart) * 1.2
+
+        sampler = Sampler(sampling_interval, read)
+        sampler.start()
+
+        done = False
+        while not done:
+            if self.measurementStatus.stopNow():
+                done = True
+            else:
+                self._calculateYFactor(chopperPowers, retain_samples)                
+                if len(chopperPowers) > retain_samples:
+                    chopperPowers = chopperPowers[-retain_samples:]
+                time.sleep(sampling_interval)
+        
+        sampler.stop()
+        self.chopper.stop()
         self.chopper.gotoHot()
         self.measurementStatus.setStatusMessage("Y-factor stopped")
         self.measurementStatus.setComplete(True)

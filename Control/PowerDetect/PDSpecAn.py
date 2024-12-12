@@ -39,7 +39,7 @@ class PDSpecAn(PowerDetect_Interface):
                 connected = True
             )
         else:
-            deviceInfo = DeviceInfo.parse_obj(self.spectrumAnalyzer.deviceInfo)
+            deviceInfo = DeviceInfo.model_validate(self.spectrumAnalyzer.deviceInfo)
             deviceInfo.name = "Power detect"
             return deviceInfo
     

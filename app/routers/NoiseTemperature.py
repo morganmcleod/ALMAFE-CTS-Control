@@ -109,7 +109,7 @@ async def put_YfactorSettings(settings: YFactorSettings):
         ifSystem.frequency = settings.ifStart
         ifSystem.bandwidth = 0
     elif powerDetect.detect_mode == DetectMode.SPEC_AN or settings.detectMode == DetectMode.SPEC_AN:
-        ifSystem.frequency = (settings.ifStop - settings.ifStart) / 2
+        ifSystem.frequency = (settings.ifStop - settings.ifStart) / 2 + settings.ifStart
         ifSystem.bandwidth = settings.ifStop - settings.ifStart
     return MessageResponse(message = "Updated Y-factor settings", success = True)
 
