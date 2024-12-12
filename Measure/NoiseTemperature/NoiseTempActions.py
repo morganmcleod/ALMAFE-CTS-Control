@@ -266,7 +266,7 @@ class NoiseTempActions():
         self.measurementStatus.setStatusMessage("Y-factor started")
         self.measurementStatus.setComplete(False)
         self.chopper.spin(self.settings.commonSettings.chopperSpeed)
-        self.powerDetect.configure(units = 'dBm', fast_mode = True)
+        self.powerDetect.configure(units = 'dBm', fast_mode = False)
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
         self.ifSystem.input_select = yFactorSettings.inputSelect
 
