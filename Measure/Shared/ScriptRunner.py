@@ -8,9 +8,6 @@ import app.measProcedure.MeasurementStatus
 measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
 import app.measProcedure.BeamScanner
 beamScanner = app.measProcedure.BeamScanner.beamScanner
-import app.measProcedure.Stability
-amplitudeStablilty = app.measProcedure.Stability.amplitudeStablilty
-phaseStability = app.measProcedure.Stability.phaseStability
 from DBBand6Cart.CartTests import CartTest
 from app.database.CTSDB import CartTestsDB
 from DBBand6Cart.TestTypes import TestTypeIds
@@ -23,11 +20,14 @@ class ScriptRunner():
     DEFLUX_MODULE = "app.scripts.MixerDeflux"
     NOISE_TEMP_MODULE = "app.scripts.NoiseTemperature"
     Y_FACTOR_MODULE = "app.scripts.YFactor"
+    AMP_STABILITY_MODULE = "app.scripts.AmplitudeStability"
+    PHASE_STABILITY_MODULE = "app.scripts.PhaseStability"
     ENTRY_FUNCTION = "main"
 
     def __init__(self) -> None:
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 1)
+        self.future = None
 
     def get_status(self):
         return measurementStatus.getCurrentValues()
@@ -107,14 +107,28 @@ class ScriptRunner():
                 return False, msg
 
         elif testType == TestTypeIds.AMP_STABILITY:
-            cartTest.key = amplitudeStablilty.start(cartTest)
+            if SIMULATE:
+                cartTest.key = 1
+            else:
+                cartTest.key = cartTestsDb.create(cartTest)
             measurementStatus.setMeasuring(cartTest)
-            return True, "Amplitude stability started"
+            success, msg = self._run_script(self.AMP_STABILITY_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
         
         elif testType == TestTypeIds.PHASE_STABILITY:
-            cartTest.key = phaseStability.start(cartTest)
+            if SIMULATE:
+                cartTest.key = 1
+            else:
+                cartTest.key = cartTestsDb.create(cartTest)
             measurementStatus.setMeasuring(cartTest)
-            return True, "Phase stability started"
+            success, msg = self._run_script(self.PHASE_STABILITY_MODULE)
+            if success:
+                return True, f"{testType.name} started."
+            else:
+                return False, msg
         
         elif testType == TestTypeIds.IV_CURVES:
             cartTest.key = 0
@@ -178,11 +192,9 @@ class ScriptRunner():
             measurementStatus.stopMeasuring()
             return True, "Beam scans stopped."
         elif testType == TestTypeIds.AMP_STABILITY:
-            amplitudeStablilty.stop()
             measurementStatus.stopMeasuring()
             return True, "Amplitude stability stopped."
         elif testType == TestTypeIds.PHASE_STABILITY:
-            phaseStability.stop()
             measurementStatus.stopMeasuring()
             return True, "Phase stability stopped."
         else:
@@ -191,18 +203,43 @@ class ScriptRunner():
             return False, msg
         
     def _run_script(self, module_name:str, function:str = 'main') -> tuple[bool, str]:
+        # wait for any exising script to finish:
+        if self.future is not None:
+            try:
+                self.future.result()
+            except:
+                pass
+        self.future = None
+        # unload the script module:
         try:
-            concurrent.futures.wait(self.futures)
             if module_name in sys.modules:
                 del sys.modules[module_name]
         except:
             pass
+
+        # import the script module:
         try:
-            __import__(module_name)
-            module = sys.modules[module_name]
-            fun = getattr(module, function)
-            self.futures = []
-            self.futures.append(self.executor.submit(fun))
-            return True, ""
+            __import__(module_name)            
         except:
-            return False, f"Could not run function '{function} in module {module_name}"
+            return False, f"Coudld not import {module_name}"
+        
+        # define callback for when script finishes or there's an exeption:
+        def done_callback(future: concurrent.futures.Future):
+            try:
+                future.result()
+            except Exception as e:
+                msg = f"Exception in {module_name}: {str(e)}"
+                self.logger.error(msg)
+                measurementStatus.setError(msg)
+
+        # run the script funciton:
+        module = sys.modules[module_name]
+        fun = getattr(module, function)
+        try:
+            self.future = self.executor.submit(fun)
+        except:
+            return False, f"Could not run function '{function}' in {module_name}"
+
+        # register the callback to run after the script exits for any reason:
+        self.future.add_done_callback(done_callback)
+        return True, ""

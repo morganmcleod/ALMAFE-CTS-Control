@@ -22,7 +22,8 @@ class MeasurementStatus():
     def setMeasuring(self, measuring: CartTest | None):
         self.model.timeStamp = datetime.now()
         self.model.cartTest = measuring
-        self.model.stopNow = False
+        self.model.stopNow = False        
+        self.model.error = False            
         if measuring is None:
             self.model.complete = True
 
@@ -44,18 +45,21 @@ class MeasurementStatus():
     def stopNow(self):
         return self.model.stopNow
 
-    def setStatusMessage(self, msg):
+    def setStatusMessage(self, msg: str):
         self.model.timeStamp = datetime.now()
         self.model.message = msg
 
     def getStatusMessage(self):
         return self.model.message
 
-    def setComplete(self, complete = None):
+    def setComplete(self, complete: bool):
         self.model.timeStamp = datetime.now()
         if complete is not None:
             self.model.complete = complete
 
-    def setError(self, error: bool):
+    def setError(self, msg: str):
         self.model.timeStamp = datetime.now()
-        self.model.error = error
+        self.model.error = True
+        self.model.complete = True
+        self.model.cartTest = None
+        self.model.message = msg

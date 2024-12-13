@@ -4,9 +4,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple, Optional
 from schemas.common import SingleFloat
 from Control.schemas.DeviceInfo import DeviceInfo
-import measProcedure.BeamScanner
-beamScanner = measProcedure.BeamScanner.beamScanner
-motorController = measProcedure.BeamScanner.beamScanner.mc
+import app.measProcedure.BeamScanner
+beamScanner = app.measProcedure.BeamScanner.beamScanner
+motorController = app.measProcedure.BeamScanner.beamScanner.mc
 
 import app.measProcedure.MeasurementStatus
 measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()

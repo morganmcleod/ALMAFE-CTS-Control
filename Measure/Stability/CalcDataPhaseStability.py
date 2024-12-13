@@ -29,6 +29,6 @@ class CalcDataPhaseStability(CalcDataInterface):
         ) for rec in records]
 
         if not self.DB.create(phaseRecords):
-            return False, "CalcDataAmplitudeStability: Error creating phase stability records"
+            return False, "CalcDataPhaseStability: Error creating phase stability records"
         else:
             return True, ""

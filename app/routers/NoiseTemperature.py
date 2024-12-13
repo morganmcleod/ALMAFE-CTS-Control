@@ -10,8 +10,8 @@ import hardware.PowerDetect
 powerDetect = hardware.PowerDetect.powerDetect
 import measProcedure.NoiseTemperature 
 nt_settings = measProcedure.NoiseTemperature.settingsContainer
-import measProcedure.DataDisplay
-dataDisplay = measProcedure.DataDisplay.dataDisplay
+import app.measProcedure.DataDisplay
+dataDisplay = app.measProcedure.DataDisplay.dataDisplay
 from Control.PowerDetect.Interface import DetectMode
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSettings
 from INSTR.ColdLoad.AMI1720 import FillMode

@@ -95,3 +95,5 @@ class RFSource(LODevice):
     def getPAOutput(self) -> float:
         return self._paOutput
     
+    def turnOff(self) -> None:
+        self.setPAOutput(pol = self.paPol, percent = 0)

@@ -12,6 +12,7 @@ class DataDisplay():
         self.currentNoiseTemp = [None, None]
         self.yFactorHistory = []
         self.yFactorPowers = []
+        self.timeSeriesList = []
         self.stabilityHistory = []
         self.ivCurveResults = IVCurveResults()
         self.magnetOptResults = MagnetOptResults()
