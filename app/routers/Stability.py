@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Response
 import app.measProcedure.Stability
-amplitudeStablilty = app.measProcedure.Stability.amplitudeStablilty
-phaseStability = app.measProcedure.Stability.phaseStability
+import app.measProcedure.DataDisplay
 settingsContainer = app.measProcedure.Stability.settingsContainer
+dataDisplay = app.measProcedure.DataDisplay.dataDisplay
 from Measure.Stability.schemas import Settings
 from app.database.CTSDB import CTSDB
 from DBBand6Cart.TestResultPlots import TestResultPlots
@@ -42,32 +42,14 @@ async def reset_settings():
     settingsContainer.defaultSettingsPhaseStability()
     return MessageResponse(message = "Reset phase stability settings to defaults.", success = True)
 
-@router.get("/amp/timeseries/list", response_model = ListResponse)
+@router.get("/timeseries/list", response_model = ListResponse)
 async def get_TimeSeriesIds():
-    items = amplitudeStablilty.timeSeriesList
-    return prepareListResponse(items)
+    return prepareListResponse(dataDisplay.timeSeriesList)
 
-@router.get("/phase/timeseries/list", response_model = ListResponse)
-async def get_TimeSeriesIds():
-    items = phaseStability.timeSeriesList
-    return prepareListResponse(items)
-
-@router.get("/amp/timeseries/plot/{tsId}")
+@router.get("/timeseries/plot/{tsId}")
 async def get_AmpTimeSeriesPlot(tsId: int):
     result = None
-    info = next((x for x in amplitudeStablilty.timeSeriesList if x.key == tsId), None)
-    if info and info.timeSeriesPlot:
-        DB = TestResultPlots(driver = CTSDB())
-        result = DB.read(info.timeSeriesPlot)
-    if result:
-        return Response(content = result[0].plotBinary, media_type=result[0].contentType)
-    else:
-        return Response(content = b"")
-
-@router.get("/phase/timeseries/plot/{tsId}")
-async def get_PhaseTimeSeriesPlot(tsId: int):
-    result = None
-    info = next((x for x in phaseStability.timeSeriesList if x.key == tsId), None)
+    info = next((x for x in dataDisplay.timeSeriesList if x.key == tsId), None)
     if info and info.timeSeriesPlot:
         DB = TestResultPlots(driver = CTSDB())
         result = DB.read(info.timeSeriesPlot)
@@ -79,7 +61,7 @@ async def get_PhaseTimeSeriesPlot(tsId: int):
 @router.get("/amp/allan/plot/{tsId}")
 async def get_AmpAllanPlot(tsId: int):
     result = None
-    info = next((x for x in amplitudeStablilty.timeSeriesList if x.key == tsId), None)
+    info = next((x for x in dataDisplay.timeSeriesList if x.key == tsId), None)
     if info and info.allanPlot:
         DB = TestResultPlots(driver = CTSDB())
         result = DB.read(info.allanPlot)
@@ -91,7 +73,7 @@ async def get_AmpAllanPlot(tsId: int):
 @router.get("/phase/allan/plot/{tsId}")
 async def get_PhaseAllanPlot(tsId: int):
     result = None
-    info = next((x for x in phaseStability.timeSeriesList if x.key == tsId), None)
+    info = next((x for x in dataDisplay.timeSeriesList if x.key == tsId), None)
     if info and info.allanPlot:
         DB = TestResultPlots(driver = CTSDB())
         result = DB.read(info.allanPlot)

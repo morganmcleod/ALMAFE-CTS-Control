@@ -1,6 +1,6 @@
 
 import app.measProcedure.MeasurementStatus
-import measProcedure.DataDisplay
+import app.measProcedure.DataDisplay
 import measProcedure.MixerTests
 import hardware.ReferenceSources
 import hardware.FEMC
@@ -18,12 +18,12 @@ receiver = hardware.FEMC.cartAssembly
 ifSystem = hardware.IFSystem.ifSystem
 ifPowerImpl = hardware.PowerDetect.ifPowerImpl
 powerDetect = ifPowerImpl.powerDetect
-dataDisplay = measProcedure.DataDisplay.dataDisplay
+dataDisplay = app.measProcedure.DataDisplay.dataDisplay
 
 actor = MixerTestActions(
     hardware.ReferenceSources.loReference,
     hardware.FEMC.cartAssembly,
     measurementStatus,
-    measProcedure.DataDisplay.dataDisplay,
+    dataDisplay,
     DUT_Type.Band6_Cartridge
 )

@@ -52,10 +52,9 @@ async def set_AutoRFMeter(freqIF: float = 10, target: float = -5, atten: int = 2
     
 @router.put("/auto_rf/pna", response_model = MessageResponse)
 async def set_AutoRFPNA(freqIF: float = 10, target: float = -5, atten: int = 22):
-    pna.setPowerConfig(DEFAULT_POWER_CONFIG)
-    pna.setMeasConfig(FAST_CONFIG)    
     ifSystem.output_select = OutputSelect.PNA_INTERFACE
     ifSystem.attenuation = atten
     powerDetectPNA = PDPNA(pna)
+    powerDetectPNA.configure(config = FAST_CONFIG, power_config = DEFAULT_POWER_CONFIG)
     success, msg = rfAutoLevel.autoLevel(freqIF, target, powerDetect = powerDetectPNA)
     return MessageResponse(message = "Auto RF power with PNA: " + msg, success = success)

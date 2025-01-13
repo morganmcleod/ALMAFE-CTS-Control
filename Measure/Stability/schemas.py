@@ -1,6 +1,8 @@
-from DBBand6Cart.TestResults import DataStatus
 from pydantic import BaseModel
 from datetime import datetime
+from DBBand6Cart.TestResults import DataStatus
+from Measure.Shared.SelectPolarization import SelectPolarization
+from Measure.Shared.SelectSideband import SelectSideband
 
 class Settings(BaseModel):
     sampleRate: float = 20      # samples/sec
@@ -9,10 +11,8 @@ class Settings(BaseModel):
     targetLevel: float = -10    # dBm
     delayAfterLock: float = 10  # minutes
     measureDuration: float = 60 # minutes
-    measurePol0: bool = True
-    measurePol1: bool = True
-    measureUSB: bool = True
-    measureLSB: bool = True
+    polarization: str = SelectPolarization.BOTH.value
+    sideband: str = SelectSideband.BOTH.value
     loStart: float = 221.0
     loStop: float = 265.0
     loStep: float = 22.0
@@ -26,7 +26,8 @@ class TimeSeriesInfo(BaseModel):
     dataStatus: str
     timeSeriesPlot: int = None
     allanPlot: int = None
-    correctionVoltagePlot: int = None
+    loCorrVPlot: int = None
+    rfCorrVPlot: int = None
     spectrumPlot: int = None
     tau0Seconds: float = 0.05
 

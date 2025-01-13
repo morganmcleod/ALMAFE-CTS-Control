@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
-import measProcedure.DataDisplay
-dataDisplay = measProcedure.DataDisplay.dataDisplay
+import app.measProcedure.DataDisplay
+dataDisplay = app.measProcedure.DataDisplay.dataDisplay
 from AMB.schemas.MixerTests import IVCurveResult, MagnetOptResult, DefluxResult
 from .ConnectionManager import ConnectionManager
 

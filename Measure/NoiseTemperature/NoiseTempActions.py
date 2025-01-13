@@ -75,7 +75,7 @@ class NoiseTempActions():
     def stop(self):        
         self.measurementStatus.stopMeasuring()
         self.chopper.stop()
-        self._rfSourceOff()
+        self.rfSrcDevice.turnOff()
 
     def finish(self):
         self.noiseTempSettings = None
@@ -413,7 +413,7 @@ class NoiseTempActions():
             freqIF: float,
             recordsIn: dict[tuple[int, float], NoiseTempRawDatum] | None = None
             ) -> dict[tuple[int, float], NoiseTempRawDatum] | None:
-        self._rfSourceOff()
+        self.rfSrcDevice.turnOff()
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
         self.ifSystem.input_select = InputSelect.POL0_USB
         selectPol = SelectPolarization(self.noiseTempSettings.polarization)
@@ -523,7 +523,7 @@ class NoiseTempActions():
 
         self.measurementStatus.setStatusMessage(f"Measure noise temperature LO={freqLO:.2f} GHz...")
         self.chopper.stop()
-        self._rfSourceOff()
+        self.rfSrcDevice.turnOff()
         self.settings.ntSpecAnSettings.sweepPoints = int((self.noiseTempSettings.ifStop - self.noiseTempSettings.ifStart) / self.noiseTempSettings.ifStep) + 1
         self.powerDetect.configure(config = self.settings.ntSpecAnSettings, startGHz = self.noiseTempSettings.ifStart, stopGHz = self.noiseTempSettings.ifStop)
         selectPol = SelectPolarization(self.noiseTempSettings.polarization)
@@ -689,7 +689,7 @@ class NoiseTempActions():
 
                     if msg:
                         self.logger.info(msg)
-        self._rfSourceOff()
+        self.rfSrcDevice.turnOff()
         
     def _measureImageReject_SWEEP(self,
             fkCartTest: int, 
@@ -704,7 +704,7 @@ class NoiseTempActions():
             if selectPol.testPol(pol):
     
                 if self.measurementStatus.stopNow():
-                    self._rfSourceOff()
+                    self.rfSrcDevice.turnOff()
                     self.finished = True                
                     return True, "User stop"                
 
@@ -746,7 +746,7 @@ class NoiseTempActions():
                         self.logger.info(msg)
 
                     if self.measurementStatus.stopNow():
-                        self._rfSourceOff()
+                        self.rfSrcDevice.turnOff()
                         self.finished = True                
                         return True, "User stop"      
                     
@@ -767,17 +767,17 @@ class NoiseTempActions():
                         self.ifSystem.set_pol_sideband(pol, 'USB')
                         time.sleep(0.25)
                         record.PwrUSB_SrcLSB = self.powerDetect.read(averaging = 50, delay = 1.5)
-                        self._rfSourceOff()
+                        self.rfSrcDevice.turnOff()
 
                     if msg:
                         self.logger.info(msg)
                 
                 if self.measurementStatus.stopNow():
-                    self._rfSourceOff()
+                    self.rfSrcDevice.turnOff()
                     self.finished = True                
                     return True, "User stop" 
 
-        self._rfSourceOff()
+        self.rfSrcDevice.turnOff()
         self.ifSystem.frequency = 0
         return True, ""
 
@@ -911,6 +911,3 @@ class NoiseTempActions():
             PA_B_Drain_V = pa['VDp1'],
             Is_LO_Unlocked = not loIsLocked
         )
-
-    def _rfSourceOff(self) -> None:
-        self.rfSrcDevice.setPAOutput(pol = self.rfSrcDevice.paPol, percent = 0)

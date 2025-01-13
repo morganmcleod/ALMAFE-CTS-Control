@@ -1,5 +1,5 @@
 import app.measProcedure.MeasurementStatus
-import measProcedure.DataDisplay
+import app.measProcedure.DataDisplay
 import measProcedure.NoiseTemperature
 import hardware.ReferenceSources
 import hardware.FEMC
@@ -19,6 +19,7 @@ from Control.PowerDetect.Interface import DetectMode
 
 settingsContainer = measProcedure.NoiseTemperature.settingsContainer
 measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
+dataDisplay = app.measProcedure.DataDisplay.dataDisplay
 receiver = hardware.FEMC.cartAssembly
 ifSystem = hardware.IFSystem.ifSystem
 powerDetect = hardware.PowerDetect.powerDetect
@@ -38,7 +39,7 @@ actor = NoiseTempActions(
     hardware.NoiseTemperature.coldLoad,
     hardware.NoiseTemperature.chopper, 
     measurementStatus,
-    measProcedure.DataDisplay.dataDisplay,
+    dataDisplay,
     DUT_Type.Band6_Cartridge,
     settingsContainer
 )
