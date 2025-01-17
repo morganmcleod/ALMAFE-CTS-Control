@@ -75,6 +75,7 @@ class CartAssembly():
                     configs = DB.read(serialNum = self.settings.serialNum, latestOnly = True)
                     if configs:                    
                         self.setCartConfig(configs[0].key)
+                    self.setLOConfig(self.settings.loConfig.key)
                     self.setRecevierBias(self.settings.freqLOGHz)
         except Exception as e:
             self.settings = CartAssemblySettings()
@@ -139,6 +140,7 @@ class CartAssembly():
         self.saveSettings()
         self.loDevice.setPABias(0, gateVoltage = self.settings.loConfig.VGp0)
         self.loDevice.setPABias(1, gateVoltage = self.settings.loConfig.VGp1)
+        self.loDevice.setYTOLimits(self.settings.loConfig.ytoLowGHz, self.settings.loConfig.ytoHighGHz)
 
     def getLOConfig(self) -> WCA:
         return self.settings.loConfig
