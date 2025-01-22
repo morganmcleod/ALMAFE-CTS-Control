@@ -7,10 +7,9 @@ from INSTR.PNA.PNASimulator import PNASimulator
 
 from DebugOptions import *
 
-# if SIMULATE:
-motorController = MCSimulator()
-
-if False:
+if SIMULATE:
+    motorController = MCSimulator()
+else:
     motorController = MotorController("10.1.1.20")
     # load specifics about the motor controller for this system:
     config = configparser.ConfigParser()

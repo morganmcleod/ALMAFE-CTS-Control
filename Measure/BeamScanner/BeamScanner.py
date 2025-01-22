@@ -467,6 +467,7 @@ class BeamScanner():
         self.pna.setMeasConfig(FAST_CONFIG)
         self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
 
+        self.pna.initContinuous()
         amp, phase = self.pna.getAmpPhase()        
         self.scanStatus.amplitude = amp if amp else -999
         self.scanStatus.phase = phase if phase else 0

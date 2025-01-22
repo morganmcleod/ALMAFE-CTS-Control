@@ -51,6 +51,7 @@ class PDPNA(PowerDetect_Interface):
         return Units.DB
 
     def read(self, **kwargs) -> float | tuple[float, float]:
+        self.pna.initContinuous()
         self._last_read, phase = self.pna.getAmpPhase()
         if kwargs.get('amp_phase', False):
             return self._last_read, phase

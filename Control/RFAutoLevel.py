@@ -69,6 +69,7 @@ class RFAutoLevel():
 
         if not amp:
             error = True
+            msg = "RF autolevel: powerDetect.read error before loop"
         
         while not done and not error: 
             self.logger.info(f"RF autoLevel: iter={self.controller.iter} setValue={self.controller.output:.2f}% amp={amp:.1f} dBm")
