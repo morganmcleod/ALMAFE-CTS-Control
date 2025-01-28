@@ -333,7 +333,8 @@ class BeamScanner():
                     return (False, "LOST RF SOURCE LOCK")
 
                 # time to record the beam center power?
-                if not lastCenterPwrTime or (time.time() - lastCenterPwrTime) > self.measurementSpec.centersInterval:
+                # always coming from +X direction to avoid mechanical backlash
+                if self.reverseX and (not lastCenterPwrTime or (time.time() - lastCenterPwrTime) > self.measurementSpec.centersInterval):
                     lastCenterPwrTime = time.time()
 
                     success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
@@ -454,6 +455,7 @@ class BeamScanner():
         self.mc.startMove(withTrigger, moveTimeout)
         moveStatus = self.mc.waitForMove(timeout = moveTimeout + 0.5)
         actualPos = self.mc.getPosition(cached = False)
+        self.logger.info("__moveScanner: " + actualPos.getText())
         self.mc.stopMove()
         if self.stopNow:
             return (False, "__moveScanner: User Stop")
@@ -628,7 +630,7 @@ class BeamScanner():
         if SIMULATE:
             return (True, "Simulate write to database")
         xAxisList = reversed(self.xAxisList) if self.reverseX else self.xAxisList
-        
+        now = datetime.now()
         records = [BPRawDatum(
             fkBeamPattern = self.scanStatus.fkBeamPatterns,
             Pol = subScan.pol,
@@ -636,7 +638,8 @@ class BeamScanner():
             Position_Y = self.yPos,
             SourceAngle = self.scanAngle,
             Power = amp,
-            Phase = phase
+            Phase = phase,
+            timeStamp = now
         ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)]
 
         count = self.bpRawDataTable.create(records)

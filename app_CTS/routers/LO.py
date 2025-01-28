@@ -62,7 +62,7 @@ async def lock_PLL(request: Request, payload: LockPLL):
 @router.put("/pll/adjust", response_model = MessageResponse)
 async def adjust_PLL(request: Request, payload: AdjustPLL):
     device, name = getTarget(request)
-    CV = device.adjustPLL(payload.deviceCV)
+    CV = device.adjustPLL(payload.targetCV)
     if CV is not None:
         return MessageResponse(message = f"{name} PLL adjusted CV:{CV} device: {payload.getText()}", success = True)
     else:
