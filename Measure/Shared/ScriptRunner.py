@@ -3,13 +3,13 @@ import logging
 from typing import Optional
 from socket import getfqdn
 import concurrent.futures
-from app.database.CTSDB import CTSDB
-import app.measProcedure.MeasurementStatus
-measurementStatus = app.measProcedure.MeasurementStatus.measurementStatus()
-import app.measProcedure.BeamScanner
-beamScanner = app.measProcedure.BeamScanner.beamScanner
+from app_Common.CTSDB import CTSDB
+import app_Common.MeasurementStatus
+measurementStatus = app_Common.MeasurementStatus.measurementStatus()
+import app_CTS.measProcedure.BeamScanner
+beamScanner = app_CTS.measProcedure.BeamScanner.beamScanner
 from DBBand6Cart.CartTests import CartTest
-from app.database.CTSDB import CartTestsDB
+from app_Common.CTSDB import CartTestsDB
 from DBBand6Cart.TestTypes import TestTypeIds
 from DebugOptions import *
 

@@ -11,7 +11,7 @@ from DebugOptions import *
 from AMB.LODevice import LODevice
 from AMB.CCADevice import CCADevice
 from AMB.schemas.MixerTests import *
-from app.database.CTSDB import CTSDB
+from app_Common.CTSDB import CTSDB
 from DBBand6Cart.CartConfigs import CartConfigs
 from DBBand6Cart.WCAs import WCAs, WCA
 from DBBand6Cart.MixerParams import MixerParams, MixerParam

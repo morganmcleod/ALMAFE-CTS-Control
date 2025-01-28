@@ -1,6 +1,6 @@
 from typing import Optional
 import yaml
-from app.database.CTSDB import CTSDB
+from app_Common.CTSDB import CTSDB
 from AMB.LODevice import LODevice
 from AMB.AMBConnectionItf import AMBConnectionItf
 from INSTR.SignalGenerator.Interface import SignalGenInterface
