@@ -1,31 +1,42 @@
 import logging
 import threading
-from typing import Union
+import queue
+import time
 from DBBand6Cart.schemas.DUT_Type import DUT_Type
-from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
+from INSTR.Chopper.Interface import Chopper_Interface
+from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from AMB.schemas.MixerTests import *
 from AMB.CCADevice import IFPowerInterface
-from Control.CartAssembly import CartAssembly
+from Controllers.Receiver.CartAssembly import CartAssembly
+from Controllers.Receiver.MixerAssembly import MixerAssembly
+from Controllers.IFSystem.Interface import IFSystem_Interface
 from Measure.Shared.MeasurementStatus import MeasurementStatus
 from Measure.Shared.DataDisplay import DataDisplay
-from Measure.Shared.makeSteps import makeSteps
+from Measure.Shared.SelectPolarization import SelectPolarization
 from Measure.MixerTests.SettingsContainer import SettingsContainer
+from Measure.MixerTests import ResultsQueue
 
 class MixerTestActions():
-
     def __init__(self,
-            loReference: SignalGenerator,
-            receiver: CartAssembly,
+            dutType: DUT_Type,
+            receiver: CartAssembly | MixerAssembly,
+            ifSystem: IFSystem_Interface,
+            tempMonitor: TemperatureMonitor,
+            chopper: Chopper_Interface,
             measurementStatus: MeasurementStatus,
-            dataDisplay: DataDisplay,
-            dutType: DUT_Type):
+            dataDisplay: DataDisplay):
         
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
-        self.loReference = loReference
         self.receiver = receiver
+        self.ifSystem = ifSystem
+        self.tempMonitor = tempMonitor
+        self.chopper = chopper
         self.measurementStatus = measurementStatus
         self.dataDisplay = dataDisplay
         self.dutType = dutType
+        self.ivCurveQueue = ResultsQueue.ResultsQueue(queue2 = self.dataDisplay.ivCurveQueue)
+        self.magnetOptQueue = ResultsQueue.ResultsQueue(queue2 = self.dataDisplay.magnetOptQueue)
+        self.defluxQueue = ResultsQueue.ResultsQueue(queue2 = self.dataDisplay.defluxQueue)
         self._reset()
 
     def _reset(self) -> None:
@@ -53,20 +64,11 @@ class MixerTestActions():
             loPumped: bool = True,
             setBias: bool = True,
         ) -> tuple[bool, str]:
-        
-        msg = None
-        if lockLO:
-            self.measurementStatus.setStatusMessage(f"Locking LO at {freqLO:.2f} GHz...")
-            success, msg = self.receiver.lockLO(self.loReference, freqLO)
-        else:
-            self.measurementStatus.setStatusMessage(f"Tuning LO at {freqLO:.2f} GHz...")
-            wcaFreq, _, _ = self.receiver.loDevice.setLOFrequency(freqLO)
-            if wcaFreq == 0:
-                success = False
-                msg = "Error tuning LO"
-            else:
-                success = True
-                self.receiver.loDevice.setNullLoopIntegrator(True)
+        self.receiver.settings.loSettings.lockLO = lockLO
+        msg = "Locking" if lockLO else "Tuning"
+        msg += f" LO at {freqLO:.2f} GHz..."
+        self.measurementStatus.setStatusMessage(msg)
+        success, msg = self.receiver.setFrequency(freqLO, self.receiver.settings.loSettings)
 
         if not success:
             self.logger.error(msg)
@@ -74,17 +76,17 @@ class MixerTestActions():
             self.logger.info(msg)
 
         if setBias:
-            success = self.receiver.setRecevierBias(freqLO)
+            success = self.receiver.setBias(freqLO)
             if not success:
-                return False, "setRecevierBias failed. Provide config ID?"
+                return False, "setBias failed. Provide config ID?"
             
         if loPumped:
             self.measurementStatus.setStatusMessage(f"Setting LO power...")
             pol0 = self.settings.ivCurveSettings.enable01 or self.settings.ivCurveSettings.enable02
             pol1 = self.settings.ivCurveSettings.enable11 or self.settings.ivCurveSettings.enable12
-            success = self.receiver.autoLOPower(pol0, pol1)
+            success, msg = self.receiver.autoLOPower(pol0 = pol0, pol1 = pol1, on_thread = False)
             if not success:
-                return False, "cartAssembly.autoLOPower failed"
+                return False, "receiver.autoLOPower failed"
 
         if self.receiver.isLocked():
             return True, f"Locked LO {'and set bias ' if setBias else ''}at {freqLO:.2f} GHz."
@@ -96,46 +98,82 @@ class MixerTestActions():
     def getLO(self) -> float:
         return self.receiver.freqLOGHz
     
-    def measureIVCurve(self, 
+    def measureIVCurves(self, 
             settings: IVCurveSettings, 
-            ifPowerImpl: IFPowerInterface = None,
-            onThread: bool = False,
-            resultsTarget: IVCurveResults = None) -> IVCurveResults:
-
-        if onThread:
-            threading.Thread(target = self.receiver.ccaDevice.IVCurve, args = (settings, ifPowerImpl, resultsTarget), daemon = True).start()
-        else:
-            self.receiver.ccaDevice.IVCurve(settings, ifPowerImpl, resultsTarget)
+            resultsTarget: IVCurveResults,
+            ifPowerImpl: IFPowerInterface | None = None
+        ) -> IVCurveResults:
+        self.measurementStatus.setStatusMessage(f"Measuring I-V Curves...")
+        resultsTarget.reset()
+        worker = threading.Thread(target = self.receiver.ivCurve, args = (settings, self.ivCurveQueue, ifPowerImpl, self.ifSystem, self.chopper), daemon = True)
+        worker.start()
+        done = False
+        while not done:
+            try:
+                # get a queue item from the measurement thread:
+                item: ResultsQueue.Item = self.ivCurveQueue.get_nowait()
+                # populate resultsTarget:
+                curve = resultsTarget.getCurve(item.pol, item.sis)
+                if item.type == ResultsQueue.PointType.ALL_DONE:
+                    done = True
+                if item.points:
+                    curve.points += item.points
+            except queue.Empty:
+                time.sleep(0.1)
+        worker.join(timeout = 10)
         return resultsTarget
-        
+
     def magnetOptimize(self,
             settings: MagnetOptSettings,
-            onThread: bool = False,
-            resultsTarget: MagnetOptResults = None) -> MagnetOptResults:
+            resultsTarget: MagnetOptResults
+        ) -> MagnetOptResults:
         
-        # turn off the LO:
-        if settings.enablePol0:
-            self.receiver.loDevice.setPAOutput(0, 0)
-        if settings.enablePol1:
-            self.receiver.loDevice.setPAOutput(1, 0)
-        if onThread:
-            threading.Thread(target = self.receiver.ccaDevice.magnetOptimize, args = (settings, resultsTarget), daemon = True).start()
-        else:
-            self.receiver.ccaDevice.magnetOptimize(settings, resultsTarget)
+        self.measurementStatus.setStatusMessage(f"Measuring Magnet Optimization...")
+        resultsTarget.reset()
+        worker = threading.Thread(target = self.receiver.magnetOptimize, args = (settings, self.magnetOptQueue), daemon = True)
+        worker.start()
+        done = False
+        while not done:
+            try:
+                if self.measurementStatus.stopNow():
+                    self.receiver.stop()
+                # get a queue item from the measurement thread:
+                item: ResultsQueue.Item = self.magnetOptQueue.get_nowait()
+                # populate resultsTarget:
+                curve = resultsTarget.getCurve(item.pol, item.sis)
+                if item.type == ResultsQueue.PointType.ALL_DONE:
+                    done = True
+                if item.points:
+                    curve.points += item.points
+            except queue.Empty:
+                time.sleep(0.1)
+        worker.join(timeout = 10)
         return resultsTarget
     
     def mixersDeflux(self, 
             settings: DefluxSettings, 
-            onThread: bool = False,
-            resultsTarget: DefluxResults = None) -> DefluxResults:
+            resultsTarget: DefluxResults = None
+        ) -> DefluxResults:
         
+        self.measurementStatus.setStatusMessage(f"Defluxing mixers...")
         # turn off the LO:
-        if settings.enablePol0:
-            self.receiver.loDevice.setPAOutput(0, 0)
-        if settings.enablePol1:
-            self.receiver.loDevice.setPAOutput(1, 0)
-        if onThread:
-            threading.Thread(target = self.receiver.ccaDevice.mixersDeflux, args = (settings, resultsTarget), daemon = True).start()
-        else:
-            self.receiver.ccaDevice.mixersDeflux(settings, resultsTarget)
+        self.receiver.setPAOutput(SelectPolarization.POL0, 0)
+        self.receiver.setPAOutput(SelectPolarization.POL1, 0)
+        resultsTarget.reset()
+        worker = threading.Thread(target = self.receiver.mixersDeflux, args = (settings, self.defluxQueue), daemon = True)
+        worker.start()
+        done = False
+        while not done:
+            try:
+                # get a queue item from the measurement thread:
+                item: ResultsQueue.Item = self.defluxQueue.get_nowait()
+                # populate resultsTarget:
+                curve = resultsTarget.curves[item.pol]
+                if item.type == ResultsQueue.PointType.ALL_DONE:
+                    done = True
+                if item.points:
+                    curve.points += item.points
+            except queue.Empty:
+                time.sleep(0.1)
+        worker.join(timeout = 10)
         return resultsTarget

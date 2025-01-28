@@ -3,7 +3,7 @@ from fastapi import APIRouter
 import hardware.NoiseTemperature
 coldLoad = hardware.NoiseTemperature.coldLoad
 from INSTR.ColdLoad.ColdLoadBase import ColdLoadState
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *
 
 logger = logging.getLogger("ALMAFE-CTS-Control")

@@ -1,6 +1,6 @@
 from datetime import datetime
-import app_Common.MeasurementStatus
-import app_CTS.measProcedure.DataDisplay
+import app_Common.measProcedure.MeasurementStatus
+import app_Common.measProcedure.DataDisplay
 import app_CTS.measProcedure.Stability
 import hardware.ReferenceSources
 import hardware.FEMC
@@ -9,8 +9,8 @@ import hardware.PowerDetect
 import hardware.IFSystem
 import hardware.BeamScanner
 import hardware.NoiseTemperature
-from Control.PowerDetect.PDPNA import PDPNA
-from Control.PowerDetect.PDVoltMeter import PDVoltMeter
+from Controllers.PowerDetect.PDPNA import PDPNA
+from Controllers.PowerDetect.PDVoltMeter import PDVoltMeter
 from database.CTSDB import CTSDB
 from Measure.Shared.makeSteps import makeSteps
 from Measure.Shared.SelectPolarization import SelectPolarization
@@ -32,14 +32,15 @@ from Measure.Stability.schemas import TimeSeriesInfo
 from DebugOptions import *
 
 settingsContainer = app_CTS.measProcedure.Stability.settingsContainer
-dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay
-measurementStatus = app_Common.MeasurementStatus.measurementStatus()
+dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay
+measurementStatus = app_Common.measProcedure.MeasurementStatus.measurementStatus()
 receiver = hardware.FEMC.cartAssembly
 ifSystem = hardware.IFSystem.ifSystem
 pdPNA = PDPNA(hardware.BeamScanner.pna)
 pdVoltMeter = PDVoltMeter(hardware.Stability.voltMeter)
 
 actor = StabilityActions(
+    dutType = DUT_Type.Band6_Cartridge,
     loReference = hardware.ReferenceSources.loReference,
     receiver = receiver,
     ifSystem = ifSystem,
@@ -47,8 +48,7 @@ actor = StabilityActions(
     chopper = hardware.NoiseTemperature.chopper,
     rfSrcDevice = hardware.FEMC.rfSrcDevice,    
     measurementStatus = measurementStatus,
-    dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay,
-    dutType = DUT_Type.Band6_Cartridge,
+    dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay,
     settings = settingsContainer
 )
 

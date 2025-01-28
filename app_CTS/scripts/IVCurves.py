@@ -11,7 +11,7 @@ def main():
 
     actor.start(settingsContainer)
 
-    if settings.measureIFPower:
+    if settings.measurePHot:
         ifSystem.frequency = 10
         ifSystem.bandwidth = 1
         ifSystem.attenuation = 20.0
@@ -30,7 +30,7 @@ def main():
     else:
         # assume the receiver is already biased.  Just do the measurement:
         dataDisplay.ivCurveResults.reset()
-        receiver.setRecevierBias(FreqLO = 0, magnetOnly = True)
+        receiver.setBias(FreqLO = 0, magnetOnly = True)
         actor.measureIVCurve(settings, ifPowerImpl, resultsTarget = dataDisplay.ivCurveResults)
 
     actor.finish()

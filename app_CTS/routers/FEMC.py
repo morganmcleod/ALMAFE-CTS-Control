@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app_Common.Response import MessageResponse
-from schemas.common import SingleInt, SingleFloat
-from Control.schemas.DeviceInfo import DeviceInfo
+from app_Common.schemas.common import SingleInt, SingleFloat
+from Controllers.schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 from typing import List
 

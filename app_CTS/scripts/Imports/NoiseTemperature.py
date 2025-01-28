@@ -1,5 +1,5 @@
-import app_Common.MeasurementStatus
-import app_CTS.measProcedure.DataDisplay
+import app_Common.measProcedure.MeasurementStatus
+import app_Common.measProcedure.DataDisplay
 import measProcedure.NoiseTemperature
 import hardware.ReferenceSources
 import hardware.FEMC
@@ -15,11 +15,11 @@ from Measure.Shared.SelectPolarization import SelectPolarization
 from DBBand6Cart.schemas.DUT_Type import DUT_Type
 from DBBand6Cart.NoiseTempRawData import NoiseTempRawData
 from DBBand6Cart.WarmIFNoiseData import WarmIFNoiseData
-from Control.PowerDetect.Interface import DetectMode
+from Controllers.PowerDetect.Interface import DetectMode
 
 settingsContainer = measProcedure.NoiseTemperature.settingsContainer
-measurementStatus = app_Common.MeasurementStatus.measurementStatus()
-dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay
+measurementStatus = app_Common.measProcedure.MeasurementStatus.measurementStatus()
+dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay
 receiver = hardware.FEMC.cartAssembly
 ifSystem = hardware.IFSystem.ifSystem
 powerDetect = hardware.PowerDetect.powerDetect
@@ -28,6 +28,7 @@ coldLoad = hardware.NoiseTemperature.coldLoad
 beamScanMotorController = hardware.BeamScanner.motorController
 
 actor = NoiseTempActions(
+    DUT_Type.Band6_Cartridge,
     hardware.ReferenceSources.loReference,
     hardware.ReferenceSources.rfReference,
     hardware.FEMC.cartAssembly,
@@ -40,6 +41,5 @@ actor = NoiseTempActions(
     hardware.NoiseTemperature.chopper, 
     measurementStatus,
     dataDisplay,
-    DUT_Type.Band6_Cartridge,
     settingsContainer
 )

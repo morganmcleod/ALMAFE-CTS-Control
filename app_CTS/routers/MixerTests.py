@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app_Common.Response import MessageResponse
-import measProcedure.MixerTests
-settingsContainer = measProcedure.MixerTests.settingsContainer
+import app_CTS.measProcedure.MixerTests
+settingsContainer = app_CTS.measProcedure.MixerTests.settingsContainer
 from AMB.schemas.MixerTests import IVCurveSettings, MagnetOptSettings, DefluxSettings
 router = APIRouter(prefix="/mixertests")
 

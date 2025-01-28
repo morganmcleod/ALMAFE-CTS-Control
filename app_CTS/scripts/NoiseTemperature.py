@@ -37,7 +37,7 @@ def main():
             if not doIFStepping:
                 if settingsContainer.testSteps.noiseTemp or settingsContainer.testSteps.loWGIntegrity:
                     actor.checkColdLoad()
-                    records = actor.measureNoiseTemp(cart_test.key, freqLO, receiver.isLocked(), freqIF = 0, recordsIn = records)
+                    records = actor.measureNoiseTemp(cart_test.key, freqLO, recordsIn = records)
             else:
                 for freqIF in makeSteps(noiseTempSettings.ifStart, noiseTempSettings.ifStop, noiseTempSettings.ifStep):
                     if measurementStatus.stopNow():
@@ -45,12 +45,12 @@ def main():
                         break
                     actor.setIF(freqIF)
                     if settingsContainer.testSteps.noiseTemp or settingsContainer.testSteps.loWGIntegrity:
-                        records = actor.measureNoiseTemp(cart_test.key, freqLO, receiver.isLocked(), freqIF, recordsIn = records)
+                        records = actor.measureNoiseTemp(cart_test.key, freqLO, freqIF, recordsIn = records)
                     if measurementStatus.stopNow():
                         actor.stop()
                         break
                     if settingsContainer.testSteps.imageReject:
-                        records = actor.measureImageReject(cart_test.key, freqLO, receiver.isLocked(), freqIF, recordsIn = records)
+                        records = actor.measureImageReject(cart_test.key, freqLO, freqIF, recordsIn = records)
 
             if records is not None:
                 DB.create(list(records.values()))

@@ -11,7 +11,7 @@ except:
 if IF_SYSTEM_B6V2:
     # IF system temporary B6v2
     import hardware.PowerDetect
-    from Control.IFSystem.TemporaryB6v2 import IFSystem
+    from Controllers.IFSystem.TemporaryB6v2 import IFSystem
     from INSTR.InputSwitch.ExternalSwitch import ExternalSwitch
     externalSwitch = ExternalSwitch("GPIB0::29::INSTR", SIMULATE)
     ifSystem = IFSystem(externalSwitch, hardware.PowerDetect.spectrumAnalyzer)
@@ -23,7 +23,7 @@ else:
     from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch
     from INSTR.WarmIFPlate.YIGFilter import YIGFilter
     from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-    from Control.IFSystem.WarmIFPlate import IFSystem
+    from Controllers.IFSystem.WarmIFPlate import IFSystem
     import hardware.NoiseTemperature
     
     warmIFPlate = WarmIFPlate(

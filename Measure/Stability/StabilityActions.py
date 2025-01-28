@@ -7,12 +7,12 @@ from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
 from INSTR.TemperatureMonitor.Lakeshore218 import TemperatureMonitor
 from INSTR.Chopper.Interface import Chopper_Interface, ChopperState
 from INSTR.PNA.AgilentPNA import DEFAULT_POWER_CONFIG, FAST_CONFIG
-from Control.CartAssembly import CartAssembly
-from Control.RFSource import RFSource
-from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
-from Control.PowerDetect.Interface import PowerDetect_Interface, DetectMode
-from Control.IFAutoLevel import IFAutoLevel
-from Control.RFAutoLevel import RFAutoLevel
+from Controllers.Receiver.CartAssembly import CartAssembly
+from Controllers.RFSource.CTS import RFSource
+from Controllers.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
+from Controllers.PowerDetect.Interface import PowerDetect_Interface, DetectMode
+from Controllers.IFAutoLevel import IFAutoLevel
+from Controllers.RFAutoLevel import RFAutoLevel
 from Measure.Shared.MeasurementStatus import MeasurementStatus
 from Measure.Shared.DataDisplay import DataDisplay
 from Measure.Shared.SelectPolarization import SelectPolarization
@@ -29,6 +29,7 @@ from DebugOptions import *
 class StabilityActions():
 
     def __init__(self,
+            dutType: DUT_Type,
             loReference: SignalGenerator,
             receiver: CartAssembly,            
             ifSystem: IFSystem_Interface,
@@ -37,7 +38,6 @@ class StabilityActions():
             rfSrcDevice: RFSource,              # for phase stability only            
             measurementStatus: MeasurementStatus,
             dataDisplay: DataDisplay,
-            dutType: DUT_Type,
             settings: SettingsContainer
     ):
         self.logger = logging.getLogger("ALMAFE-CTS-Control")
@@ -71,14 +71,14 @@ class StabilityActions():
         self._reset()
         self.settings = settings
         if self.rfSrcDevice:
-            self.rfSrcDevice.turnOff()
+            self.rfSrcDevice.setOutputPower(0)
 
     def stop(self):        
         self.measurementStatus.setStatusMessage("Stopping...")
         self.measurementStatus.stopMeasuring()
         self.chopper.gotoHot()
         if self.rfSrcDevice:
-            self.rfSrcDevice.turnOff()
+            self.rfSrcDevice.setOutputPower(0)
         
     def finish(self):
         self.powerDetect.reset()
@@ -92,7 +92,7 @@ class StabilityActions():
     def setLO(self, freqLO: float, setBias: bool = True) -> tuple[bool, str]:
         
         self.measurementStatus.setStatusMessage(f"Locking LO at {freqLO:.2f} GHz...")
-        success, msg = self.receiver.lockLO(self.loReference, freqLO)
+        success, msg = self.receiver.lockLO(freqLO, self.loReference)
 
         locked = success        
         if not success:
@@ -101,9 +101,9 @@ class StabilityActions():
             self.logger.info(msg)
 
         if setBias:
-            success = self.receiver.setRecevierBias(freqLO)
+            success = self.receiver.setBias(freqLO)
             if not success:
-                return False, "setRecevierBias failed. Provide config ID?"
+                return False, "setBias failed. Provide config ID?"
             
             self.measurementStatus.setStatusMessage(f"Setting LO power...")
             selectPol = SelectPolarization(self.settings.polarization)
@@ -133,7 +133,7 @@ class StabilityActions():
             raise ValueError("lockRF: no rfSrcDevice")
         self.measurementStatus.setStatusMessage(f"Locking RF at {freqRF} GHz...")
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
-        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(freqRF)
+        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setFrequency(freqRF)
         if not SIMULATE:
             wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.lockPLL()
         return (wcaFreq != 0, f"lockRF: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")      

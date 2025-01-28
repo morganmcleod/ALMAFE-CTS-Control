@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Response
 import app_CTS.measProcedure.Stability
-import app_CTS.measProcedure.DataDisplay
+import app_Common.measProcedure.DataDisplay
 settingsContainer = app_CTS.measProcedure.Stability.settingsContainer
-dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay
+dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay
 from Measure.Stability.schemas import Settings
 from app_Common.CTSDB import CTSDB
 from DBBand6Cart.TestResultPlots import TestResultPlots

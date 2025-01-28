@@ -1,7 +1,7 @@
 import configparser
 from DebugOptions import *
-from Control.PowerDetect.IFPowerImpl import IFPowerImpl
-from Control.PowerDetect.PDPowerMeter import PDPowerMeter
+from Controllers.PowerDetect.IFPowerImpl import IFPowerImpl
+from Controllers.PowerDetect.PDPowerMeter import PDPowerMeter
 from INSTR.SpectrumAnalyzer.Simulator import SpectrumAnalyzerSimulator
 from INSTR.PowerMeter.KeysightE441X import PowerMeter
 from INSTR.PowerMeter.Simulator import PowerMeterSimulator
@@ -15,17 +15,17 @@ except:
     POWER_DETECT_B6V2 = False
 
 if POWER_DETECT_B6V2:
-    # B6v2 powerDetect is spectrrum analyzer
+    # MTS powerDetect is spectrum analyzer
     from INSTR.SpectrumAnalyzer.SpectrumAnalyzer import SpectrumAnalyzer    
-    from Control.PowerDetect.PDSpecAn import PDSpecAn
+    from Controllers.PowerDetect.PDSpecAn import PDSpecAn
     if SIMULATE:
         spectrumAnalyzer = SpectrumAnalyzerSimulator()
     else:
-        spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.10::inst0::INSTR")
+        spectrumAnalyzer = SpectrumAnalyzer("TCPIP0::10.1.1.5::inst0::INSTR")
     powerDetect = PDSpecAn(spectrumAnalyzer)
 
 else:    
-    # MTS1 powerDetect is power meter
+    # CTS and MTS1 powerDetect is power meter
     from INSTR.PowerMeter.Simulator import PowerMeterSimulator
     spectrumAnalyzer = SpectrumAnalyzerSimulator()
     if SIMULATE:

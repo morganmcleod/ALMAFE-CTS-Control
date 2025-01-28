@@ -51,7 +51,7 @@ from app_CTS.routers.BeamScanner import router as beamScanRouter
 from app_CTS.routers.IFSystem import router as ifSystemRouter
 from app_CTS.routers.DataDisplay import router as dataDisplayRouter
 from app_CTS.routers.MixerTests import router as mixerTestsRouter
-from app_CTS.routers.ConnectionManager import ConnectionManager
+from app_Common.ConnectionManager import ConnectionManager
 
 
 
@@ -190,7 +190,7 @@ async def websocket_actionPublisher(websocket: WebSocket):
                 startupEvent = None
         except WebSocketDisconnect:
             manager.disconnect(websocket)
-            logger.exception("WebSocketDisconnect: /startup_ws")
+            logger.info("WebSocketDisconnect: /startup_ws")
         await asyncio.sleep(1)
 
 @app.get("/", tags=["API"], response_model = MessageResponse)

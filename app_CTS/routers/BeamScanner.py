@@ -2,16 +2,16 @@ import asyncio
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Tuple, Optional
-from schemas.common import SingleFloat
-from Control.schemas.DeviceInfo import DeviceInfo
+from app_Common.schemas.common import SingleFloat
+from Controllers.schemas.DeviceInfo import DeviceInfo
 import app_CTS.measProcedure.BeamScanner
 beamScanner = app_CTS.measProcedure.BeamScanner.beamScanner
 motorController = app_CTS.measProcedure.BeamScanner.beamScanner.mc
 
-import app_Common.MeasurementStatus
-measurementStatus = app_Common.MeasurementStatus.measurementStatus()
+import app_Common.measProcedure.MeasurementStatus
+measurementStatus = app_Common.measProcedure.MeasurementStatus.measurementStatus()
 from app_Common.Response import MessageResponse
-from .ConnectionManager import ConnectionManager
+from app_Common.ConnectionManager import ConnectionManager
 from INSTR.MotorControl.schemas import MotorStatus, MoveStatus, Position
 from INSTR.PNA.schemas import MeasConfig, PowerConfig
 from Measure.BeamScanner.schemas import MeasurementSpec, ScanList, ScanStatus, Rasters
@@ -35,7 +35,7 @@ async def websocket_scandata_push(websocket: WebSocket):
             await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /position_ws")
+        logger.info("WebSocketDisconnect: /position_ws")
 
 @router.websocket("/motorstatus_ws")
 async def websocket_scandata_push(websocket: WebSocket):
@@ -50,7 +50,7 @@ async def websocket_scandata_push(websocket: WebSocket):
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /motorstatus_ws")
+        logger.info("WebSocketDisconnect: /motorstatus_ws")
 
 @router.websocket("/rasters_ws")
 async def websocket_scandata_push(websocket: WebSocket):
@@ -69,7 +69,7 @@ async def websocket_scandata_push(websocket: WebSocket):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rasters_ws")
+        logger.info("WebSocketDisconnect: /rasters_ws")
     except Exception as e:
         logger.exception(e)
 

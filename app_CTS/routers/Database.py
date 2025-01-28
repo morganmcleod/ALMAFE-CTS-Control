@@ -3,7 +3,7 @@ from app_Common.Response import ListResponse, prepareListResponse, MessageRespon
 router = APIRouter(prefix="/database")
 
 from app_Common.CTSDB import CTSDB
-from schemas.common import SingleBool
+from app_Common.schemas.common import SingleBool
 from DBBand6Cart.CartConfigs import CartConfig, CartConfigs
 from DBBand6Cart.schemas.CartConfig import CartKeys
 from DBBand6Cart.MixerParams import MixerParam, MixerParams
@@ -63,14 +63,14 @@ async def getLOConfiig():
 
 @router.put("/rfsource/config/{configId}", response_model = MessageResponse)
 async def putRFSourceConfig(configId: int):
-    if rfSrcDevice.setRFSourceConfig(configId):
+    if rfSrcDevice.setConfig(configId):
         return MessageResponse(message = f"Selected RF source config {configId}", success = True)
     else:
         return MessageResponse(message = f"ERROR selecting RF source config {configId}", success = False)
 
 @router.get("/rfsource/config", response_model = WCA)
 async def getRFSrcConfiig():
-    return rfSrcDevice.getRFSourceConfig()
+    return rfSrcDevice.setConfig()
 
 @router.get("/config/keys", response_model = Optional[CartKeys])
 async def getConfigKeys(configId:int, pol:int, callback:str = None):

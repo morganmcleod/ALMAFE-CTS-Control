@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import Optional
-from DBBand6Cart.CartTests import CartTest
+from DBBand6Cart.MixerTests import MixerTest
 from app_Common.Response import KeyResponse, MessageResponse
 from Measure.Shared.MeasurementStatus import MeasurementStatusModel
 import measProcedure.ScriptRunner
@@ -10,12 +10,12 @@ from DebugOptions import *
 router = APIRouter(prefix="/measure")
 
 @router.put("/start", response_model = KeyResponse)
-async def put_Start(cartTest:CartTest):
-    success, msg = scriptRunner.start(cartTest)
+async def put_Start(testRec: MixerTest):
+    success, msg = scriptRunner.start(testRec)
     if not success:
         return KeyResponse(key = 0, message = msg, success = False)
     else:
-        return KeyResponse(key = cartTest.key, message = msg, success = True)
+        return KeyResponse(key = testRec.key, message = msg, success = True)
 
 @router.put("/stop", response_model = MessageResponse)
 async def put_Stop():
@@ -25,7 +25,7 @@ async def put_Stop():
     else:
         return MessageResponse(message = msg, success = True)
     
-@router.get("/current_test", response_model = Optional[CartTest])
+@router.get("/current_test", response_model = Optional[MixerTest])
 async def get_CurrentTest():
     return scriptRunner.get_carttest()
 

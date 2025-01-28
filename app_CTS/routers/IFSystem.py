@@ -2,9 +2,9 @@ import logging
 from fastapi import APIRouter
 import hardware.IFSystem
 ifSystem = hardware.IFSystem.ifSystem
-from Control.schemas.DeviceInfo import DeviceInfo
-from Control.IFSystem.Interface import InputSelect
-from schemas.common import SingleFloat, SingleInt
+from Controllers.schemas.DeviceInfo import DeviceInfo
+from Controllers.IFSystem.Interface import InputSelect
+from app_Common.schemas.common import SingleFloat, SingleInt
 from app_Common.Response import MessageResponse
 from DebugOptions import *
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/ifsystem")
 async def get_device_info():
     return ifSystem.device_info
 
-@router.get("/input_select", response_model = MessageResponse)
+@router.get("/input_select", response_model = int)
 async def get_input_select():
     return MessageResponse(message = ifSystem.input_select.name, success = True)
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app_Common.Response import MessageResponse
 
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.DeviceInfo import DeviceInfo
 import hardware.NoiseTemperature 
 chopper = hardware.NoiseTemperature.chopper
 from INSTR.Chopper.Band6Chopper import ChopperState

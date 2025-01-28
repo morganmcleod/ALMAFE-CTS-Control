@@ -6,5 +6,5 @@ if SIMULATE:
     loReference = SignalGenSimulator()
     rfReference = SignalGenSimulator()
 else:    
-    loReference = SignalGenerator("GPIB0::19::INSTR", reset = False)
-    rfReference = SignalGenerator("GPIB0::17::INSTR", reset = False)
+    loReference = SignalGenerator("TCPIP0::10.1.1.7::inst0::INSTR", reset = False)
+    rfReference = SignalGenerator("TCPIP0::10.1.1.6::inst0::INSTR", reset = False)

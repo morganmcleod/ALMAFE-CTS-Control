@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.DeviceInfo import DeviceInfo
 import hardware.PowerDetect
 from DebugOptions import *
 

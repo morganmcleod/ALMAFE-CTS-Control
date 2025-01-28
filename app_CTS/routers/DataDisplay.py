@@ -3,10 +3,10 @@ import logging
 from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
-import app_CTS.measProcedure.DataDisplay
-dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay
+import app_Common.measProcedure.DataDisplay
+dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay
 from AMB.schemas.MixerTests import IVCurveResult, MagnetOptResult, DefluxResult
-from .ConnectionManager import ConnectionManager
+from app_Common.ConnectionManager import ConnectionManager
 
 manager = ConnectionManager()
 router = APIRouter(prefix="/display")
@@ -30,7 +30,7 @@ async def websocket_warmif(websocket: WebSocket):
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /ifsystem_ws")
+        logger.info("WebSocketDisconnect: /ifsystem_ws")
 
 @router.websocket("/chopperpower_ws")
 async def websocket_chopperpower(websocket: WebSocket):
@@ -51,7 +51,7 @@ async def websocket_chopperpower(websocket: WebSocket):
             await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /chopperpower_ws")
+        logger.info("WebSocketDisconnect: /chopperpower_ws")
 
 @router.websocket("/rawspecan_ws")
 async def websocket_rawspecan(websocket: WebSocket):
@@ -64,7 +64,7 @@ async def websocket_rawspecan(websocket: WebSocket):
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rawspecan_ws")
+        logger.info("WebSocketDisconnect: /rawspecan_ws")
 
 @router.websocket("/rawnoisetemp_ws")
 async def websocket_raw_nt(websocket: WebSocket):
@@ -81,7 +81,7 @@ async def websocket_raw_nt(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /rawnoisetemp_ws")
+        logger.info("WebSocketDisconnect: /rawnoisetemp_ws")
 
 @router.websocket("/yfactor_ws")
 async def websocket_yfactor(websocket: WebSocket):
@@ -100,7 +100,7 @@ async def websocket_yfactor(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /yfactor_ws")
+        logger.info("WebSocketDisconnect: /yfactor_ws")
 
 @router.websocket("/stability/timeseries_ws")
 async def websocket_amp_timeseries_push(websocket: WebSocket):
@@ -119,7 +119,7 @@ async def websocket_amp_timeseries_push(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /stability/timeseries_ws")
+        logger.info("WebSocketDisconnect: /stability/timeseries_ws")
 
 @router.websocket("/mixertests/iv_curves_ws")
 async def websocket_iv_curves(websocket: WebSocket):
@@ -165,7 +165,7 @@ async def websocket_iv_curves(websocket: WebSocket):
                 await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /mixertests/iv_curves_ws")
+        logger.info("WebSocketDisconnect: /mixertests/iv_curves_ws")
 
 
 @router.websocket("/mixertests/magnet_opt_ws")
@@ -209,7 +209,7 @@ async def websocket_magnet_opt(websocket: WebSocket):
             
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /mixertests/magnet_opt_ws")
+        logger.info("WebSocketDisconnect: /mixertests/magnet_opt_ws")
 
 @router.websocket("/mixertests/mixer_deflux_ws")
 async def websocket_mixer_deflux(websocket: WebSocket):
@@ -252,4 +252,4 @@ async def websocket_mixer_deflux(websocket: WebSocket):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        logger.exception("WebSocketDisconnect: /mixertests/mixer_deflux_ws")
+        logger.info("WebSocketDisconnect: /mixertests/mixer_deflux_ws")

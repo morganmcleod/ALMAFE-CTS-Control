@@ -9,12 +9,12 @@ except:
     IF_SYSTEM_B6V2 = False
 
 if IF_SYSTEM_B6V2:
-    # IF system temporary B6v2
-    import hardware.PowerDetect
+    # IF system MTS-2
+    import app_MTS2.hardware.PowerDetect
     from INSTR.InputSwitch.MTS2 import InputSwitch_MTS2
-    from Control.IFSystem.MTS2 import IFSystem
+    from Controllers.IFSystem.MTS2 import IFSystem
     inputSwitch = InputSwitch_MTS2(simulate = SIMULATE)
-    ifSystem = IFSystem(inputSwitch, hardware.PowerDetect.spectrumAnalyzer)
+    ifSystem = IFSystem(inputSwitch, app_MTS2.hardware.PowerDetect.spectrumAnalyzer)
 
 else:
     # Warm IF plate
@@ -23,7 +23,7 @@ else:
     from INSTR.WarmIFPlate.OutputSwitch import OutputSwitch
     from INSTR.WarmIFPlate.YIGFilter import YIGFilter
     from INSTR.WarmIFPlate.WarmIFPlate import WarmIFPlate
-    from Control.IFSystem.WarmIFPlate import IFSystem
+    from Controllers.IFSystem.WarmIFPlate import IFSystem
     import hardware.NoiseTemperature
     
     warmIFPlate = WarmIFPlate(

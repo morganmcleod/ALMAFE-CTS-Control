@@ -2,6 +2,7 @@ import configparser
 from ALMAFE.database.DriverMySQL import DriverMySQL
 from DBBand6Cart.LoadConfiguration import loadConfiguration
 from DBBand6Cart.CartTests import CartTests
+from DBBand6Cart.MixerTests import MixerTests
 
 CTS_INI = 'ALMAFE-CTS-Control.ini'
 
@@ -27,9 +28,25 @@ def CartTestsDB():
         config = configparser.ConfigParser()
         config.read(CTS_INI)
         try:
-            fkCartTest = int(config['CartTests']['fkTestSystem'])
+            fkTestSystem = int(config['CartTests']['fkTestSystem'])
         except:
-            fkCartTest = None
-        CartTestsDB.CartTestsDB = CartTests(driver = CTSDB(), defaultFkTestSystem = fkCartTest)
+            fkTestSystem = None
+        CartTestsDB.CartTestsDB = CartTests(driver = CTSDB(), defaultFkTestSystem = fkTestSystem)
         return CartTestsDB.CartTestsDB
+    
+def MixerTestsDB():
+    '''
+    test and if necessary create the singleton MixerTestsDB object
+    '''
+    try:
+        return MixerTestsDB.MixerTestsDB
+    except:
+        config = configparser.ConfigParser()
+        config.read(CTS_INI)
+        try:
+            fkTestSystem = int(config['MixerTests']['fkTestSystem'])
+        except:
+            fkTestSystem = None
+        MixerTestsDB.MixerTestsDB = MixerTests(driver = CTSDB(), defaultFkTestSystem = fkTestSystem)
+        return MixerTestsDB.MixerTestsDB
    

@@ -10,13 +10,13 @@ import hardware.PowerDetect
 powerDetect = hardware.PowerDetect.powerDetect
 import measProcedure.NoiseTemperature 
 nt_settings = measProcedure.NoiseTemperature.settingsContainer
-import app_CTS.measProcedure.DataDisplay
-dataDisplay = app_CTS.measProcedure.DataDisplay.dataDisplay
-from Control.PowerDetect.Interface import DetectMode
+import app_Common.measProcedure.DataDisplay
+dataDisplay = app_Common.measProcedure.DataDisplay.dataDisplay
+from Controllers.PowerDetect.Interface import DetectMode
 from Measure.NoiseTemperature.schemas import TestSteps, CommonSettings, WarmIFSettings, NoiseTempSettings, YFactorSettings
 from INSTR.ColdLoad.AMI1720 import FillMode
 from INSTR.SpectrumAnalyzer.schemas import SpectrumAnalyzerSettings
-from schemas.common import SingleFloat
+from app_Common.schemas.common import SingleFloat
 from app_Common.Response import ListResponse, MessageResponse, prepareListResponse
 
 router = APIRouter(prefix="/noisetemp")

@@ -3,7 +3,7 @@ from fastapi import APIRouter
 import hardware.NoiseTemperature
 temperatureMonitor = hardware.NoiseTemperature.temperatureMonitor
 from INSTR.TemperatureMonitor.schemas import Temperatures, DESCRIPTIONS
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.DeviceInfo import DeviceInfo
 from DebugOptions import *
 
 logger = logging.getLogger("ALMAFE-CTS-Control")

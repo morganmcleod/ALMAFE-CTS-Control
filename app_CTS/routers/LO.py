@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, Depends
-from schemas.LO import *
-from schemas.common import *
+from Controllers.schemas.LO import *
+from app_Common.schemas.common import *
 from app_Common.Response import MessageResponse
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.DeviceInfo import DeviceInfo
 import hardware.FEMC as FEMC
 
 router = APIRouter()
@@ -29,31 +29,31 @@ async def set_YTO_Limits(request: Request, payload: ConfigYTO):
     return MessageResponse(message = f"{name} YTO: " + payload.getText(), success = True)
 
 @router.put("/yto/coursetune", response_model = MessageResponse)
-async def set_YTO_CourseTune(request: Request, payload: SetYTO):
+async def set_YTO_CourseTune(request: Request, value: int):
     device, name = getTarget(request)
-    result = device.setYTOCourseTune(payload.courseTune)
+    result = device.setYTOCourseTune(value)
     if result:
-        return MessageResponse(message = f"{name} YTO courseTune " + payload.getText(), success = True)
+        return MessageResponse(message = f"{name} set YTO course tune {value}", success = True)
     else:
-        return MessageResponse(message = f"{name} YTO courseTune FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} YTO set course tune FAILED", success = False)
 
 @router.put("/frequency", response_model = MessageResponse)
-async def set_Frequency(request: Request, payload: SetLOFrequency):
+async def set_Frequency(request: Request, freqGHz: float):
     device, name = getTarget(request)
-    (wcaFreq, ytoFreq, ytoCourse) = device.setLOFrequency(payload.freqGHz)
+    (wcaFreq, ytoFreq, ytoCourse) = device.setFrequency(freqGHz)
     if wcaFreq:
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
-        return MessageResponse(message = f"{name} frequency " + payload.getText() + wcaText, success = True)
+        return MessageResponse(message = f"{name} set frequency {freqGHz} GHz" + wcaText, success = True)
     else:
-        return MessageResponse(message = f"{name} frequency FAILED: " + payload.getText(), success = False)
+        return MessageResponse(message = f"{name} set frequency {freqGHz} GHz FAILED", success = False)
 
 @router.put("/pll/lock", response_model = MessageResponse)
-async def lock_PLL(request: Request, payload: LockPLL):
+async def lock_PLL(request: Request, payload: LOSettings):
     device, name = getTarget(request)
     (wcaFreq, ytoFreq, ytoCourse) = device.lockPLL(payload.freqLOGHz)
     if wcaFreq:
         if name == "LO":
-            FEMC.cartAssembly.setRecevierBias(payload.freqLOGHz)
+            FEMC.cartAssembly.setBias(payload.freqLOGHz)
         wcaText = f" [wcaFreq:{wcaFreq} ytoFreq:{ytoFreq} ytoCourse:{ytoCourse}]"
         return MessageResponse(message = f"{name} PLL LOCKED " + payload.getText() + wcaText, success = True)
     else:
@@ -104,7 +104,7 @@ async def setNullLoopIntegrator(request: Request, payload:SingleBool):
 @router.put("/photomixer/enable", response_model = MessageResponse)
 async def set_Photmixer_Enable(request: Request, payload:SingleBool):
     device, name = getTarget(request)
-    device.setPhotmixerEnable(payload.value)
+    device.enablePhotomixer(payload.value)
     return MessageResponse(message = f"{name} Photomixer " + payload.getText(), success = True)
 
 @router.put("/pa/bias", response_model = MessageResponse)

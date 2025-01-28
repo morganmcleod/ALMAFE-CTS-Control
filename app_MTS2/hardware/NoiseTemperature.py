@@ -13,14 +13,9 @@ else:
     temperatureMonitor = TemperatureMonitor("GPIB0::12::INSTR")
 
 if SIMULATE:
-    powerSupply = PowerSupplySimulator()
-else:
-    powerSupply = PowerSupply("GPIB0::5::INSTR")
-
-if SIMULATE:
     coldLoad = AMI1720Simulator()
 else:
-    coldLoad = AMI1720("TCPIP0::10.1.1.5::7180::SOCKET")
+    coldLoad = AMI1720("TCPIP0::10.1.1.3::7180::SOCKET")
 
 chopper = Chopper(simulate = SIMULATE)
 

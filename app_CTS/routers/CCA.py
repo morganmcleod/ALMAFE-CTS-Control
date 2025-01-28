@@ -1,8 +1,8 @@
 import yaml
 from fastapi import APIRouter
-from schemas.CCA import *
-from schemas.common import *
-from Control.schemas.DeviceInfo import DeviceInfo
+from Controllers.schemas.MixerBias import *
+from app_Common.schemas.common import *
+from Controllers.schemas.DeviceInfo import DeviceInfo
 from AMB.schemas.MixerTests import *
 import hardware.FEMC as FEMC
 from app_Common.Response import MessageResponse

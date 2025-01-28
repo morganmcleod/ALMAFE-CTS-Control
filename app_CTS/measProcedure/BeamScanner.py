@@ -2,7 +2,7 @@ import hardware.BeamScanner
 import hardware.ReferenceSources
 import hardware.FEMC
 import hardware.IFSystem
-import app_Common.MeasurementStatus
+import app_Common.measProcedure.MeasurementStatus
 from Measure.BeamScanner.schemas import ScanList, ScanListItem, SubScansOption
 from Measure.BeamScanner.BeamScanner import BeamScanner
 from DebugOptions import *
@@ -15,7 +15,7 @@ beamScanner = BeamScanner(
     cartAssembly = hardware.FEMC.cartAssembly, 
     rfSrcDevice = hardware.FEMC.rfSrcDevice, 
     ifSystem = hardware.IFSystem.ifSystem,
-    measurementStatus = app_Common.MeasurementStatus.measurementStatus()
+    measurementStatus = app_Common.measProcedure.MeasurementStatus.measurementStatus()
 )
 
 if TESTING:
