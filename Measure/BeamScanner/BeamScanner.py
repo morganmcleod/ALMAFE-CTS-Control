@@ -630,7 +630,7 @@ class BeamScanner():
         if SIMULATE:
             return (True, "Simulate write to database")
         xAxisList = reversed(self.xAxisList) if self.reverseX else self.xAxisList
-        
+        now = datetime.now()
         records = [BPRawDatum(
             fkBeamPattern = self.scanStatus.fkBeamPatterns,
             Pol = subScan.pol,
@@ -638,7 +638,8 @@ class BeamScanner():
             Position_Y = self.yPos,
             SourceAngle = self.scanAngle,
             Power = amp,
-            Phase = phase
+            Phase = phase,
+            timeStamp = now
         ) for x, amp, phase in zip(xAxisList, self.raster.amplitude, self.raster.phase)]
 
         count = self.bpRawDataTable.create(records)
