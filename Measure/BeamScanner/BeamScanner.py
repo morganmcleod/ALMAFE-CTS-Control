@@ -455,7 +455,6 @@ class BeamScanner():
         self.mc.startMove(withTrigger, moveTimeout)
         moveStatus = self.mc.waitForMove(timeout = moveTimeout + 0.5)
         actualPos = self.mc.getPosition(cached = False)
-        self.logger.info("__moveScanner: " + actualPos.getText())
         self.mc.stopMove()
         if self.stopNow:
             return (False, "__moveScanner: User Stop")
