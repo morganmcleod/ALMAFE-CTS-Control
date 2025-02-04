@@ -268,6 +268,9 @@ class BeamScanner():
                 success, msg = self.__moveToBeamCenter(scan, subScan)
             if success:
                 success, msg = self.__rfSourceAutoLevel(scan, subScan)
+            if success:
+                success, msg = self.__measureCenterPower(scan, subScan, scanComplete = False)
+                lastCenterPwrTime = time.time()
             
             if not success:
                 self.__logBPError(
@@ -280,7 +283,6 @@ class BeamScanner():
 
             self.__selectIFInput(isUSB = scan.RF > scan.LO, pol = subScan.pol)
 
-            lastCenterPwrTime = None
             rasterIndex = 0
             # loop on y axis:
             for self.yPos in self.yAxisList:
@@ -481,7 +483,8 @@ class BeamScanner():
                 Phase = self.scanStatus.phase,
                 ScanComplete = self.scanStatus.scanComplete
             ))
-        msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"
+        self.logger.info(f"__measureCenterPower: position {self.mc.getPosition().getText()}")
+        msg = f"__measureCenterPower: {self.scanStatus.getCenterPowerText()}"        
         self.logger.info(msg)
         return (True, msg)
 
@@ -553,7 +556,7 @@ class BeamScanner():
         wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
         pllConfig = self.cartAssembly.loDevice.getPLLConfig()
         self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
-        self.loReference.setAmplitude(12.0)
+        # self.loReference.setAmplitude(12.0)
         self.loReference.setRFOutput(True)
         if not SIMULATE:
             wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.lockPLL()

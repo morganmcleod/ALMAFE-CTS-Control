@@ -89,12 +89,13 @@ class CartAssembly():
             pass
 
     def setCartConfig(self, configId:int) -> bool:
-        DB = CartConfigs(driver = CTSDB())
         self.reset()
         self.settings = CartAssemblySettings(loConfig = self.settings.loConfig)
         if configId == 0:
             self.saveSettings()
             return True
+        
+        DB = CartConfigs(driver = CTSDB())
         configs = DB.read(keyColdCart = configId)
         if not configs:
             return False

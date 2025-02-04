@@ -38,7 +38,7 @@ class CommonSettings(BaseModel):
     powerMeterConfig: StdErrConfig = StdErrConfig(
         minS = 50,
         maxS = 600,
-        stdErr = 500.0E-6,
+        stdErr = 5.0E-4,
         timeout = 0
     )
 

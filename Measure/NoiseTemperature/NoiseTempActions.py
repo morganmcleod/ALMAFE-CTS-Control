@@ -595,7 +595,7 @@ class NoiseTempActions():
             loIsLocked: bool,
             freqIF: float,
             recordsIn: dict[tuple[int, float], NoiseTempRawDatum] | None = None
-            ) -> dict[tuple[int, float], NoiseTempRawDatum] | None:
+        ) -> dict[tuple[int, float], NoiseTempRawDatum] | None:
         
         self.chopper.gotoHot()
         self.ifSystem.output_select = OutputSelect.POWER_DETECT
