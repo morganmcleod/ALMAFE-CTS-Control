@@ -2,8 +2,8 @@ from pydantic import BaseModel
 from enum import Enum
 from INSTR.PowerMeter.schemas import StdErrConfig
 from INSTR.Chopper.Interface import ChopperState
-from Control.IFSystem.Interface import InputSelect
-from Control.PowerDetect.Interface import DetectMode
+from Controllers.IFSystem.Interface import InputSelect
+from Controllers.PowerDetect.Interface import DetectMode
 from Measure.Shared.SelectPolarization import SelectPolarization
 
 class ChopperMode(Enum):
@@ -28,12 +28,14 @@ class CommonSettings(BaseModel):
     backEndMode: str = BackEndMode.IF_PLATE.value
     targetPHot: float = -30.0
     imageRejectSBTarget_PM: float = -15.0   # dBm
-    imageRejectSBTarget_SA: float = -30.0   # dBm
+    imageRejectSBTarget_SA: float = -40.0   # dBm
     chopperSpeed: float = 0.5               # rev/sec
     sampleRate: float = 20                  # samples/sec
-    sensorAmbient: int = 7
+    sensorAmbient: int = 6
+    sensorMixer: int = 2
     tColdEff: float = 80
-    sigGenAmplitude: float = 10.0
+    loRefAmplitude: float = 5
+    rfRefAmplitude: float = 15
     pauseForColdLoad: bool = True
     powerMeterConfig: StdErrConfig = StdErrConfig(
         minS = 50,
@@ -63,13 +65,23 @@ class NoiseTempSettings(BaseModel):
     polarization: str = SelectPolarization.BOTH.value
 
 class BiasOptSettings(BaseModel):
-    vjMin: float = 4.0
-    vjStep: float = 0.2
-    vjMax: float = 5.0
-    ijMin: float = 32.0
-    ijStep: float = 2.0
-    ijMax: float = 42.0
-    polarization: str = SelectPolarization.BOTH.value
+    ifOptimizeStart: float = 5.0
+    ifOptimizeStop: float = 10.0
+    vjStart: float = 7.5
+    vjStop: float = 9.0
+    vjStep: float = 0.5
+    ijStart: float = 40.0
+    ijStop: float = 60.0
+    ijStep: float = 5.0
+    iMag: float = 25.0
+    outputDir: str = "testdata_local"
+
+class BiasOptResult(BaseModel):
+    freqLO: float
+    VjSet: float
+    IjSet: float
+    IjRead: float
+    Trx: float
 
 class YFactorSettings(BaseModel):
     inputSelect: InputSelect = InputSelect.POL0_USB

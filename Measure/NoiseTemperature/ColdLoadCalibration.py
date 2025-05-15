@@ -54,7 +54,7 @@ class ColdLoadCalibration():
         self.wb = Workbook()
         self.ws = self.wb.active
         self.ws.append(['TS', 'Annotation', 'TAmbient', 'Power'])
-        self.spectrumAnalyzer.configWideBand(center_GHz, span_GHz, self.specAnSettings.sweepPoints)
+        self.spectrumAnalyzer.configWideBand(center_GHz, span_GHz)
         self.worker = threading.Thread(target = self.__measureLoop, daemon = True)
         self.worker.start()
 

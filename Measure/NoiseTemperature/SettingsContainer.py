@@ -14,6 +14,12 @@ class SettingsContainer():
 
     def __init__(self):
         self.setDefaultTestSteps()
+        self.loadSettings()
+
+    def setDefaultTestSteps(self):
+        self.testSteps = TestSteps()
+
+    def loadSettings(self):
         self.loadSettingsCommon()
         self.loadSettingsWarmIF()
         self.loadSettingsNoiseTemp()
@@ -22,9 +28,6 @@ class SettingsContainer():
         self.loadSettingsYFactor()
         self.loadSettingsNTSpecAn()
         self.loadSettingsIRSpecAn()
-
-    def setDefaultTestSteps(self):
-        self.testSteps = TestSteps()
 
     def loadSettingsCommon(self):
         try:
@@ -111,7 +114,7 @@ class SettingsContainer():
             with open(self.YFACTOR_SETTINGS_FILE, "r") as f:
                 d = yaml.safe_load(f)
                 self.yFactorSettings = YFactorSettings.model_validate(d)
-        except:
+        except Exception as e:
             self.setDefaultsYFactor()
 
     def setDefaultsYFactor(self):
@@ -147,7 +150,12 @@ class SettingsContainer():
             self.setDefaultsIRSpecAn()
 
     def setDefaultsIRSpecAn(self):
-        self.irSpecAnSettings = SpectrumAnalyzerSettings(attenuation = 2, resolutionBW = 10e3, enableInternalPreamp = False)
+        self.irSpecAnSettings = SpectrumAnalyzerSettings(
+            attenuation = 16, 
+            resolutionBW = 10e3,             
+            enableInternalPreamp = True,
+            sweepPoints = 201
+        )        
         self.saveSettingsIRSpecAn()
 
     def saveSettingsIRSpecAn(self):

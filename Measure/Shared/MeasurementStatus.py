@@ -1,10 +1,11 @@
 from DBBand6Cart.CartTests import CartTest
+from DBBand6Cart.MixerTests import MixerTest
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
 class MeasurementStatusModel(BaseModel):
-    cartTest: Optional[CartTest] = None
+    testRecord: Optional[CartTest|MixerTest] = None
     childKey: int = 0
     timeStamp: Optional[datetime] = None
     complete: bool = True
@@ -19,9 +20,9 @@ class MeasurementStatus():
     def getCurrentValues(self):
         return self.model
 
-    def setMeasuring(self, measuring: CartTest | None):
+    def setMeasuring(self, measuring: CartTest | MixerTest | None):
         self.model.timeStamp = datetime.now()
-        self.model.cartTest = measuring
+        self.model.testRecord = measuring
         self.model.stopNow = False        
         self.model.error = False            
         if measuring is None:
@@ -32,22 +33,23 @@ class MeasurementStatus():
         self.model.childKey = childKey
         
     def getMeasuring(self):
-        return self.model.cartTest
+        return self.model.testRecord
 
     def stopMeasuring(self):
         self.model.timeStamp = datetime.now()
-        self.model.cartTest = None
+        self.model.testRecord = None
         self.model.stopNow = True
 
     def isMeasuring(self):
-        return self.model.cartTest is not None and not self.model.complete
+        return self.model.testRecord is not None and not self.model.complete
     
     def stopNow(self):
         return self.model.stopNow
 
-    def setStatusMessage(self, msg: str):
+    def setStatusMessage(self, msg: str, error: bool = False):
         self.model.timeStamp = datetime.now()
         self.model.message = msg
+        self.model.error = error
 
     def getStatusMessage(self):
         return self.model.message
@@ -61,5 +63,5 @@ class MeasurementStatus():
         self.model.timeStamp = datetime.now()
         self.model.error = True
         self.model.complete = True
-        self.model.cartTest = None
+        self.model.testRecord = None
         self.model.message = msg

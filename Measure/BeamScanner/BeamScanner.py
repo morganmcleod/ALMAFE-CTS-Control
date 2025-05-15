@@ -4,21 +4,21 @@ from INSTR.PNA.schemas import TriggerSource
 from INSTR.PNA.PNAInterface import PNAInterface
 from INSTR.PNA.AgilentPNA import DEFAULT_CONFIG, FAST_CONFIG, DEFAULT_POWER_CONFIG
 from INSTR.SignalGenerator.Keysight_PSG_MXG import SignalGenerator
-from Control.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
+from Controllers.IFSystem.Interface import IFSystem_Interface, InputSelect, OutputSelect
 from AMB.LODevice import LODevice
-from Control.CartAssembly import CartAssembly
-from Control.RFAutoLevel import RFAutoLevel
-from Control.IFSystem.Interface import IFSystem_Interface
-from Control.PowerDetect.PDPNA import PDPNA
+from Controllers.Receiver.CartAssembly import CartAssembly
+from Controllers.RFAutoLevel import RFAutoLevel
+from Controllers.IFSystem.Interface import IFSystem_Interface
+from Controllers.PowerDetect.PDPNA import PDPNA
 from .schemas import MeasurementSpec, ScanList, ScanListItem, ScanStatus, SubScan, Raster, Rasters
 from ..Shared.MeasurementStatus import MeasurementStatus
 from DBBand6Cart.CartTests import CartTest
-from app.database.CTSDB import CartTestsDB
+from app_Common.CTSDB import CartTestsDB
 from DBBand6Cart.BPCenterPowers import BPCenterPower, BPCenterPowers
 from DBBand6Cart.BeamPatterns import BeamPattern, BeamPatterns
 from DBBand6Cart.BPRawData import BPRawDatum, BPRawData
 from DBBand6Cart.BPErrors import BPErrorLevel, BPError, BPErrors
-from app.database.CTSDB import CTSDB
+from app_Common.CTSDB import CTSDB
 from DebugOptions import *
 
 import os
@@ -553,7 +553,7 @@ class BeamScanner():
 
     def __lockLO(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.cartAssembly.loDevice.selectLockSideband(self.cartAssembly.loDevice.LOCK_ABOVE_REF)
-        wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setLOFrequency(scan.LO)
+        wcaFreq, ytoFreq, ytoCourse = self.cartAssembly.loDevice.setFrequency(scan.LO)
         pllConfig = self.cartAssembly.loDevice.getPLLConfig()
         self.loReference.setFrequency((scan.LO / pllConfig['coldMult'] - 0.020) / pllConfig['warmMult'])
         # self.loReference.setAmplitude(12.0)
@@ -563,7 +563,7 @@ class BeamScanner():
         return (True, f"__lockLO: wca={wcaFreq}, yto={ytoFreq}, courseTune={ytoCourse}")
 
     def __setReceiverBias(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
-        if self.cartAssembly.setRecevierBias(scan.LO):
+        if self.cartAssembly.setBias(scan.LO):
             if not SIMULATE:
                 ret = self.cartAssembly.autoLOPower()
             else:
@@ -573,11 +573,11 @@ class BeamScanner():
             else:
                 return (False, "cartAssembly.autoLOPower failed")
         else:
-            return (False, "cartAssembly.setRecevierBias failed.  Provide config ID?")
+            return (False, "cartAssembly.setBias failed.  Provide config ID?")
 
     def __lockRF(self, scan:ScanListItem, subScan:SubScan) -> Tuple[bool, str]:
         self.rfSrcDevice.selectLockSideband(self.rfSrcDevice.LOCK_ABOVE_REF)
-        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setLOFrequency(scan.RF)
+        wcaFreq, ytoFreq, ytoCourse = self.rfSrcDevice.setFrequency(scan.RF)
         if self.rfReference:
             # for debug only.  Normally the RF ref synth is not used for beam patterns:
             pllConfig = self.rfSrcDevice.getPLLConfig()

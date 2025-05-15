@@ -10,7 +10,7 @@ from DBBand6Cart.schemas.PreampParam import PreampParam
 from DBBand6Cart.MixerParams import MixerParams
 from DBBand6Cart.PreampParams import PreampParams
 
-from Control.CartAssembly import CartAssembly
+from Controllers.Receiver.CartAssembly import CartAssembly
 
 CARTRIDGE_BAND = 6
 YTO_LOW = 12.22
@@ -75,7 +75,7 @@ class test_CartAssembly(unittest.TestCase):
 
     def test_setRecevierBias(self) -> None:
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)
-        self.cartAssembly.setRecevierBias(221)
+        self.cartAssembly.setBias(221)
         self.assertIsInstance(self.cartAssembly.mixerParam01, MixerParam)
         self.assertIsInstance(self.cartAssembly.mixerParam02, MixerParam)
         self.assertIsInstance(self.cartAssembly.mixerParam11, MixerParam)
@@ -92,12 +92,12 @@ class test_CartAssembly(unittest.TestCase):
     def test_setAutoLOPower(self) -> None:
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)
         self.cartAssembly.loDevice.lockPLL(221)
-        self.cartAssembly.setRecevierBias(221)
+        self.cartAssembly.setBias(221)
         self.cartAssembly.autoLOPower()
     
     def test_getSISCurrentTargets(self) -> None:
         self.cartAssembly.setConfig(CARTRIDGE_CONFIG)
-        self.cartAssembly.setRecevierBias(221)
+        self.cartAssembly.setBias(221)
         targets = self.cartAssembly.getSISCurrentTargets()
         print(targets)
 
